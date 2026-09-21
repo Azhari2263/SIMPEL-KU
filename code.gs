@@ -1861,8 +1861,8 @@ function getSupervisorDashboardData(token, bulan, tahun) {
 
     const unitSummary = {
       'Kebersihan': { unit: 'Kebersihan', total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 },
-      'Pelayanan':  { unit: 'Pelayanan', total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 },
-      'Keamanan':   { unit: 'Keamanan', total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 }
+      'Pelayanan':  { unit: 'Pelayanan',  total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 },
+      'Keamanan':   { unit: 'Keamanan',   total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 }
     };
 
     const rekapPegawaiList = [];
@@ -1881,7 +1881,8 @@ function getSupervisorDashboardData(token, bulan, tahun) {
     const shiftSecuritySummary = {
       P: 0, S: 0, M: 0, O: 0,
       totalHariKerja: 0,
-      petugasAktifHariIni: { P: [], S: [], M: [], O: [] }
+      petugasAktifHariIni: { P: [], S: [], M: [], O: [] },
+      satpamTodayList: []
     };
 
     const todayDateNum = (now.getMonth() + 1 === selectedMonth && now.getFullYear() === selectedYear) ? now.getDate() : 1;
@@ -1913,6 +1914,14 @@ function getSupervisorDashboardData(token, bulan, tahun) {
 
               if (sc.tanggal === todayDateNum) {
                 shiftSecuritySummary.petugasAktifHariIni[kode].push(emp.namaPegawai);
+                if (kode !== 'O') {
+                  shiftSecuritySummary.satpamTodayList.push({
+                    nama: emp.namaPegawai,
+                    username: emp.username,
+                    shift: kode,
+                    posisi: kode === 'P' ? 'Piket Pagi (06.00 - 16.00)' : (kode === 'S' ? 'Piket Sore (15.30 - 23.30)' : 'Piket Malam (23.00 - 07.30)')
+                  });
+                }
               }
 
               if (kode !== 'O') {
@@ -1984,17 +1993,33 @@ function getSupervisorDashboardData(token, bulan, tahun) {
     const persenGlobal = totalGlobalTarget > 0 ? Math.round((totalGlobalSelesai / totalGlobalTarget) * 100) : 0;
     const inspeksiData = getInspeksiMutuData(token, selectedMonth, selectedYear);
 
+    // Calculate avg score
+    let avgSkor = 5.0;
+    let totInsp = 0;
+    if (inspeksiData && inspeksiData.success && inspeksiData.data && inspeksiData.data.length > 0) {
+      totInsp = inspeksiData.data.length;
+      const sum = inspeksiData.data.reduce((acc, cur) => acc + Number(cur.skorRataRata || 5), 0);
+      avgSkor = sum / totInsp;
+    }
+
     return {
       success: true,
       data: {
         bulan: selectedMonth,
         tahun: selectedYear,
+        totalChecklist: totalGlobalTarget,
+        totalChecklistDone: totalGlobalSelesai,
         totalMonitoring: totalGlobalTarget,
         monitoringSelesai: totalGlobalSelesai,
         monitoringBelum: totalGlobalBelum,
         progresPersen: persenGlobal,
+        avgSkorMutu: avgSkor,
+        totalInspeksi: totInsp,
+        unitProgress: unitSummary,
         unitSummary: unitSummary,
+        pegawaiList: rekapPegawaiList,
         rekapPegawai: rekapPegawaiList,
+        satpamToday: shiftSecuritySummary.satpamTodayList,
         shiftSecuritySummary: shiftSecuritySummary,
         inspeksiMutuSummary: (inspeksiData && inspeksiData.success) ? inspeksiData.data : null,
         dataTindakLanjut: dataTindakLanjut
@@ -2006,7 +2031,7 @@ function getSupervisorDashboardData(token, bulan, tahun) {
   }
 }
 
-function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPegawai, filterRuangan, filterStatus) {
+function getIntegratedMonitoringData(token, filterUnitOrMonth, tahunOrNull, maybeFilterUnit, maybeFilterPegawai, maybeFilterRuangan, maybeFilterStatus) {
   try {
     const session = getSessionUser(token);
     if (!session) {
@@ -2017,13 +2042,33 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
     if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
 
     const now = new Date();
-    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
+    // Parse arguments flexibly
+    let filterUnit = 'SEMUA';
+    let filterPegawai = 'SEMUA';
+    let filterRuangan = 'SEMUA';
+    let filterStatus = 'SEMUA';
+    let selectedMonth = now.getMonth() + 1;
+    let selectedYear = now.getFullYear();
+
+    if (typeof filterUnitOrMonth === 'string' && isNaN(Number(filterUnitOrMonth))) {
+      filterUnit = filterUnitOrMonth;
+      if (maybeFilterUnit && !isNaN(Number(maybeFilterUnit))) selectedMonth = Number(maybeFilterUnit);
+      if (maybeFilterPegawai && !isNaN(Number(maybeFilterPegawai))) selectedYear = Number(maybeFilterPegawai);
+      if (maybeFilterRuangan) filterRuangan = maybeFilterRuangan;
+      if (maybeFilterStatus) filterStatus = maybeFilterStatus;
+    } else {
+      if (filterUnitOrMonth && !isNaN(Number(filterUnitOrMonth))) selectedMonth = Number(filterUnitOrMonth);
+      if (tahunOrNull && !isNaN(Number(tahunOrNull))) selectedYear = Number(tahunOrNull);
+      if (maybeFilterUnit) filterUnit = maybeFilterUnit;
+      if (maybeFilterPegawai) filterPegawai = maybeFilterPegawai;
+      if (maybeFilterRuangan) filterRuangan = maybeFilterRuangan;
+      if (maybeFilterStatus) filterStatus = maybeFilterStatus;
+    }
 
     const allUsers = getAllUsersList(ss);
     let targetUsers = allUsers.filter(u => {
       const r = (u.role || '').toLowerCase();
-      return !r.includes('admin') && !r.includes('supervisor');
+      return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
     });
 
     if (filterUnit && filterUnit !== 'SEMUA') {
@@ -2041,7 +2086,7 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
 
     allUsers.forEach(u => {
       const r = (u.role || '').toLowerCase();
-      if (!r.includes('admin') && !r.includes('supervisor')) {
+      if (!r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag')) {
         daftarPegawaiFilter.push({ username: u.username, namaPegawai: u.namaPegawai, unit: u.unit });
       }
     });
@@ -2053,15 +2098,36 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
         const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
         if (resK && resK.taskItems) {
           resK.taskItems.forEach(t => {
-            t.namaPegawai = emp.namaPegawai;
-            t.username = emp.username;
-            t.unit = 'Keamanan';
             allRuanganSet.add(t.ruangan);
-            aggregatedItems.push(t);
+            // Expand to daily items
+            if (resK.jadwal) {
+              resK.jadwal.forEach(j => {
+                activeDaysSet.add(j.tanggal);
+                if (j.kodeShift !== 'O') {
+                  const rUpper = String(t.ruangan || '').toUpperCase();
+                  let appliesToShift = false;
+                  if (j.kodeShift === 'P' && (rUpper.includes('PAGI') || rUpper.includes('JAM KERJA'))) appliesToShift = true;
+                  else if ((j.kodeShift === 'S' || j.kodeShift === 'M') && rUpper.includes('MALAM')) appliesToShift = true;
+                  else if (j.kodeShift === 'S' && rUpper.includes('JAM KERJA')) appliesToShift = true;
+
+                  if (appliesToShift) {
+                    aggregatedItems.push({
+                      unit: 'Keamanan',
+                      pegawai: emp.namaPegawai,
+                      namaPegawai: emp.namaPegawai,
+                      username: emp.username,
+                      ruangan: t.ruangan,
+                      item: t.kegiatan,
+                      dayNum: j.tanggal,
+                      weekNum: Math.min(5, Math.ceil(j.tanggal / 7)),
+                      isDone: true,
+                      updatedAt: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(j.tanggal).padStart(2, '0')} (Shift ${j.kodeShift})`
+                    });
+                  }
+                }
+              });
+            }
           });
-          if (resK.jadwal) {
-            resK.jadwal.forEach(j => activeDaysSet.add(j.tanggal));
-          }
         }
       } else {
         const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
@@ -2072,11 +2138,22 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
             parsed.daftarRuangan.forEach(r => allRuanganSet.add(r));
 
             parsed.items.forEach(it => {
-              it.namaPegawai = emp.namaPegawai;
-              it.username = emp.username;
-              it.unit = empUnit;
-              it.targetSheetName = empSheet.getName();
-              aggregatedItems.push(it);
+              parsed.activeDays.forEach(d => {
+                const st = it.dailyStatus ? it.dailyStatus[d] : null;
+                const isDone = (st === '1' || st === 1);
+                aggregatedItems.push({
+                  unit: empUnit,
+                  pegawai: emp.namaPegawai,
+                  namaPegawai: emp.namaPegawai,
+                  username: emp.username,
+                  ruangan: it.ruangan,
+                  item: it.kegiatan,
+                  dayNum: d,
+                  weekNum: Math.min(5, Math.ceil(d / 7)),
+                  isDone: isDone,
+                  updatedAt: isDone ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00` : '-'
+                });
+              });
             });
           }
         }
@@ -2089,14 +2166,17 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
 
     if (filterStatus && filterStatus !== 'SEMUA') {
       aggregatedItems = aggregatedItems.filter(it => {
-        const isDoneAll = it.selesaiCount === it.totalHariAktif && it.totalHariAktif > 0;
-        if (filterStatus === 'SELESAI') return isDoneAll;
-        if (filterStatus === 'BELUM') return !isDoneAll;
+        if (filterStatus === 'SELESAI') return it.isDone;
+        if (filterStatus === 'BELUM') return !it.isDone;
         return true;
       });
     }
 
     const sortedActiveDays = Array.from(activeDaysSet).sort((a, b) => a - b);
+
+    // Make sure all distinct pegawai and ruangan names are list strings
+    const distinctPegawai = Array.from(new Set(daftarPegawaiFilter.map(p => p.namaPegawai)));
+    const distinctRuangan = Array.from(allRuanganSet);
 
     return {
       success: true,
@@ -2106,8 +2186,10 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
         activeDays: sortedActiveDays.length > 0 ? sortedActiveDays : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         daysInMonth: sortedActiveDays.length > 0 ? Math.max.apply(null, sortedActiveDays) : 30,
         items: aggregatedItems,
+        pegawaiList: distinctPegawai,
+        ruanganList: distinctRuangan,
         daftarPegawai: daftarPegawaiFilter,
-        daftarRuangan: Array.from(allRuanganSet),
+        daftarRuangan: distinctRuangan,
         totalItems: aggregatedItems.length
       }
     };
@@ -2159,9 +2241,9 @@ function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
       { row: 105, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Patroli keamanan gedung, aset dan karyawan kantor secara berkala setiap 2 jam dan memeriksa area kantor melalui CCTV' },
       { row: 106, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Mengawasi keluar masuk orang, barang dan kendaraan, mendokumentasikan dan melaporkan hal mencurigakan' },
       { row: 107, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Menyambut tamu, memeriksa identitas dan mengarahkan tamu ke front office/ruang tunggu' },
-      { row: 108, ruangan: 'MALAM', kegiatan: 'Patroli keamanan gedung secara berkala dan memeriksa area kantor melalui CCTV' },
-      { row: 109, ruangan: 'MALAM', kegiatan: 'Memastikan pintu, jendela, dan ruangan penting terkunci dengan baik' },
-      { row: 110, ruangan: 'MALAM', kegiatan: 'Mencegah potensi bahaya seperti kebakaran atau pencurian' }
+      { row: 108, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Patroli keamanan gedung secara berkala dan memeriksa area kantor melalui CCTV' },
+      { row: 109, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Memastikan pintu, jendela, dan ruangan penting terkunci dengan baik' },
+      { row: 110, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Mencegah potensi bahaya seperti kebakaran atau pencurian' }
     ];
 
     const colMapping = {};
@@ -2201,60 +2283,160 @@ function getIntegratedRekapMonitoring(token, bulan, tahun) {
     const now = new Date();
     const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
     const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-
-    const supDashRes = getSupervisorDashboardData(token, selectedMonth, selectedYear);
-    if (!supDashRes || !supDashRes.success) {
-      return { success: false, message: "Gagal memproses data rekapitulasi: " + (supDashRes ? supDashRes.message : "Data tidak valid") };
-    }
-
-    const dashData = supDashRes.data;
-
-    const rekapHarian = [];
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateObj = new Date(selectedYear, selectedMonth - 1, d);
-      const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-      
-      let dayTotal = isWeekend ? 0 : 45;
-      let daySelesai = isWeekend ? 0 : (d <= now.getDate() ? 42 : 0);
+    const allUsers = getAllUsersList(ss);
+    const nonManagementStaff = allUsers.filter(u => {
+      const r = (u.role || '').toLowerCase();
+      return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
+    });
 
-      rekapHarian.push({
-        hari: d,
-        total: dayTotal,
-        selesai: daySelesai
+    const rekapRuanganMap = {};
+    const rekapHarian = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      rekapHarian.push({ hari: d, total: 0, selesai: 0 });
+    }
+
+    let globalTotal = 0;
+    let globalSelesai = 0;
+
+    const unitSummary = {
+      'Kebersihan': { unit: 'Kebersihan', total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 },
+      'Pelayanan':  { unit: 'Pelayanan',  total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 },
+      'Keamanan':   { unit: 'Keamanan',   total: 0, selesai: 0, belum: 0, persen: 0, totalPegawai: 0 }
+    };
+
+    // 1. Process Kebersihan and Pelayanan
+    nonManagementStaff.forEach(emp => {
+      const empUnit = emp.unit || 'Kebersihan';
+      if (unitSummary[empUnit]) unitSummary[empUnit].totalPegawai++;
+
+      if (empUnit !== 'Keamanan') {
+        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
+        if (empSheet) {
+          const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+          if (parsed && parsed.items) {
+            parsed.items.forEach(it => {
+              const rName = it.ruangan || 'Area Kantor';
+              if (!rekapRuanganMap[rName]) {
+                rekapRuanganMap[rName] = { ruangan: rName, unit: empUnit, total: 0, selesai: 0, itemCount: 0 };
+              }
+              rekapRuanganMap[rName].itemCount++;
+              rekapRuanganMap[rName].total += it.totalHariAktif;
+              rekapRuanganMap[rName].selesai += it.selesaiCount;
+
+              globalTotal += it.totalHariAktif;
+              globalSelesai += it.selesaiCount;
+              if (unitSummary[empUnit]) {
+                unitSummary[empUnit].total += it.totalHariAktif;
+                unitSummary[empUnit].selesai += it.selesaiCount;
+              }
+
+              if (it.dailyStatus) {
+                for (let d = 1; d <= daysInMonth; d++) {
+                  if (it.dailyStatus[d] !== undefined && it.dailyStatus[d] !== null && it.dailyStatus[d] !== '') {
+                    rekapHarian[d - 1].total++;
+                    if (it.dailyStatus[d] === '1' || it.dailyStatus[d] === 1) {
+                      rekapHarian[d - 1].selesai++;
+                    }
+                  }
+                }
+              }
+            });
+          }
+        }
+      }
+    });
+
+    // 2. Process Keamanan based on 3 standard shifts: PAGI, SELAMA JAM KERJA, MALAM
+    const jadwalSheet = findJadwalSheet(ss);
+    let secRawValues = [];
+    let secDispValues = [];
+    let securityGrid = null;
+    if (jadwalSheet) {
+      secRawValues = jadwalSheet.getDataRange().getValues();
+      secDispValues = jadwalSheet.getDataRange().getDisplayValues();
+      securityGrid = parseJadwalGrid(secRawValues, selectedMonth);
+    }
+
+    const secOfficers = nonManagementStaff.filter(u => u.unit === 'Keamanan');
+    const secCategories = [
+      { name: 'PAGI (06.00-07.30)', taskCount: 4, applicableShifts: ['P'] },
+      { name: 'SELAMA JAM KERJA (07.30-16.00)', taskCount: 3, applicableShifts: ['P', 'S'] },
+      { name: 'MALAM (23.00-07.30)', taskCount: 3, applicableShifts: ['M', 'S'] }
+    ];
+
+    secCategories.forEach(cat => {
+      if (!rekapRuanganMap[cat.name]) {
+        rekapRuanganMap[cat.name] = { ruangan: cat.name, unit: 'Keamanan', total: 0, selesai: 0, itemCount: cat.taskCount };
+      }
+    });
+
+    if (securityGrid && securityGrid.schedCols && secRawValues.length > 0) {
+      secOfficers.forEach(sec => {
+        const empRowIdx = findEmployeeRowInJadwal(secRawValues, sec, 0);
+        if (empRowIdx !== -1) {
+          const rowData = secRawValues[empRowIdx];
+          const rowDisp = secDispValues[empRowIdx] || rowData;
+
+          securityGrid.schedCols.forEach(sc => {
+            const rawKode = String(rowData[sc.colIdx] !== undefined && rowData[sc.colIdx] !== null ? rowData[sc.colIdx] : (rowDisp[sc.colIdx] || '')).trim().toUpperCase();
+            let kode = 'O';
+            if (rawKode === 'P' || rawKode.includes('PAGI') || rawKode === '1') kode = 'P';
+            else if (rawKode === 'S' || rawKode.includes('SORE') || rawKode.includes('SIANG') || rawKode === '2') kode = 'S';
+            else if (rawKode === 'M' || rawKode.includes('MALAM') || rawKode === '3') kode = 'M';
+            else kode = 'O';
+
+            if (kode !== 'O') {
+              secCategories.forEach(cat => {
+                if (cat.applicableShifts.includes(kode)) {
+                  rekapRuanganMap[cat.name].total += cat.taskCount;
+                  rekapRuanganMap[cat.name].selesai += cat.taskCount;
+
+                  globalTotal += cat.taskCount;
+                  globalSelesai += cat.taskCount;
+
+                  if (unitSummary['Keamanan']) {
+                    unitSummary['Keamanan'].total += cat.taskCount;
+                    unitSummary['Keamanan'].selesai += cat.taskCount;
+                  }
+
+                  if (sc.tanggal >= 1 && sc.tanggal <= daysInMonth) {
+                    rekapHarian[sc.tanggal - 1].total += cat.taskCount;
+                    rekapHarian[sc.tanggal - 1].selesai += cat.taskCount;
+                  }
+                }
+              });
+            }
+          });
+        }
       });
     }
 
-    const rekapRuangan = [
-      { ruangan: 'Ruang Kepala Kantor', unit: 'Kebersihan', total: 22, selesai: 22, itemCount: 4 },
-      { ruangan: 'Ruang Subbagian Umum', unit: 'Kebersihan', total: 22, selesai: 20, itemCount: 6 },
-      { ruangan: 'Ruang Pelayanan Statistik Terpadu (PST)', unit: 'Pelayanan', total: 22, selesai: 22, itemCount: 8 },
-      { ruangan: 'Front Office & Resepsionis', unit: 'Pelayanan', total: 22, selesai: 21, itemCount: 5 },
-      { ruangan: 'Pos Keamanan & Pintu Gerbang', unit: 'Keamanan', total: 30, selesai: 30, itemCount: 7 },
-      { ruangan: 'Area Parkir & Patroli Gedung', unit: 'Keamanan', total: 30, selesai: 29, itemCount: 5 },
-      { ruangan: 'Toilet & Wastafel Utama', unit: 'Kebersihan', total: 22, selesai: 21, itemCount: 4 }
-    ];
+    Object.keys(unitSummary).forEach(k => {
+      const u = unitSummary[k];
+      u.belum = Math.max(0, u.total - u.selesai);
+      u.persen = u.total > 0 ? Math.round((u.selesai / u.total) * 100) : 0;
+    });
+
+    const rekapRuanganList = Object.values(rekapRuanganMap);
 
     return {
       success: true,
       data: {
         bulan: selectedMonth,
         tahun: selectedYear,
-        totalMonitoring: dashData.totalMonitoring,
-        monitoringSelesai: dashData.monitoringSelesai,
-        monitoringBelum: dashData.monitoringBelum,
-        progresPersen: dashData.progresPersen,
-        rekapUnit: Object.values(dashData.unitSummary),
-        rekapPegawai: dashData.rekapPegawai,
-        rekapRuangan: rekapRuangan,
-        rekapHarian: rekapHarian,
-        shiftSecuritySummary: dashData.shiftSecuritySummary
+        totalMonitoring: globalTotal,
+        monitoringSelesai: globalSelesai,
+        monitoringBelum: Math.max(0, globalTotal - globalSelesai),
+        progresPersen: globalTotal > 0 ? Math.round((globalSelesai / globalTotal) * 100) : 0,
+        rekapUnit: Object.values(unitSummary),
+        rekapRuangan: rekapRuanganList,
+        rekapHarian: rekapHarian
       }
     };
-
   } catch (err) {
-    return { success: false, message: "Gagal memuat data rekapitulasi: " + err.message };
+    return { success: false, message: "Gagal memuat rekap terpadu: " + err.message };
   }
 }
 
@@ -2280,16 +2462,49 @@ function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
 
     const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
     const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
+    const todayDate = (new Date().getMonth() + 1 === selectedMonth) ? new Date().getDate() : 1;
 
     if (targetUser.unit === 'Keamanan') {
       const resK = getJadwalKeamananInternal(ss, targetUser, selectedMonth, selectedYear);
+      const allSecTasks = (resK && resK.taskItems) ? resK.taskItems : [];
+
+      let todayShift = 'O';
+      if (resK && resK.jadwal) {
+        const jToday = resK.jadwal.find(j => j.tanggal === todayDate);
+        if (jToday) todayShift = jToday.kodeShift;
+      }
+
+      const formattedTasks = allSecTasks.map(t => {
+        const rUpper = String(t.ruangan || '').toUpperCase();
+        let appliesToShift = false;
+        if (todayShift === 'P' && (rUpper.includes('PAGI') || rUpper.includes('JAM KERJA'))) appliesToShift = true;
+        else if ((todayShift === 'S' || todayShift === 'M') && rUpper.includes('MALAM')) appliesToShift = true;
+        else if (todayShift === 'S' && rUpper.includes('JAM KERJA')) appliesToShift = true;
+
+        return {
+          item: t.kegiatan,
+          ruangan: t.ruangan,
+          periode: 'Shift ' + todayShift,
+          isDone: appliesToShift
+        };
+      });
+
+      const totalTasks = formattedTasks.length;
+      const doneTasks = formattedTasks.filter(t => t.isDone).length;
+
       return {
         success: true,
         data: {
-          user: targetUser,
+          namaPegawai: targetUser.namaPegawai,
+          username: targetUser.username,
+          unit: targetUser.unit,
+          role: targetUser.role,
+          totalTasks: totalTasks,
+          doneTasks: doneTasks,
           isKeamanan: true,
+          todayShift: todayShift,
           jadwalShift: resK ? resK.jadwal : [],
-          taskItems: resK ? resK.taskItems : []
+          tasks: formattedTasks
         }
       };
     } else {
@@ -2298,12 +2513,28 @@ function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
         return { success: false, message: "Sheet monitoring untuk pegawai ini belum tersedia." };
       }
       const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+
+      const formattedTasks = (parsed.items || []).map(it => {
+        const isDoneToday = it.dailyStatus && (it.dailyStatus[todayDate] === '1' || it.dailyStatus[todayDate] === 1);
+        return {
+          item: it.kegiatan,
+          ruangan: it.ruangan,
+          periode: it.periode || 'Harian',
+          isDone: isDoneToday
+        };
+      });
+
       return {
         success: true,
         data: {
-          user: targetUser,
+          namaPegawai: targetUser.namaPegawai,
+          username: targetUser.username,
+          unit: targetUser.unit,
+          role: targetUser.role,
+          totalTasks: formattedTasks.length,
+          doneTasks: formattedTasks.filter(t => t.isDone).length,
           isKeamanan: false,
-          parsedData: parsed
+          tasks: formattedTasks
         }
       };
     }
@@ -2312,12 +2543,6 @@ function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
     return { success: false, message: "Gagal memuat detail pegawai: " + err.message };
   }
 }
-
-/**
- * =============================================================================
- * PENGATURAN & PERTUKARAN SHIFT SECURITY (KE SHEET JadwalPiketSecurity)
- * =============================================================================
- */
 
 function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
   try {
@@ -2329,6 +2554,7 @@ function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
     if (!jadwalSheet) return { success: false, message: "Sheet JadwalPiketSecurity tidak ditemukan." };
 
     const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
+    const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
     const rawValues = jadwalSheet.getDataRange().getValues();
     const displayValues = jadwalSheet.getDataRange().getDisplayValues();
 
@@ -2345,6 +2571,7 @@ function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
     secOfficers.forEach(sec => {
       const rIdx = findEmployeeRowInJadwal(rawValues, sec, 0);
       const shiftPerDay = {};
+      const summary = { P: 0, S: 0, M: 0, O: 0 };
 
       if (rIdx !== -1) {
         const row = rawValues[rIdx];
@@ -2359,6 +2586,7 @@ function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
           else kode = 'O';
 
           shiftPerDay[sc.tanggal] = kode;
+          summary[kode] = (summary[kode] || 0) + 1;
         });
       }
 
@@ -2366,6 +2594,7 @@ function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
         namaPegawai: sec.namaPegawai,
         username: sec.username,
         rowInSheet: rIdx !== -1 ? rIdx + 1 : -1,
+        summary: summary,
         shifts: shiftPerDay
       });
     });
@@ -2375,6 +2604,9 @@ function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
       data: {
         schedCols: grid.schedCols,
         officers: officerRows,
+        daysInMonth: grid.schedCols.length,
+        bulan: selectedMonth,
+        tahun: selectedYear,
         sheetName: jadwalSheet.getName()
       }
     };
@@ -2417,7 +2649,7 @@ function updateSecurityShift(token, employeeNameOrId, dayNum, newShift, bulan, t
     if (!grid || !grid.schedCols) return { success: false, message: "Grid jadwal tidak dapat dibaca." };
 
     const targetColObj = grid.schedCols.find(sc => sc.tanggal === targetDay);
-    if (!targetColObj) return { success: false, message: "Kolom tanggal " + targetDay + " tidak ditemukan." };
+    if (!targetColObj) return { success: false, message: "Kolom tanggal " + targetDay + " tidak ditemukan pada sheet jadwal." };
 
     const fakeUserObj = { namaPegawai: employeeNameOrId, username: employeeNameOrId, namaSheet: employeeNameOrId };
     const empRowIdx = findEmployeeRowInJadwal(rawValues, fakeUserObj, 0);
@@ -2437,13 +2669,14 @@ function updateSecurityShift(token, employeeNameOrId, dayNum, newShift, bulan, t
       cache.remove("cache_jadwal_" + selectedMonth + "_" + (tahun || new Date().getFullYear()));
     } catch (ce) { /* ignore */ }
 
-    const SHIFT_NAMES = { 'P': 'Pagi (06.00-16.00)', 'S': 'Sore / Jam Kerja', 'M': 'Malam (23.00-07.30)', 'O': 'Off (Libur)' };
+    const SHIFT_NAMES = { 'P': 'Shift Pagi (06.00-16.00)', 'S': 'Shift Sore / Jam Kerja (15.30-23.30)', 'M': 'Shift Malam (23.00-07.30)', 'O': 'Libur / Bebas Tugas' };
 
     return {
       success: true,
-      message: "Jadwal shift untuk " + employeeNameOrId + " pada tanggal " + targetDay + " berhasil diubah menjadi " + (SHIFT_NAMES[cleanShift] || cleanShift) + " di sheet " + jadwalSheet.getName() + "!",
+      message: "Jadwal shift " + employeeNameOrId + " pada tanggal " + targetDay + " berhasil diubah menjadi " + (SHIFT_NAMES[cleanShift] || cleanShift) + ".",
       updatedShift: cleanShift,
-      timestamp: Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")
+      petugas: employeeNameOrId,
+      tanggal: targetDay
     };
 
   } catch (err) {
@@ -2471,39 +2704,34 @@ function swapSecurityShift(token, emp1Name, emp2Name, dayNum, bulan, tahun) {
     const grid = parseJadwalGrid(rawValues, selectedMonth);
     if (!grid || !grid.schedCols) return { success: false, message: "Grid jadwal tidak dapat diproses." };
 
-    const targetColObj = grid.schedCols.find(sc => sc.tanggal === Number(dayNum));
-    if (!targetColObj) return { success: false, message: "Kolom tanggal tidak ditemukan." };
+    const targetDay = Number(dayNum);
+    const targetCol = grid.schedCols.find(sc => sc.tanggal === targetDay);
+    if (!targetCol) return { success: false, message: "Kolom tanggal " + targetDay + " tidak ditemukan." };
 
     const rIdx1 = findEmployeeRowInJadwal(rawValues, { namaPegawai: emp1Name, username: emp1Name }, 0);
     const rIdx2 = findEmployeeRowInJadwal(rawValues, { namaPegawai: emp2Name, username: emp2Name }, 0);
 
     if (rIdx1 === -1 || rIdx2 === -1) {
-      return { success: false, message: "Salah satu nama petugas tidak ditemukan pada sheet jadwal." };
+      return { success: false, message: "Salah satu petugas tidak ditemukan pada jadwal." };
     }
 
-    const colIndex = targetColObj.colIdx;
-    const shift1 = String(rawValues[rIdx1][colIndex] || 'O').trim().toUpperCase();
-    const shift2 = String(rawValues[rIdx2][colIndex] || 'O').trim().toUpperCase();
+    const colIdx = targetCol.colIdx;
+    const shift1 = String(rawValues[rIdx1][colIdx] || 'O').toUpperCase();
+    const shift2 = String(rawValues[rIdx2][colIdx] || 'O').toUpperCase();
 
-    jadwalSheet.getRange(rIdx1 + 1, colIndex + 1).setValue(shift2);
-    jadwalSheet.getRange(rIdx2 + 1, colIndex + 1).setValue(shift1);
+    jadwalSheet.getRange(rIdx1 + 1, colIdx + 1).setValue(shift2);
+    jadwalSheet.getRange(rIdx2 + 1, colIdx + 1).setValue(shift1);
     SpreadsheetApp.flush();
 
     return {
       success: true,
-      message: "Berhasil menukar shift tanggal " + dayNum + ": " + emp1Name + " (" + shift2 + ") <-> " + emp2Name + " (" + shift1 + ")!"
+      message: "Berhasil menukar shift antara " + emp1Name + " (" + shift2 + ") dan " + emp2Name + " (" + shift1 + ") pada tanggal " + targetDay + "."
     };
-
   } catch (err) {
     return { success: false, message: "Gagal menukar shift: " + err.message };
   }
 }
 
-/**
- * =============================================================================
- * MODUL INSPEKSI MUTU (KEBERSIHAN, KEAMANAN, PELAYANAN)
- * =============================================================================
- */
 
 function setupInspeksiMutuSheet(ss) {
   if (!ss) ss = getDb();
