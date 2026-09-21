@@ -1361,6 +1361,68 @@
         </div>
       </div>
 
+      <!-- Panel Form Pertukaran Shift (Shift Swap) -->
+      <div class="px-4 py-3 bg-gradient-to-r from-indigo-50/90 to-blue-50/80 border-b border-indigo-100 flex flex-col gap-2.5 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs shadow-xs">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </div>
+            <h4 class="text-xs font-black text-indigo-950 uppercase tracking-wide">Pertukaran Shift Cepat (Shift Swap)</h4>
+          </div>
+          <span class="text-[11px] text-indigo-700 font-medium hidden sm:inline">Tukar shift antara 2 petugas atau tanggal berbeda</span>
+        </div>
+
+        <form onsubmit="handleSwapShiftSubmit(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+          <!-- Petugas 1 & Tanggal 1 -->
+          <div class="sm:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white/90 p-2 rounded-xl border border-indigo-200 shadow-2xs">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Petugas 1</label>
+              <select id="swapOfficer1" required class="w-full text-xs font-semibold p-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih Petugas 1</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Tanggal 1</label>
+              <select id="swapDate1" required class="w-full text-xs font-semibold p-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih Tanggal</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Icon Swap -->
+          <div class="hidden sm:flex sm:col-span-1 items-center justify-center pb-2 text-indigo-600">
+            <div class="w-7 h-7 rounded-full bg-white border border-indigo-200 flex items-center justify-center text-xs shadow-xs">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </div>
+          </div>
+
+          <!-- Petugas 2 & Tanggal 2 -->
+          <div class="sm:col-span-4 grid grid-cols-1 sm:grid-cols-2 gap-2 bg-white/90 p-2 rounded-xl border border-indigo-200 shadow-2xs">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Petugas 2</label>
+              <select id="swapOfficer2" required class="w-full text-xs font-semibold p-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih Petugas 2</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-600 uppercase mb-0.5">Tanggal 2</label>
+              <select id="swapDate2" required class="w-full text-xs font-semibold p-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih Tanggal</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tombol Submit -->
+          <div class="sm:col-span-2">
+            <button type="submit" id="btnSubmitSwapShift" class="w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-black text-xs rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-right-left text-xs"></i>
+              <span>Tukar Shift</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
       <!-- Matrix Container (Scrollable Table) -->
       <div id="secSchedMatrixContainer" class="p-4 overflow-auto flex-1 text-xs">
         <div class="text-center py-12 text-slate-400">Memuat matriks jadwal piket security...</div>
@@ -1538,6 +1600,8 @@
             runner.getSecurityScheduleMatrix(params.token, params.bulan, params.tahun);
           } else if (action === 'updateSecurityShift') {
             runner.updateSecurityShift(params.token, params.targetUserOrName, params.tanggal, params.newShift, params.bulan, params.tahun);
+          } else if (action === 'swapSecurityShift') {
+            runner.swapSecurityShift(params.token, params.user1, params.tanggal1, params.user2, params.tanggal2, params.bulan, params.tahun);
           } else {
             reject(new Error('Aksi tidak dikenali: ' + action));
           }
@@ -3668,16 +3732,16 @@
       let shiftDescStr = '';
       if (shiftKode === 'P') {
         shiftTitleStr = 'Shift Pagi (06.00 – 16.00)';
-        shiftDescStr = 'Menampilkan tugas bagian: PAGI (06.00–07.30) dan SELAMA JAM KERJA (07.30–16.00)';
+        shiftDescStr = 'Menampilkan 7 checklist tugas: Bagian PAGI (06.00–07.30) dan SELAMA JAM KERJA (07.30–16.00)';
       } else if (shiftKode === 'S') {
         shiftTitleStr = 'Shift Sore (15.30 – 23.30)';
-        shiftDescStr = 'Menampilkan tugas bagian: MALAM (Patroli & Pengamanan)';
+        shiftDescStr = 'Menampilkan 3 checklist tugas: Bagian MALAM (Patroli & Pengamanan Sore/Malam)';
       } else if (shiftKode === 'M') {
         shiftTitleStr = 'Shift Malam (23.00 – 07.30)';
-        shiftDescStr = 'Menampilkan tugas bagian: MALAM (Patroli & Penguncian Gedung)';
+        shiftDescStr = 'Menampilkan 3 checklist tugas: Bagian MALAM (Patroli & Penguncian Gedung Malam)';
       } else {
         shiftTitleStr = 'Status: LIBUR (Bebas Tugas)';
-        shiftDescStr = 'Tidak ada tugas yang harus dikerjakan pada hari libur / off.';
+        shiftDescStr = 'Tidak ada tugas checklist yang harus dikerjakan pada hari libur / off.';
       }
 
       const allTasks = d.taskItems || [];
@@ -3774,7 +3838,7 @@
             <div>
               <p class="text-[10px] text-blue-600 uppercase font-bold tracking-wider">Shift Pagi (P)</p>
               <h3 class="text-xl font-black text-blue-700 mt-0.5" id="kSum-pagi">${(d.summary && d.summary.P) || 0}</h3>
-              <p class="text-[10px] text-blue-500 mt-0.5">06.00 – 16.00</p>
+              <p class="text-[10px] text-blue-500 mt-0.5">7 checklist/hari</p>
             </div>
             <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
               <i class="fa-solid fa-sun"></i>
@@ -3785,7 +3849,7 @@
             <div>
               <p class="text-[10px] text-amber-600 uppercase font-bold tracking-wider">Shift Sore (S)</p>
               <h3 class="text-xl font-black text-amber-700 mt-0.5" id="kSum-sore">${(d.summary && d.summary.S) || 0}</h3>
-              <p class="text-[10px] text-amber-500 mt-0.5">15.30 – 23.30</p>
+              <p class="text-[10px] text-amber-500 mt-0.5">3 checklist/hari</p>
             </div>
             <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-base">
               <i class="fa-solid fa-cloud-sun"></i>
@@ -3796,7 +3860,7 @@
             <div>
               <p class="text-[10px] text-indigo-600 uppercase font-bold tracking-wider">Shift Malam (M)</p>
               <h3 class="text-xl font-black text-indigo-700 mt-0.5" id="kSum-malam">${(d.summary && d.summary.M) || 0}</h3>
-              <p class="text-[10px] text-indigo-500 mt-0.5">23.00 – 07.30</p>
+              <p class="text-[10px] text-indigo-500 mt-0.5">3 checklist/hari</p>
             </div>
             <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base">
               <i class="fa-solid fa-moon"></i>
@@ -4285,6 +4349,99 @@
           </table>
         </div>
       `;
+
+      populateSwapShiftDropdowns(officers, activeDays);
+    }
+
+    function populateSwapShiftDropdowns(officers, activeDays) {
+      const selectOff1 = document.getElementById('swapOfficer1');
+      const selectOff2 = document.getElementById('swapOfficer2');
+      const selectDate1 = document.getElementById('swapDate1');
+      const selectDate2 = document.getElementById('swapDate2');
+
+      if (selectOff1 && selectOff2) {
+        let optOfficers = '<option value="">Pilih Petugas</option>';
+        (officers || []).forEach(off => {
+          optOfficers += `<option value="${escapeHtml(off.username || off.namaPegawai)}">${escapeHtml(off.namaPegawai)} (@${escapeHtml(off.username)})</option>`;
+        });
+        selectOff1.innerHTML = optOfficers;
+        selectOff2.innerHTML = optOfficers;
+        if (officers && officers.length >= 2) {
+          selectOff1.selectedIndex = 1;
+          selectOff2.selectedIndex = 2;
+        }
+      }
+
+      if (selectDate1 && selectDate2) {
+        let optDates = '<option value="">Pilih Tanggal</option>';
+        (activeDays || []).forEach(d => {
+          optDates += `<option value="${d}">Tanggal ${d}</option>`;
+        });
+        selectDate1.innerHTML = optDates;
+        selectDate2.innerHTML = optDates;
+        const curDay = (typeof selectedKeamananDay !== 'undefined' && selectedKeamananDay) ? selectedKeamananDay : 1;
+        selectDate1.value = String(curDay);
+        selectDate2.value = String(curDay);
+      }
+    }
+
+    async function handleSwapShiftSubmit(event) {
+      if (event) event.preventDefault();
+      const user1 = document.getElementById('swapOfficer1') ? document.getElementById('swapOfficer1').value : '';
+      const date1 = document.getElementById('swapDate1') ? Number(document.getElementById('swapDate1').value) : 0;
+      const user2 = document.getElementById('swapOfficer2') ? document.getElementById('swapOfficer2').value : '';
+      const date2 = document.getElementById('swapDate2') ? Number(document.getElementById('swapDate2').value) : 0;
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      if (!user1 || !date1 || !user2 || !date2) {
+        showToast('Pilih kedua petugas dan tanggal yang akan ditukar.', 'warning');
+        return;
+      }
+
+      if (user1 === user2 && date1 === date2) {
+        showToast('Petugas dan tanggal tidak boleh sama persis.', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitSwapShift');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-1"></i><span>Menukar...</span>';
+      }
+
+      showToast(`Menukar shift ${user1} (Tgl ${date1}) dengan ${user2} (Tgl ${date2})...`, 'info');
+
+      try {
+        const res = await callBackend('swapSecurityShift', {
+          token: sessionToken,
+          user1: user1,
+          tanggal1: date1,
+          user2: user2,
+          tanggal2: date2,
+          bulan: bulan,
+          tahun: tahun
+        });
+
+        if (res && res.success) {
+          showToast(res.message || 'Pertukaran shift berhasil disimpan ke spreadsheet!', 'success');
+          await loadSecurityScheduleMatrix();
+          if (activeView === 'monitoring' && currentMonitoringJenis === 'Keamanan') {
+            loadMonitoringData('Keamanan');
+          } else if (activeView === 'supervisor') {
+            loadSupervisorData();
+          }
+        } else {
+          showToast((res && res.message) ? res.message : 'Gagal menukar shift.', 'error');
+        }
+      } catch (err) {
+        showToast('Kesalahan server saat tukar shift: ' + err.message, 'error');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-left text-xs mr-1"></i><span>Tukar Shift</span>';
+        }
+      }
     }
 
     async function handleShiftChange(targetUserOrName, tanggal, newShift) {
