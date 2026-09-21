@@ -118,6 +118,16 @@ function handleApiRequest(params) {
       result = getJadwalKeamanan(params.token, params.bulan, params.tahun);
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
+    } else if (action === 'getSupervisorDashboardData') {
+      result = getSupervisorDashboardData(params.token, params.bulan, params.tahun, params.filterUnit, params.filterLantai);
+    } else if (action === 'getQualityAudits') {
+      result = getQualityAudits(params.token, params.bulan, params.tahun);
+    } else if (action === 'submitQualityAudit') {
+      result = submitQualityAudit(params.token, params);
+    } else if (action === 'approveMonthlyReport') {
+      result = approveMonthlyReport(params.token, params);
+    } else if (action === 'getMonthlyApprovals') {
+      result = getMonthlyApprovals(params.token, params.bulan, params.tahun);
     } else {
       result = { success: false, message: 'Aksi "' + action + '" tidak dikenali.' };
     }
@@ -459,7 +469,7 @@ function login(username, password) {
     const inputPassNoSpace = cleanInputPass.replace(/\s+/g, '');
 
     // 1. Temukan baris header dan indeks kolom secara dinamis
-    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3;
+    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3, colRole = -1;
     let headerRowIdx = 0;
 
     for (let r = 0; r < Math.min(5, rawValues.length); r++) {
@@ -470,6 +480,7 @@ function login(username, password) {
         if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
         if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
         if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
+        if (h.includes('role') || h.includes('peran') || h.includes('jabatan') || h.includes('hak akses')) colRole = c;
       }
       if (cleanStr(row[colUser]).toLowerCase().includes('user') || cleanStr(row[colPass]).toLowerCase().includes('pass')) {
         headerRowIdx = r;
@@ -484,6 +495,7 @@ function login(username, password) {
       const rowUser = cleanStr(rawValues[i][colUser]);
       const rowNama = cleanStr(rawValues[i][colNama]);
       const rowSheet = cleanStr(rawValues[i][colSheet]);
+      const explicitRole = (colRole !== -1 && rawValues[i][colRole]) ? cleanStr(rawValues[i][colRole]).toUpperCase() : '';
       
       if (!rowUser && !rowNama) continue; // Skip baris kosong
 
@@ -526,7 +538,8 @@ function login(username, password) {
         matchedUser = {
           username: rowUser || rowNama,
           namaPegawai: rowNama || rowUser,
-          namaSheet: rowSheet || rowUser
+          namaSheet: rowSheet || rowUser,
+          explicitRole: explicitRole
         };
         break;
       }
@@ -548,6 +561,27 @@ function login(username, password) {
       }
     }
 
+    // 4. Tentukan Role Pengguna Berjenjang
+    let finalRole = 'CS';
+    const explicitRole = matchedUser.explicitRole;
+
+    if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(explicitRole)) {
+      finalRole = explicitRole;
+    } else {
+      const uComb = (matchedUser.username + ' ' + matchedUser.namaPegawai + ' ' + matchedUser.namaSheet).toLowerCase();
+      if (uComb.includes('supervisor') || uComb.includes('kasubbag') || uComb.includes('ppk') || uComb.includes('koordinator') || uComb.includes('pimpinan')) {
+        finalRole = 'SUPERVISOR';
+      } else if (uComb.includes('admin')) {
+        finalRole = 'ADMIN';
+      } else if (jenisSheet === 'RESEPSIONIS' || uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('rania') || uComb.includes('yuni') || uComb.includes('alfiana')) {
+        finalRole = 'PELAYANAN';
+      } else if (jenisSheet === 'KEAMANAN KANTOR' || uComb.includes('keamanan') || uComb.includes('satpam') || uComb.includes('security')) {
+        finalRole = 'SECURITY';
+      } else {
+        finalRole = 'CS';
+      }
+    }
+
     const token = Utilities.getUuid();
     const cache = CacheService.getScriptCache();
 
@@ -556,6 +590,7 @@ function login(username, password) {
       namaPegawai: matchedUser.namaPegawai,
       namaSheet: actualSheetName,
       jenis: jenisSheet,
+      role: finalRole,
       loginTime: new Date().toISOString()
     };
 
@@ -567,7 +602,8 @@ function login(username, password) {
       user: {
         username: matchedUser.username,
         namaPegawai: matchedUser.namaPegawai,
-        jenis: jenisSheet
+        jenis: jenisSheet,
+        role: finalRole
       }
     };
 
@@ -639,7 +675,7 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
     }
 
     // Temukan baris header dan indeks kolom secara dinamis
-    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3;
+    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3, colRole = -1, colLog = -1;
     let headerRowIdx = 0;
 
     for (let r = 0; r < Math.min(5, rawValues.length); r++) {
@@ -650,6 +686,8 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
         if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
         if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
         if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
+        if (h.includes('role') || h.includes('peran') || h.includes('jabatan')) colRole = c;
+        if (h.includes('terakhir') || h.includes('kredensial') || h.includes('log') || h.includes('timestamp')) colLog = c;
       }
       if (cleanStr(row[colUser]).toLowerCase().includes('user') || cleanStr(row[colPass]).toLowerCase().includes('pass')) {
         headerRowIdx = r;
@@ -657,10 +695,10 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
       }
     }
 
-    // Pastikan header kolom log timestamp ada jika belum ada
-    if (rawValues[headerRowIdx].length < 5 || !rawValues[headerRowIdx][4]) {
-      userSheet.getRange(headerRowIdx + 1, 5).setValue("Terakhir Ganti Kredensial");
-      userSheet.getRange(headerRowIdx + 1, 5)
+    if (colLog === -1) {
+      colLog = rawValues[headerRowIdx].length >= 5 ? rawValues[headerRowIdx].length : 5;
+      userSheet.getRange(headerRowIdx + 1, colLog + 1).setValue("Terakhir Ganti Kredensial");
+      userSheet.getRange(headerRowIdx + 1, colLog + 1)
         .setBackground("#1e40af")
         .setFontColor("#ffffff")
         .setFontWeight("bold");
@@ -733,7 +771,7 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
     // TULIS PERUBAHAN LANGSUNG KE SHEET USERS
     userSheet.getRange(userRowIndex, colUser + 1).setValue(String(targetUsername));
     userSheet.getRange(userRowIndex, colPass + 1).setValue(String(targetPassword));
-    userSheet.getRange(userRowIndex, 5).setValue(nowTimestamp);
+    userSheet.getRange(userRowIndex, colLog + 1).setValue(nowTimestamp);
 
     // FLUSH LANGSUNG KE SPREADSHEET AGAR TERSIMPAN PERMANEN
     SpreadsheetApp.flush();
@@ -745,6 +783,7 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
       namaPegawai: session.namaPegawai,
       namaSheet: session.namaSheet,
       jenis: session.jenis,
+      role: session.role || 'CS',
       loginTime: session.loginTime || new Date().toISOString()
     };
     cache.put(token, JSON.stringify(updatedPayload), SESSION_DURATION_SEC);
@@ -755,7 +794,8 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
       user: {
         username: targetUsername,
         namaPegawai: session.namaPegawai,
-        jenis: session.jenis
+        jenis: session.jenis,
+        role: session.role || 'CS'
       }
     };
 
@@ -1663,7 +1703,650 @@ function readSheetMonitoring(sheet, bulan, tahun) {
 }
 
 /**
- * FUNGSI SETUP DATABASE USERS OTOMATIS
+ * Helper untuk mendeteksi Lantai / Lokasi Gedung dari Nama Ruangan
+ */
+function getLantaiFromRuangan(ruangan) {
+  if (!ruangan) return 'Lantai 1';
+  const r = String(ruangan).toLowerCase();
+  if (r.includes('lantai 2') || r.includes('lt 2') || r.includes('lt. 2') || r.includes('lt.2') || r.includes('lantai ii') || r.includes('lt ii')) {
+    return 'Lantai 2';
+  }
+  if (r.includes('lantai 3') || r.includes('lt 3') || r.includes('lt. 3') || r.includes('lt.3') || r.includes('lantai iii') || r.includes('lt iii')) {
+    return 'Lantai 3';
+  }
+  if (r.includes('halaman') || r.includes('parkir') || r.includes('taman') || r.includes('luar') || r.includes('pos satpam') || r.includes('pagar') || r.includes('posko')) {
+    return 'Luar / Halaman';
+  }
+  return 'Lantai 1';
+}
+
+/**
+ * Mengambil Data Dashboard Eksekutif Supervisor / Kasubbag Umum / PPK
+ */
+function getSupervisorDashboardData(token, bulan, tahun, filterUnit, filterLantai) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+
+    const ss = getDb();
+    if (!ss) {
+      return { success: false, message: "Koneksi database spreadsheet gagal." };
+    }
+
+    const now = new Date();
+    const selBulan = bulan ? Number(bulan) : (now.getMonth() + 1);
+    const selTahun = tahun ? Number(tahun) : now.getFullYear();
+
+    const userSheet = findSheet(ss, "Users");
+    if (!userSheet) {
+      return { success: false, message: "Sheet 'Users' tidak ditemukan." };
+    }
+
+    const rawValues = userSheet.getDataRange().getValues();
+    let colUser = 0, colNama = 1, colSheet = 2, colRole = -1;
+    let headerRowIdx = 0;
+
+    for (let r = 0; r < Math.min(5, rawValues.length); r++) {
+      const row = rawValues[r];
+      for (let c = 0; c < row.length; c++) {
+        const h = cleanStr(row[c]).toLowerCase();
+        if (h.includes('user') || h === 'username') colUser = c;
+        if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
+        if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
+        if (h.includes('role') || h.includes('peran') || h.includes('jabatan')) colRole = c;
+      }
+      if (cleanStr(row[colUser]).toLowerCase().includes('user')) {
+        headerRowIdx = r;
+        break;
+      }
+    }
+
+    const employees = [];
+    let macroCsTarget = 0, macroCsSelesai = 0;
+    let macroPstTarget = 0, macroPstSelesai = 0;
+    let macroSecTarget = 0, macroSecSelesai = 0;
+
+    for (let i = headerRowIdx + 1; i < rawValues.length; i++) {
+      const uName = cleanStr(rawValues[i][colUser]);
+      const nNama = cleanStr(rawValues[i][colNama]);
+      const nSheet = cleanStr(rawValues[i][colSheet]);
+      const expRole = (colRole !== -1 && rawValues[i][colRole]) ? cleanStr(rawValues[i][colRole]).toUpperCase() : '';
+
+      if (!uName && !nNama) continue;
+
+      let role = 'CS';
+      if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(expRole)) {
+        role = expRole;
+      } else {
+        const uComb = (uName + ' ' + nNama + ' ' + nSheet).toLowerCase();
+        if (uComb.includes('supervisor') || uComb.includes('kasubbag') || uComb.includes('ppk') || uComb.includes('koordinator')) {
+          role = 'SUPERVISOR';
+        } else if (uComb.includes('admin')) {
+          role = 'ADMIN';
+        } else if (uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('rania') || uComb.includes('yuni') || uComb.includes('alfiana')) {
+          role = 'PELAYANAN';
+        } else if (uComb.includes('keamanan') || uComb.includes('satpam') || uComb.includes('security')) {
+          role = 'SECURITY';
+        } else {
+          role = 'CS';
+        }
+      }
+
+      // Supervisor & Admin murni dilewati dari daftar perbandingan pekerja lapangan
+      if (role === 'SUPERVISOR' || role === 'ADMIN') continue;
+
+      let totalTarget = 0;
+      let totalSelesai = 0;
+      let totalBelum = 0;
+      let persen = 0;
+      let roomsSummary = [];
+
+      if (role === 'CS' || role === 'PELAYANAN') {
+        const targetSheet = findEmployeeSheet(ss, nSheet, nNama, uName);
+        if (targetSheet) {
+          const parsed = readSheetMonitoring(targetSheet, selBulan, selTahun);
+          let filteredItems = parsed.items || [];
+          if (filterLantai && filterLantai !== 'SEMUA') {
+            filteredItems = filteredItems.filter(it => getLantaiFromRuangan(it.ruangan) === filterLantai);
+          }
+
+          filteredItems.forEach(it => {
+            totalTarget += it.totalHariAktif;
+            totalSelesai += it.selesaiCount;
+          });
+
+          totalBelum = Math.max(0, totalTarget - totalSelesai);
+          persen = totalTarget > 0 ? Math.round((totalSelesai / totalTarget) * 100) : 0;
+          roomsSummary = (parsed.daftarRuangan || []).slice(0, 4);
+        }
+      } else if (role === 'SECURITY') {
+        const jadwalSheet = findJadwalSheet(ss);
+        if (jadwalSheet) {
+          const jVals = jadwalSheet.getDataRange().getValues();
+          const jGrid = parseJadwalGrid(jVals, selBulan);
+          if (jGrid && !jGrid.error && jGrid.schedCols) {
+            const rowIdx = findEmployeeRowInJadwal(jVals, { namaPegawai: nNama, username: uName, namaSheet: nSheet }, 0);
+            if (rowIdx !== -1) {
+              const empRow = jVals[rowIdx];
+              let workDays = 0;
+              jGrid.schedCols.forEach(col => {
+                const k = String(empRow[col.colIdx] || '').trim().toUpperCase();
+                if (k === 'P' || k === 'S' || k === 'M' || k === '1' || k === '2' || k === '3') {
+                  workDays++;
+                }
+              });
+              // Target = workDays * 5 tugas rata-rata
+              totalTarget = workDays * 5;
+              totalSelesai = totalTarget; // Pada jadwal security baseline selesai adalah hari kerja aktif
+              totalBelum = 0;
+              persen = totalTarget > 0 ? 100 : 0;
+              roomsSummary = ['Pos Satpam', 'Patroli Gedung', 'Parkiran'];
+            }
+          }
+        }
+      }
+
+      // Akumulasi Makro
+      if (role === 'CS') {
+        macroCsTarget += totalTarget;
+        macroCsSelesai += totalSelesai;
+      } else if (role === 'PELAYANAN') {
+        macroPstTarget += totalTarget;
+        macroPstSelesai += totalSelesai;
+      } else if (role === 'SECURITY') {
+        macroSecTarget += totalTarget;
+        macroSecSelesai += totalSelesai;
+      }
+
+      // Evaluasi Badge Status Kinerja
+      let statusLabel = 'Baik';
+      let statusColor = 'blue';
+      let statusBadge = 'bg-blue-100 text-blue-800';
+
+      if (persen >= 90) {
+        statusLabel = 'Sangat Baik';
+        statusColor = 'emerald';
+        statusBadge = 'bg-emerald-100 text-emerald-800';
+      } else if (persen >= 75) {
+        statusLabel = 'Baik';
+        statusColor = 'blue';
+        statusBadge = 'bg-blue-100 text-blue-800';
+      } else if (persen >= 60) {
+        statusLabel = 'Cukup';
+        statusColor = 'amber';
+        statusBadge = 'bg-amber-100 text-amber-800';
+      } else {
+        statusLabel = 'Perlu Pembinaan';
+        statusColor = 'rose';
+        statusBadge = 'bg-rose-100 text-rose-800';
+      }
+
+      const empObj = {
+        username: uName,
+        namaPegawai: nNama,
+        role: role,
+        roleLabel: role === 'CS' ? 'Kebersihan (CS)' : (role === 'PELAYANAN' ? 'Pelayanan (PST)' : 'Keamanan (Satpam)'),
+        totalTarget: totalTarget,
+        totalSelesai: totalSelesai,
+        totalBelum: totalBelum,
+        persen: persen,
+        statusKinerja: {
+          label: statusLabel,
+          color: statusColor,
+          badge: statusBadge
+        },
+        roomsSummary: roomsSummary
+      };
+
+      // Filter Unit jika dipilih
+      if (!filterUnit || filterUnit === 'SEMUA' || filterUnit === role) {
+        employees.push(empObj);
+      }
+    }
+
+    // Hitung Persentase Makro
+    const macroTotalTarget = macroCsTarget + macroPstTarget + macroSecTarget;
+    const macroTotalSelesai = macroCsSelesai + macroPstSelesai + macroSecSelesai;
+    const macroTotalPersen = macroTotalTarget > 0 ? Math.round((macroTotalSelesai / macroTotalTarget) * 100) : 0;
+    const macroCsPersen = macroCsTarget > 0 ? Math.round((macroCsSelesai / macroCsTarget) * 100) : 0;
+    const macroPstPersen = macroPstTarget > 0 ? Math.round((macroPstSelesai / macroPstTarget) * 100) : 0;
+    const macroSecPersen = macroSecTarget > 0 ? Math.round((macroSecSelesai / macroSecTarget) * 100) : 0;
+
+    // Ambil Data Quality Audits & Approvals
+    const qaResult = getQualityAudits(token, selBulan, selTahun);
+    const qaData = (qaResult && qaResult.success) ? qaResult.data : { averageScore: 0, totalAudits: 0, recentAudits: [] };
+
+    const appResult = getMonthlyApprovals(token, selBulan, selTahun);
+    const appData = (appResult && appResult.success) ? appResult.data : {};
+
+    return {
+      success: true,
+      data: {
+        macro: {
+          totalPegawai: employees.length,
+          kepatuhanTotal: macroTotalPersen,
+          kepatuhanCs: macroCsPersen,
+          kepatuhanPst: macroPstPersen,
+          kepatuhanSecurity: macroSecPersen,
+          totalTarget: macroTotalTarget,
+          totalSelesai: macroTotalSelesai,
+          qaAverageScore: qaData.averageScore || 0,
+          qaTotalAudits: qaData.monthTotalAudits || qaData.totalAudits || 0
+        },
+        employees: employees,
+        approvals: appData,
+        qaSummary: qaData
+      }
+    };
+
+  } catch (err) {
+    return { success: false, message: "Terjadi kesalahan memuat dashboard supervisor: " + err.message };
+  }
+}
+
+/**
+ * Setup Sheet Quality_Audits
+ */
+function setupQualityAuditsSheet(ss) {
+  if (!ss) return null;
+  let sheet = ss.getSheetByName("Quality_Audits");
+  if (!sheet) {
+    sheet = ss.insertSheet("Quality_Audits");
+    sheet.getRange(1, 1, 1, 10).setValues([[
+      "AuditID", "Tanggal", "Auditor", "RoleAuditor", "AreaRuangan", "Lantai", "SkorBintang", "CatatanEvaluasi", "FotoTemuanUrl", "Timestamp"
+    ]]);
+    sheet.getRange(1, 1, 1, 10)
+      .setBackground("#047857")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold");
+    sheet.autoResizeColumns(1, 10);
+  }
+  return sheet;
+}
+
+/**
+ * Setup Sheet Monthly_Approvals
+ */
+function setupMonthlyApprovalsSheet(ss) {
+  if (!ss) return null;
+  let sheet = ss.getSheetByName("Monthly_Approvals");
+  if (!sheet) {
+    sheet = ss.insertSheet("Monthly_Approvals");
+    sheet.getRange(1, 1, 1, 9).setValues([[
+      "ApprovalID", "Bulan", "Tahun", "UnitKerja", "Status", "Verifikator", "CatatanApproval", "TanggalApproval", "Timestamp"
+    ]]);
+    sheet.getRange(1, 1, 1, 9)
+      .setBackground("#1e40af")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold");
+    sheet.autoResizeColumns(1, 9);
+  }
+  return sheet;
+}
+
+/**
+ * Submit Penilaian Inspeksi Mutu / Sidak Kebersihan (Quality Assurance)
+ */
+function submitQualityAudit(token, auditData) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+    if (session.role !== 'SUPERVISOR' && session.role !== 'ADMIN') {
+      return { success: false, message: "Hanya Supervisor / Kasubbag Umum / PPK / Admin yang berwenang mengisi inspeksi mutu." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
+
+    let sheet = findSheet(ss, "Quality_Audits");
+    if (!sheet) {
+      sheet = setupQualityAuditsSheet(ss);
+    }
+
+    const now = new Date();
+    const nowTimestamp = Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+    const dateStr = auditData.tanggal || Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd");
+    const auditId = "AUD-" + Utilities.formatDate(now, "Asia/Jakarta", "yyyyMMdd") + "-" + Math.floor(1000 + Math.random() * 9000);
+
+    const skor = Number(auditData.skorBintang) || 5;
+    const auditor = auditData.auditor || session.namaPegawai;
+    const roleAuditor = session.role || 'SUPERVISOR';
+    const area = cleanStr(auditData.areaRuangan || auditData.ruangan || 'Lobby Utama');
+    const lantai = cleanStr(auditData.lantai || getLantaiFromRuangan(area));
+    const catatan = cleanStr(auditData.catatan || auditData.catatanEvaluasi || '-');
+    const fotoUrl = cleanStr(auditData.fotoTemuanUrl || auditData.fotoUrl || '');
+
+    sheet.appendRow([
+      auditId,
+      dateStr,
+      auditor,
+      roleAuditor,
+      area,
+      lantai,
+      skor,
+      catatan,
+      fotoUrl,
+      nowTimestamp
+    ]);
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      message: "Inspeksi mutu kebersihan pada " + area + " berhasil dicatat ke spreadsheet!",
+      auditId: auditId
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal mencatat inspeksi mutu: " + err.message };
+  }
+}
+
+/**
+ * Mengambil Data Histori & Rata-rata Skor Quality Audits
+ */
+function getQualityAudits(token, bulan, tahun) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi tidak valid. Silakan login kembali." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
+
+    const sheet = findSheet(ss, "Quality_Audits");
+    if (!sheet) {
+      return {
+        success: true,
+        data: {
+          audits: [],
+          recentAudits: [],
+          averageScore: 0,
+          totalAudits: 0,
+          monthTotalAudits: 0,
+          areaScores: {}
+        }
+      };
+    }
+
+    const rawValues = sheet.getDataRange().getValues();
+    if (rawValues.length < 2) {
+      return {
+        success: true,
+        data: {
+          audits: [],
+          recentAudits: [],
+          averageScore: 0,
+          totalAudits: 0,
+          monthTotalAudits: 0,
+          areaScores: {}
+        }
+      };
+    }
+
+    const now = new Date();
+    const selBulan = bulan ? Number(bulan) : (now.getMonth() + 1);
+    const selTahun = tahun ? Number(tahun) : now.getFullYear();
+
+    const audits = [];
+    let totalScore = 0;
+    let monthScore = 0;
+    let monthCount = 0;
+    const areaMap = {};
+
+    let colId = 0, colTgl = 1, colAuditor = 2, colRole = 3, colArea = 4, colLantai = 5, colSkor = 6, colCatatan = 7, colFoto = 8, colTime = 9;
+    const headerRow = rawValues[0];
+    for (let c = 0; c < headerRow.length; c++) {
+      const h = cleanStr(headerRow[c]).toLowerCase();
+      if (h.includes('id')) colId = c;
+      else if (h.includes('tanggal') || h === 'tgl') colTgl = c;
+      else if (h.includes('auditor') && !h.includes('role')) colAuditor = c;
+      else if (h.includes('role')) colRole = c;
+      else if (h.includes('area') || h.includes('ruangan')) colArea = c;
+      else if (h.includes('lantai')) colLantai = c;
+      else if (h.includes('skor') || h.includes('bintang') || h.includes('rating')) colSkor = c;
+      else if (h.includes('catatan') || h.includes('evaluasi')) colCatatan = c;
+      else if (h.includes('foto')) colFoto = c;
+      else if (h.includes('time') || h.includes('timestamp')) colTime = c;
+    }
+
+    for (let r = 1; r < rawValues.length; r++) {
+      const row = rawValues[r];
+      if (!row || !row[colId]) continue;
+
+      const tglRaw = row[colTgl];
+      let rowDate = null;
+      if (tglRaw instanceof Date) {
+        rowDate = tglRaw;
+      } else if (typeof tglRaw === 'string' && tglRaw.trim()) {
+        const parts = tglRaw.split(/[-/]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) rowDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          else rowDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        }
+      }
+
+      const rowMonth = rowDate ? (rowDate.getMonth() + 1) : selBulan;
+      const rowYear = rowDate ? rowDate.getFullYear() : selTahun;
+
+      const skorVal = Number(row[colSkor]) || 5;
+      const areaVal = cleanStr(row[colArea]) || 'Lobby Utama';
+      const formattedDate = rowDate ? Utilities.formatDate(rowDate, "Asia/Jakarta", "dd MMM yyyy") : String(tglRaw);
+
+      const auditItem = {
+        auditId: cleanStr(row[colId]),
+        tanggal: formattedDate,
+        rawDate: rowDate ? rowDate.toISOString() : '',
+        auditor: cleanStr(row[colAuditor]),
+        roleAuditor: cleanStr(row[colRole]),
+        areaRuangan: areaVal,
+        lantai: cleanStr(row[colLantai]) || getLantaiFromRuangan(areaVal),
+        skorBintang: skorVal,
+        catatanEvaluasi: cleanStr(row[colCatatan]),
+        fotoTemuanUrl: cleanStr(row[colFoto]),
+        timestamp: cleanStr(row[colTime])
+      };
+
+      audits.push(auditItem);
+      totalScore += skorVal;
+
+      if (rowMonth === selBulan && rowYear === selTahun) {
+        monthScore += skorVal;
+        monthCount++;
+        if (!areaMap[areaVal]) {
+          areaMap[areaVal] = { total: 0, count: 0 };
+        }
+        areaMap[areaVal].total += skorVal;
+        areaMap[areaVal].count += 1;
+      }
+    }
+
+    audits.sort((a, b) => (b.auditId > a.auditId ? 1 : -1));
+
+    const finalAvg = monthCount > 0 ? (monthScore / monthCount) : (audits.length > 0 ? (totalScore / audits.length) : 0);
+
+    const areaScores = {};
+    Object.keys(areaMap).forEach(areaKey => {
+      areaScores[areaKey] = Math.round((areaMap[areaKey].total / areaMap[areaKey].count) * 10) / 10;
+    });
+
+    return {
+      success: true,
+      data: {
+        audits: audits,
+        recentAudits: audits.slice(0, 15),
+        averageScore: Math.round(finalAvg * 10) / 10,
+        totalAudits: audits.length,
+        monthTotalAudits: monthCount,
+        areaScores: areaScores
+      }
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal memuat audit mutu: " + err.message };
+  }
+}
+
+/**
+ * Approval & Verifikasi Laporan Bulanan Oleh Kasubbag Umum / PPK
+ */
+function approveMonthlyReport(token, approvalData) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+    if (session.role !== 'SUPERVISOR' && session.role !== 'ADMIN') {
+      return { success: false, message: "Hanya Kasubbag Umum / PPK / Supervisor yang berwenang memberikan approval laporan bulanan." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
+
+    let sheet = findSheet(ss, "Monthly_Approvals");
+    if (!sheet) {
+      sheet = setupMonthlyApprovalsSheet(ss);
+    }
+
+    const now = new Date();
+    const nowTimestamp = Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+    const dateStr = Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd");
+
+    const bulan = Number(approvalData.bulan) || (now.getMonth() + 1);
+    const tahun = Number(approvalData.tahun) || now.getFullYear();
+    const unitKerja = cleanStr(approvalData.unitKerja || 'ALL').toUpperCase();
+    const status = cleanStr(approvalData.status || 'DISETUJUI').toUpperCase();
+    const verifikator = cleanStr(approvalData.verifikator || session.namaPegawai);
+    const catatan = cleanStr(approvalData.catatan || approvalData.catatanApproval || 'Laporan bulanan telah diverifikasi dan disetujui.');
+    const approvalId = "APP-" + tahun + String(bulan).padStart(2, '0') + "-" + unitKerja;
+
+    const rawValues = sheet.getDataRange().getValues();
+    let existingRowIdx = -1;
+
+    for (let r = 1; r < rawValues.length; r++) {
+      const rowBulan = Number(rawValues[r][1]);
+      const rowTahun = Number(rawValues[r][2]);
+      const rowUnit = cleanStr(rawValues[r][3]).toUpperCase();
+
+      if (rowBulan === bulan && rowTahun === tahun && (rowUnit === unitKerja || unitKerja === 'ALL')) {
+        existingRowIdx = r + 1;
+        break;
+      }
+    }
+
+    if (existingRowIdx !== -1) {
+      sheet.getRange(existingRowIdx, 1, 1, 9).setValues([[
+        approvalId,
+        bulan,
+        tahun,
+        unitKerja,
+        status,
+        verifikator,
+        catatan,
+        dateStr,
+        nowTimestamp
+      ]]);
+    } else {
+      sheet.appendRow([
+        approvalId,
+        bulan,
+        tahun,
+        unitKerja,
+        status,
+        verifikator,
+        catatan,
+        dateStr,
+        nowTimestamp
+      ]);
+    }
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      message: "Laporan bulanan unit " + unitKerja + " berhasil diverifikasi & disetujui secara resmi oleh " + verifikator + "!",
+      approvalId: approvalId
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal melakukan approval: " + err.message };
+  }
+}
+
+/**
+ * Mengambil Data Approval Bulanan untuk Unit Kerja
+ */
+function getMonthlyApprovals(token, bulan, tahun) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi tidak valid." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
+
+    const sheet = findSheet(ss, "Monthly_Approvals");
+    if (!sheet) {
+      return {
+        success: true,
+        data: {
+          CS: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+          PELAYANAN: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+          SECURITY: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+          ALL: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' }
+        }
+      };
+    }
+
+    const rawValues = sheet.getDataRange().getValues();
+    const selBulan = bulan ? Number(bulan) : (new Date().getMonth() + 1);
+    const selTahun = tahun ? Number(tahun) : new Date().getFullYear();
+
+    const approvals = {
+      CS: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+      PELAYANAN: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+      SECURITY: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' },
+      ALL: { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '', approvalId: '' }
+    };
+
+    for (let r = 1; r < rawValues.length; r++) {
+      const row = rawValues[r];
+      if (!row || !row[0]) continue;
+
+      const rowBulan = Number(row[1]);
+      const rowTahun = Number(row[2]);
+      const rowUnit = cleanStr(row[3]).toUpperCase();
+
+      if (rowBulan === selBulan && rowTahun === selTahun) {
+        const item = {
+          approvalId: cleanStr(row[0]),
+          status: cleanStr(row[4]) || 'DISETUJUI',
+          verifikator: cleanStr(row[5]),
+          catatan: cleanStr(row[6]),
+          tanggal: cleanStr(row[7])
+        };
+
+        if (rowUnit === 'CS' || rowUnit === 'KEBERSIHAN') approvals.CS = item;
+        else if (rowUnit === 'PELAYANAN' || rowUnit === 'PST' || rowUnit === 'RESEPSIONIS') approvals.PELAYANAN = item;
+        else if (rowUnit === 'SECURITY' || rowUnit === 'KEAMANAN' || rowUnit === 'SATPAM') approvals.SECURITY = item;
+        else approvals[rowUnit] = item;
+      }
+    }
+
+    return {
+      success: true,
+      data: approvals
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal memuat status approval: " + err.message };
+  }
+}
+
+/**
+ * FUNGSI SETUP DATABASE USERS DENGAN SKEMA MULTI-ROLE & TABEL MUTU
  */
 function setupAllUsers() {
   const ss = getDb();
@@ -1676,34 +2359,40 @@ function setupAllUsers() {
     userSheet.clear();
   }
 
-  userSheet.getRange(1, 1, 1, 5).setValues([["Username", "Nama Pegawai", "Nama Sheet", "Password", "Terakhir Ganti Kredensial"]]);
-  userSheet.getRange(1, 1, 1, 5)
+  userSheet.getRange(1, 1, 1, 6).setValues([["Username", "Nama Pegawai", "Nama Sheet", "Password", "Role", "Terakhir Ganti Kredensial"]]);
+  userSheet.getRange(1, 1, 1, 6)
     .setBackground("#1e40af")
     .setFontColor("#ffffff")
     .setFontWeight("bold");
 
   const allUsers = [
-    ["dede",           "Nurramadhanial",    "Nurramadhanial",    "dede123",  ""],
-    ["slamet",         "Slamet Riyadi",     "SlametRiyadi",      "slamet123", ""],
-    ["syukri",         "Muhammad Syukri",   "MSyukri",           "syukri123", ""],
-    ["ramadhan",       "Ramadhan",          "Ramadhan",          "rama123",   ""],
-    ["yuni",           "Yuni Juniarti",     "YuniJuniarti",      "yuni123",   ""],
-    ["rania",          "Rania Naila Husna", "RaniaNailaHusna",   "rania123",  ""],
-    ["alfiana",        "Alfiana Ayuni",     "AlfianaAyuni",      "alfiana123",""],
-    ["mawardi",        "Mawardi",           "Mawardi",           "mawardi123",""],
-    ["eddy",           "Eddy Suryadi",      "EddySuryadi",       "eddy123",   ""],
-    ["reza",           "Syarif Reza Nopriadrian Al Kadri", "SyReza", "reza123", ""],
-    ["feri",           "Feri Yustami",      "FeriYustami",       "feri123",   ""],
-    ["eko",            "Eko Prasetyo",      "EkoPrasetyo",       "eko123",   ""],
-    ["agus",           "Agus Tetriansyah",  "AgusTetriansyah",   "agus123",   ""],
-    ["rizki",          "Rizki Fadil",       "RizkiFadil",        "rizki123",  ""]
+    ["supervisor",     "Kasubbag Umum / PPK",             "Supervisor",        "super123",  "SUPERVISOR", ""],
+    ["admin",          "Admin TI",                        "Admin",             "admin123",  "ADMIN",      ""],
+    ["dede",           "Nurramadhanial",                  "Nurramadhanial",    "dede123",   "CS",         ""],
+    ["slamet",         "Slamet Riyadi",                   "SlametRiyadi",      "slamet123", "CS",         ""],
+    ["syukri",         "Muhammad Syukri",                 "MSyukri",           "syukri123", "CS",         ""],
+    ["ramadhan",       "Ramadhan",                        "Ramadhan",          "rama123",   "CS",         ""],
+    ["mawardi",        "Mawardi",                         "Mawardi",           "mawardi123","CS",         ""],
+    ["yuni",           "Yuni Juniarti",                   "YuniJuniarti",      "yuni123",   "PELAYANAN",  ""],
+    ["rania",          "Rania Naila Husna",               "RaniaNailaHusna",   "rania123",  "PELAYANAN",  ""],
+    ["alfiana",        "Alfiana Ayuni",                   "AlfianaAyuni",      "alfiana123","PELAYANAN",  ""],
+    ["eddy",           "Eddy Suryadi",                    "EddySuryadi",       "eddy123",   "SECURITY",   ""],
+    ["reza",           "Syarif Reza Nopriadrian Al Kadri","SyReza",            "reza123",   "SECURITY",   ""],
+    ["feri",           "Feri Yustami",                    "FeriYustami",       "feri123",   "SECURITY",   ""],
+    ["eko",            "Eko Prasetyo",                    "EkoPrasetyo",       "eko123",   "SECURITY",   ""],
+    ["agus",           "Agus Tetriansyah",                "AgusTetriansyah",   "agus123",   "SECURITY",   ""],
+    ["rizki",          "Rizki Fadil",                     "RizkiFadil",        "rizki123",  "SECURITY",   ""]
   ];
 
-  userSheet.getRange(2, 1, allUsers.length, 5).setValues(allUsers);
-  userSheet.autoResizeColumns(1, 5);
+  userSheet.getRange(2, 1, allUsers.length, 6).setValues(allUsers);
+  userSheet.autoResizeColumns(1, 6);
+
+  setupQualityAuditsSheet(ss);
+  setupMonthlyApprovalsSheet(ss);
+
   SpreadsheetApp.flush();
 
-  return "Setup Users Berhasil! " + allUsers.length + " pengguna telah ditambahkan.";
+  return "Setup Database Tahap 3 Berhasil! " + allUsers.length + " pengguna, tabel Quality_Audits, dan Monthly_Approvals telah siap.";
 }
 
 function setupSampleDatabase() {

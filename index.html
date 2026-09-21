@@ -262,9 +262,17 @@
 
         <!-- Menu Navigasi -->
         <nav class="px-2 space-y-1" id="sidebarNav">
+          <button onclick="navigateTo('supervisor')" id="nav-supervisor" title="Dashboard Supervisor" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-gauge-high w-5 text-center text-amber-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard Supervisor</span>
+          </button>
+          <button onclick="navigateTo('qa')" id="nav-qa" title="Inspeksi Mutu (QA)" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-clipboard-check w-5 text-center text-emerald-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Inspeksi Mutu (QA)</span>
+          </button>
           <button onclick="navigateTo('dashboard')" id="nav-dashboard" title="Dashboard" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold active overflow-hidden">
             <i class="fa-solid fa-chart-pie w-5 text-center flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard</span>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard Personal</span>
           </button>
           <button onclick="navigateTo('kebersihan')" id="nav-kebersihan" title="Monitoring Kebersihan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
             <i class="fa-solid fa-sparkles w-5 text-center text-accent-500 flex-shrink-0"></i>
@@ -343,6 +351,434 @@
 
       <!-- Main Container (Full Screen Layout 100%) -->
       <main class="flex-1 p-3 sm:p-6 lg:p-8 max-w-full w-full mx-auto overflow-hidden">
+
+        <!-- ================= VIEW 0: DASHBOARD SUPERVISOR / KASUBBAG UMUM ================= -->
+        <section id="view-supervisor" class="hidden space-y-6">
+          <!-- Banner Eksekutif Supervisor -->
+          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white p-6 sm:p-8 shadow-xl shadow-indigo-950/20">
+            <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8">
+              <i class="fa-solid fa-gauge-high text-9xl"></i>
+            </div>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div class="max-w-2xl">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 border border-amber-400/30 text-amber-300 backdrop-blur-md rounded-full text-[11px] font-bold tracking-wider uppercase mb-2">
+                  <i class="fa-solid fa-shield-halved text-xs"></i>
+                  <span>Portal Pengawasan Manajerial & Approval</span>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-black text-white" id="supWelcomeName">Dashboard Pengawasan Kasubbag Umum / PPK</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+                  Monitoring kepatuhan makro tenaga alih daya (Kebersihan, Pelayanan PST, & Keamanan) dan verifikasi persetujuan laporan bulanan BPS Provinsi Kalimantan Barat.
+                </p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+                <button onclick="navigateTo('qa')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-2 active:scale-95">
+                  <i class="fa-solid fa-clipboard-check"></i>
+                  <span>Sidak Mutu (QA)</span>
+                </button>
+                <button onclick="openApprovalModal('ALL')" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-500/30 transition-all flex items-center gap-2 active:scale-95">
+                  <i class="fa-solid fa-stamp"></i>
+                  <span>Approval Bulanan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kartu Statistik Makro 5 Unit -->
+          <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- 1. Total Kepatuhan Makro -->
+            <div class="col-span-2 sm:col-span-1 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kepatuhan Total</span>
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-chart-pie"></i>
+                </div>
+              </div>
+              <p class="text-2xl sm:text-3xl font-black text-slate-900 mt-3" id="supMacroTotalPersen">0%</p>
+              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="supMacroTotalBar" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1.5" id="supMacroTotalSubtitle">Seluruh Unit Alih Daya</p>
+            </div>
+
+            <!-- 2. Kepatuhan Kebersihan (CS) -->
+            <div class="bg-white p-5 rounded-2xl border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Kebersihan (CS)</span>
+                <div class="w-8 h-8 rounded-xl bg-orange-50 text-accent-600 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-sparkles"></i>
+                </div>
+              </div>
+              <p class="text-2xl sm:text-3xl font-black text-orange-600 mt-3" id="supMacroCsPersen">0%</p>
+              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="supMacroCsBar" class="bg-accent-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p class="text-[10px] text-orange-600/70 mt-1.5 font-medium">Kepatuhan Checklist CS</p>
+            </div>
+
+            <!-- 3. Kepatuhan Pelayanan (PST) -->
+            <div class="bg-white p-5 rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Pelayanan (PST)</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-hand-holding-heart"></i>
+                </div>
+              </div>
+              <p class="text-2xl sm:text-3xl font-black text-blue-600 mt-3" id="supMacroPstPersen">0%</p>
+              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="supMacroPstBar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p class="text-[10px] text-blue-600/70 mt-1.5 font-medium">Standar Layanan PST</p>
+            </div>
+
+            <!-- 4. Kepatuhan Keamanan (Satpam) -->
+            <div class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Satpam (Security)</span>
+                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+              </div>
+              <p class="text-2xl sm:text-3xl font-black text-indigo-600 mt-3" id="supMacroSecPersen">0%</p>
+              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div id="supMacroSecBar" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+              <p class="text-[10px] text-indigo-600/70 mt-1.5 font-medium">Shift & Patroli Satpam</p>
+            </div>
+
+            <!-- 5. Indeks Mutu Kebersihan (QA) -->
+            <div class="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider">Mutu Sidak (QA)</span>
+                <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
+                  <i class="fa-solid fa-star"></i>
+                </div>
+              </div>
+              <div class="flex items-baseline gap-1 mt-3">
+                <p class="text-2xl sm:text-3xl font-black text-amber-600" id="supMacroQAScore">0.0</p>
+                <span class="text-xs font-bold text-slate-400">/ 5.0</span>
+              </div>
+              <div class="flex items-center space-x-0.5 mt-1.5 text-amber-400 text-xs" id="supMacroQAStars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1" id="supMacroQACount">0 Sesi Inspeksi Mutu</p>
+            </div>
+          </div>
+
+          <!-- Section: Status Verifikasi & Approval Bulanan Laporan Tenaga Alih Daya -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-file-circle-check text-indigo-600"></i>
+                  <span>Status Verifikasi & Persetujuan Laporan Bulanan (Kasubbag Umum / PPK)</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Approval resmi atas realisasi kinerja tenaga alih daya sebelum proses administrasi & pembayaran bulanan.
+                </p>
+              </div>
+              <button onclick="openApprovalModal('ALL')" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200 transition-all flex items-center gap-1.5 self-start sm:self-auto">
+                <i class="fa-solid fa-pen-nib text-xs"></i>
+                <span>Form Approval Resmi</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="supApprovalCardsContainer">
+              <!-- Diisi via renderSupervisorApprovalCards() -->
+              <div class="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center py-6 text-xs text-slate-400">Memuat status approval...</div>
+            </div>
+          </div>
+
+          <!-- Section: Filter & Tabel Komparasi Kepatuhan Antar-Pegawai (Real-Time) -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-users-viewfinder text-brand-600"></i>
+                  <span>Tabel Komparasi Real-Time Kepatuhan Antar-Pegawai</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Pantau capaian target, penyelesaian tugas, dan status kinerja individual.</p>
+              </div>
+              <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg flex items-center gap-1.5 self-start sm:self-auto">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Sync Spreadsheet</span>
+              </span>
+            </div>
+
+            <!-- Filter Controls: Unit Kerja, Lantai Gedung, Pencarian Pegawai -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Unit Kerja</label>
+                <select id="supFilterUnit" onchange="filterSupervisorEmployees()" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="SEMUA">Semua Unit Kerja (CS, PST, Satpam)</option>
+                  <option value="CS">Kebersihan (Cleaning Service)</option>
+                  <option value="PELAYANAN">Pelayanan (Front Office / PST)</option>
+                  <option value="SECURITY">Keamanan (Satpam / Security)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Lantai Gedung</label>
+                <select id="supFilterLantai" onchange="loadSupervisorData()" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="SEMUA">Semua Lantai & Area</option>
+                  <option value="Lantai 1">Lantai 1</option>
+                  <option value="Lantai 2">Lantai 2</option>
+                  <option value="Lantai 3">Lantai 3</option>
+                  <option value="Luar / Halaman">Luar / Halaman / Pos Satpam</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Pencarian Pegawai</label>
+                <div class="relative">
+                  <input type="text" id="supSearchPegawai" oninput="filterSupervisorEmployees()" placeholder="Cari nama pegawai..." 
+                    class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl pl-8 pr-3 py-2 font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Data Pegawai -->
+            <div class="w-full overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th class="p-3 text-center w-10">No</th>
+                    <th class="p-3">Nama Pegawai</th>
+                    <th class="p-3">Unit / Tugas</th>
+                    <th class="p-3 text-center">Target</th>
+                    <th class="p-3 text-center">Selesai</th>
+                    <th class="p-3 text-center">Belum</th>
+                    <th class="p-3 min-w-[150px]">Kepatuhan (%)</th>
+                    <th class="p-3 text-center">Status Kinerja</th>
+                    <th class="p-3 text-center w-28">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="supEmployeeTableBody" class="divide-y divide-slate-100 text-xs">
+                  <tr>
+                    <td colspan="9" class="p-8 text-center text-slate-400">Memuat data perbandingan pegawai...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= VIEW QA: INSPEKSI MUTU / QUALITY ASSURANCE ================= -->
+        <section id="view-qa" class="hidden space-y-6">
+          <!-- Header Card QA -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
+                <span>Quality Assurance (Inspeksi Mutu & Sidak Kebersihan)</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Evaluasi mutu riil dan audit kebersihan area publik kantor BPS Provinsi Kalimantan Barat.
+              </p>
+            </div>
+            <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200/80 self-start sm:self-auto flex items-center gap-1.5">
+              <i class="fa-solid fa-star text-amber-500"></i>
+              <span>Rating 1 s/d 5 Bintang</span>
+            </span>
+          </div>
+
+          <!-- Form Audit Cepat & Panel Ringkasan Mutu -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Form Input Sidak Mutu (7 Kolom) -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                  <i class="fa-solid fa-pen-to-square text-brand-600"></i>
+                  <span>Formulir Penilaian Sidak Mutu Cepat</span>
+                </h4>
+                <span class="text-[11px] text-slate-400">Pencatatan ke Sheet Quality_Audits</span>
+              </div>
+
+              <form id="formQualityAudit" onsubmit="handleQualityAuditSubmit(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- Tanggal Inspeksi -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Tanggal Sidak <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="date" id="qaTanggal" required 
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  </div>
+
+                  <!-- Auditor -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Nama Auditor / Pengawas
+                    </label>
+                    <input type="text" id="qaAuditor" readonly 
+                      class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-not-allowed">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- Area / Ruangan Publik -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Area / Ruangan Publik <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="qaAreaRuangan" onchange="autoSelectQALantai()" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                      <option value="Lobby Utama">Lobby Utama (Lt 1)</option>
+                      <option value="Pelayanan PST">Pelayanan PST / Front Office (Lt 1)</option>
+                      <option value="Toilet Pria Lantai 1">Toilet Pria Lantai 1</option>
+                      <option value="Toilet Wanita Lantai 1">Toilet Wanita Lantai 1</option>
+                      <option value="Toilet Lantai 2">Toilet Lantai 2</option>
+                      <option value="Toilet Lantai 3">Toilet Lantai 3</option>
+                      <option value="Ruang Rapat Utama (Lt 2)">Ruang Rapat Utama (Lt 2)</option>
+                      <option value="Ruang Rapat Pimpinan (Lt 3)">Ruang Rapat Pimpinan (Lt 3)</option>
+                      <option value="Mushola Kantor">Mushola Kantor</option>
+                      <option value="Ruang Kepala BPS">Ruang Kepala BPS</option>
+                      <option value="Halaman & Parkiran Kantor">Halaman & Parkiran Kantor</option>
+                      <option value="Pos Keamanan Satpam">Pos Keamanan Satpam</option>
+                      <option value="Koridor & Tangga">Koridor & Tangga Gedung</option>
+                    </select>
+                  </div>
+
+                  <!-- Lantai Gedung -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Lantai Gedung <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="qaLantai" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                      <option value="Lantai 1">Lantai 1</option>
+                      <option value="Lantai 2">Lantai 2</option>
+                      <option value="Lantai 3">Lantai 3</option>
+                      <option value="Luar / Halaman">Luar / Halaman</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Rating Bintang Interaktif (1 - 5) -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Penilaian Skor Bintang Mutu <span class="text-rose-500">*</span>
+                  </label>
+                  <div class="bg-amber-50/60 border border-amber-200/80 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2" id="qaStarPicker">
+                      <button type="button" onclick="setQARating(1)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
+                      <button type="button" onclick="setQARating(2)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
+                      <button type="button" onclick="setQARating(3)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
+                      <button type="button" onclick="setQARating(4)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
+                      <button type="button" onclick="setQARating(5)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
+                    </div>
+                    <div class="text-left sm:text-right">
+                      <span class="text-sm font-black text-amber-700" id="qaRatingLabel">5 / 5 ⭐ (Sangat Bersih & Prima)</span>
+                      <p class="text-[10px] text-amber-600/80">Klik bintang untuk memilih skor mutu</p>
+                    </div>
+                  </div>
+                  <input type="hidden" id="qaRatingValue" value="5">
+                </div>
+
+                <!-- Catatan Evaluasi / Temuan Lapangan -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Catatan Evaluasi / Temuan Sidak <span class="text-rose-500">*</span>
+                  </label>
+                  <textarea id="qaCatatan" rows="2.5" required placeholder="Contoh: Area sangat bersih dan wangi, tempat sampah kosong, kaca bersih mengkilap..."
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800"></textarea>
+                </div>
+
+                <!-- Link URL Foto Temuan -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Link / URL Foto Dokumentasi Sidak (Opsional)
+                  </label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-camera text-xs"></i>
+                    </span>
+                    <input type="url" id="qaFotoUrl" placeholder="https://drive.google.com/... atau link foto temuan"
+                      class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800">
+                  </div>
+                </div>
+
+                <div class="pt-2 flex justify-end">
+                  <button type="submit" id="btnSubmitQA"
+                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 active:scale-98">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                    <span>Kirim & Simpan Hasil Inspeksi Mutu</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Panel Ringkasan Skor Mutu & Standar Area (5 Kolom) -->
+            <div class="lg:col-span-5 space-y-4">
+              <!-- Widget Skor Rata-Rata Mutu -->
+              <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-6 text-center space-y-3">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm">
+                  <i class="fa-solid fa-award"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-amber-800 uppercase tracking-wider">Indeks Rata-Rata Mutu Kebersihan</p>
+                  <div class="flex items-baseline justify-center gap-1.5 mt-2">
+                    <span class="text-4xl font-black text-amber-700" id="qaSummaryBigScore">0.0</span>
+                    <span class="text-sm font-bold text-amber-600/70">/ 5.0</span>
+                  </div>
+                  <div class="flex justify-center space-x-1 mt-2 text-amber-500 text-base" id="qaSummaryStars">
+                    <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                  </div>
+                  <p class="text-xs text-amber-700 font-medium mt-1" id="qaSummaryTotalText">Berdasarkan 0 sesi sidak mutu</p>
+                </div>
+              </div>
+
+              <!-- Skor Rata-rata per Ruangan -->
+              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Skor Mutu per Area Publik</span>
+                  <i class="fa-solid fa-chart-column text-amber-500"></i>
+                </h4>
+                <div class="space-y-2 max-h-60 overflow-y-auto pr-1" id="qaAreaScoresList">
+                  <div class="text-center py-6 text-xs text-slate-400">Memuat skor per area...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Riwayat Log Sidak Mutu Terkini -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-5 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-clock-rotate-left text-brand-600"></i>
+                  <span>Riwayat & Feed Log Inspeksi Mutu Terkini</span>
+                </h4>
+                <p class="text-xs text-slate-500 mt-0.5">Daftar rekaman sidak mutu kebersihan yang tersimpan pada sheet Quality_Audits.</p>
+              </div>
+              <button onclick="loadQAData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 self-start sm:self-auto">
+                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                <span>Segarkan Data</span>
+              </button>
+            </div>
+
+            <div class="w-full overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th class="p-3">ID Audit</th>
+                    <th class="p-3">Tanggal</th>
+                    <th class="p-3">Auditor</th>
+                    <th class="p-3">Area / Ruangan</th>
+                    <th class="p-3">Lantai</th>
+                    <th class="p-3 text-center">Skor</th>
+                    <th class="p-3">Catatan Evaluasi</th>
+                    <th class="p-3 text-center">Foto</th>
+                  </tr>
+                </thead>
+                <tbody id="qaHistoryTableBody" class="divide-y divide-slate-100 text-xs">
+                  <tr>
+                    <td colspan="8" class="p-8 text-center text-slate-400">Memuat riwayat sidak mutu...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
 
         <!-- ================= VIEW 1: DASHBOARD ================= -->
         <section id="view-dashboard" class="space-y-6">
@@ -818,6 +1254,85 @@
     </div>
   </div>
 
+  <!-- ================= MODAL VERIFIKASI & APPROVAL BULANAN ================= -->
+  <div id="modalMonthlyApproval" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden transform transition-all">
+      <div class="p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 flex items-center justify-center text-lg shadow-inner">
+            <i class="fa-solid fa-stamp"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black">Verifikasi & Approval Laporan</h3>
+            <p class="text-[11px] text-slate-300">Persetujuan Resmi Kasubbag Umum / PPK</p>
+          </div>
+        </div>
+        <button onclick="closeApprovalModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="formApprovalModal" onsubmit="handleApprovalSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Unit Tenaga Alih Daya <span class="text-rose-500">*</span>
+          </label>
+          <select id="appModalUnit" required class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+            <option value="ALL">Semua Unit Kerja (Kebersihan, Pelayanan, & Keamanan)</option>
+            <option value="CS">Kebersihan (Cleaning Service)</option>
+            <option value="PELAYANAN">Pelayanan (Front Office PST)</option>
+            <option value="SECURITY">Keamanan (Satpam / Security)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Bulan & Tahun</label>
+            <input type="text" id="appModalPeriode" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-not-allowed">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Status Persetujuan</label>
+            <span class="inline-flex items-center w-full px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-black text-emerald-800">
+              <i class="fa-solid fa-circle-check text-emerald-600 mr-1.5 text-xs"></i>
+              DISETUJUI
+            </span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Nama Pejabat Verifikator (Kasubbag Umum / PPK) <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" id="appModalVerifikator" required placeholder="Contoh: Kasubbag Umum BPS Prov. Kalbar"
+            class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            Catatan Evaluasi / Rekomendasi Manajerial <span class="text-rose-500">*</span>
+          </label>
+          <textarea id="appModalCatatan" rows="3" required placeholder="Contoh: Realisasi kinerja bulan ini telah memenuhi target SOP kebersihan & keamanan. Laporan disetujui untuk diproses lebih lanjut."
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800"></textarea>
+        </div>
+
+        <div class="bg-blue-50/70 border border-blue-200 p-3 rounded-xl text-[11px] text-blue-800 leading-relaxed flex items-start space-x-2">
+          <i class="fa-solid fa-circle-info text-brand-600 mt-0.5 flex-shrink-0"></i>
+          <span>Approval ini akan dicatat ke spreadsheet database pada sheet <strong>Monthly_Approvals</strong> lengkap dengan stempel digital dan waktu approval.</span>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end space-x-3 border-t border-slate-100">
+          <button type="button" onclick="closeApprovalModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors">
+            Batal
+          </button>
+          <button type="submit" id="btnSubmitApproval" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 active:scale-98">
+            <i class="fa-solid fa-stamp text-xs"></i>
+            <span>Tanda Tangan & Setujui Laporan</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
     /**
@@ -825,6 +1340,7 @@
      */
     let currentUser              = null;
     let sessionToken             = null;
+    let userRole                 = 'CS';                      // 'SUPERVISOR' | 'ADMIN' | 'CS' | 'PELAYANAN' | 'SECURITY'
     let activeView               = 'dashboard';
     let employeeJenis            = 'PIKET KEBERSIHAN KANTOR'; // jenis tugas pegawai
     let currentMonitoringJenis   = 'Kebersihan';              // 'Kebersihan' | 'Pelayanan'
@@ -837,6 +1353,9 @@
     let isSidebarCollapsed       = false;                     // Collapse desktop sidebar
     let cachedMonitoringData     = null;
     let cachedKeamananData       = null;
+    let cachedSupervisorData     = null;
+    let cachedQAData             = null;
+    let currentQARating          = 5;
     let selectedKeamananDay      = 1;
     let chartTrenInstance        = null;
     let chartRuanganInstance     = null;
@@ -876,6 +1395,16 @@
             runner.getJadwalKeamanan(params.token, params.bulan, params.tahun);
           } else if (action === 'changeCredentials') {
             runner.changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
+          } else if (action === 'getSupervisorDashboardData') {
+            runner.getSupervisorDashboardData(params.token, params.bulan, params.tahun, params.filterUnit, params.filterLantai);
+          } else if (action === 'getQualityAudits') {
+            runner.getQualityAudits(params.token, params.bulan, params.tahun);
+          } else if (action === 'submitQualityAudit') {
+            runner.submitQualityAudit(params.token, params);
+          } else if (action === 'approveMonthlyReport') {
+            runner.approveMonthlyReport(params.token, params);
+          } else if (action === 'getMonthlyApprovals') {
+            runner.getMonthlyApprovals(params.token, params.bulan, params.tahun);
           } else {
             reject(new Error('Aksi tidak dikenali: ' + action));
           }
@@ -951,13 +1480,22 @@
       document.getElementById('infoNamaLengkap').innerText = currentUser.namaPegawai;
       document.getElementById('infoUsername').innerText = currentUser.username;
       document.getElementById('dashWelcomeName').innerText = 'Halo, ' + currentUser.namaPegawai + '!';
+      if (document.getElementById('supWelcomeName')) {
+        document.getElementById('supWelcomeName').innerText = 'Dashboard Pengawasan ' + currentUser.namaPegawai;
+      }
 
+      userRole = (currentUser.role || 'CS').toUpperCase();
       employeeJenis = currentUser.jenis || 'PIKET KEBERSIHAN KANTOR';
-      renderDynamicMenu(employeeJenis);
+
+      renderDynamicMenu(userRole, employeeJenis);
       renderQuickActions();
 
-      if (employeeJenis === 'KEAMANAN KANTOR') {
+      if (userRole === 'SUPERVISOR' || userRole === 'ADMIN') {
+        activeView = 'supervisor';
+      } else if (employeeJenis === 'KEAMANAN KANTOR' || userRole === 'SECURITY') {
         activeView = 'keamanan';
+      } else if (employeeJenis === 'RESEPSIONIS' || userRole === 'PELAYANAN') {
+        activeView = 'pelayanan';
       } else {
         activeView = 'dashboard';
       }
@@ -1118,7 +1656,34 @@
       const j = (employeeJenis || '').toUpperCase();
       let html = '';
 
-      if (j.includes('KEBERSIHAN')) {
+      if (userRole === 'SUPERVISOR' || userRole === 'ADMIN') {
+        html += `
+          <button onclick="navigateTo('supervisor')" class="w-full p-3.5 rounded-xl border border-slate-200 hover:border-amber-500/50 hover:bg-amber-50/30 transition-all flex items-center justify-between text-left group">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-gauge-high"></i>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-800">Dashboard Supervisor</p>
+                <p class="text-[10px] text-slate-400">Monitoring makro & approval</p>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-amber-600"></i>
+          </button>
+          <button onclick="navigateTo('qa')" class="w-full p-3.5 rounded-xl border border-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/30 transition-all flex items-center justify-between text-left group">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+                <i class="fa-solid fa-clipboard-check"></i>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-slate-800">Inspeksi Mutu (QA)</p>
+                <p class="text-[10px] text-slate-400">Rating bintang & sidak kebersihan</p>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-emerald-600"></i>
+          </button>
+        `;
+      } else if (j.includes('KEBERSIHAN')) {
         html += `
           <button onclick="navigateTo('kebersihan')" class="w-full p-3.5 rounded-xl border border-slate-200 hover:border-accent-500/50 hover:bg-accent-50/30 transition-all flex items-center justify-between text-left group">
             <div class="flex items-center space-x-3">
@@ -1163,21 +1728,6 @@
             <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-indigo-600"></i>
           </button>
         `;
-      } else {
-        html += `
-          <button onclick="navigateTo('kebersihan')" class="w-full p-3.5 rounded-xl border border-slate-200 hover:border-accent-500/50 hover:bg-accent-50/30 transition-all flex items-center justify-between text-left group">
-            <div class="flex items-center space-x-3">
-              <div class="w-9 h-9 rounded-xl bg-orange-100 text-accent-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
-                <i class="fa-solid fa-sparkles"></i>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-slate-800">Checklist Kebersihan</p>
-                <p class="text-[10px] text-slate-400">Ruang kerja, toilet, lobby</p>
-              </div>
-            </div>
-            <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-accent-600"></i>
-          </button>
-        `;
       }
 
       html += `
@@ -1198,20 +1748,36 @@
       container.innerHTML = html;
     }
 
-    function renderDynamicMenu(jenis) {
-      ['nav-kebersihan', 'nav-pelayanan', 'nav-keamanan'].forEach(id => {
+    function renderDynamicMenu(role, jenis) {
+      ['nav-supervisor', 'nav-qa', 'nav-dashboard', 'nav-kebersihan', 'nav-pelayanan', 'nav-keamanan', 'nav-rekap', 'nav-profil'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
 
+      const r = (role || 'CS').toUpperCase();
       const j = (jenis || '').toUpperCase();
-      if (j.includes('KEBERSIHAN')) {
+
+      if (document.getElementById('nav-profil')) document.getElementById('nav-profil').classList.remove('hidden');
+      if (document.getElementById('nav-rekap')) document.getElementById('nav-rekap').classList.remove('hidden');
+
+      if (r === 'SUPERVISOR') {
+        document.getElementById('nav-supervisor').classList.remove('hidden');
+        document.getElementById('nav-qa').classList.remove('hidden');
+      } else if (r === 'ADMIN') {
+        document.getElementById('nav-supervisor').classList.remove('hidden');
+        document.getElementById('nav-qa').classList.remove('hidden');
+        document.getElementById('nav-dashboard').classList.remove('hidden');
         document.getElementById('nav-kebersihan').classList.remove('hidden');
-      } else if (j.includes('RESEPSIONIS') || j.includes('PELAYANAN')) {
         document.getElementById('nav-pelayanan').classList.remove('hidden');
-      } else if (j.includes('KEAMANAN')) {
+        document.getElementById('nav-keamanan').classList.remove('hidden');
+      } else if (r === 'PELAYANAN' || j.includes('RESEPSIONIS') || j.includes('PELAYANAN')) {
+        document.getElementById('nav-dashboard').classList.remove('hidden');
+        document.getElementById('nav-pelayanan').classList.remove('hidden');
+      } else if (r === 'SECURITY' || j.includes('KEAMANAN')) {
+        document.getElementById('nav-dashboard').classList.remove('hidden');
         document.getElementById('nav-keamanan').classList.remove('hidden');
       } else {
+        document.getElementById('nav-dashboard').classList.remove('hidden');
         document.getElementById('nav-kebersihan').classList.remove('hidden');
       }
     }
@@ -1223,7 +1789,7 @@
       const navBtn = document.getElementById('nav-' + viewName);
       if (navBtn) navBtn.classList.add('active');
 
-      ['view-dashboard','view-monitoring','view-rekap','view-profil','view-keamanan'].forEach(id => {
+      ['view-supervisor','view-qa','view-dashboard','view-monitoring','view-rekap','view-profil','view-keamanan'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
@@ -1234,8 +1800,18 @@
       if (sidebar) sidebar.classList.add('-translate-x-full');
       if (backdrop) backdrop.classList.add('hidden');
 
-      if (viewName === 'dashboard') {
-        document.getElementById('topbarTitle').innerText   = 'Dashboard Ringkasan';
+      if (viewName === 'supervisor') {
+        document.getElementById('topbarTitle').innerText   = 'Dashboard Supervisor & Approval';
+        document.getElementById('topbarSubtitle').innerText = 'Monitoring makro seluruh unit, evaluasi pegawai & approval laporan';
+        document.getElementById('view-supervisor').classList.remove('hidden');
+        loadSupervisorData();
+      } else if (viewName === 'qa') {
+        document.getElementById('topbarTitle').innerText   = 'Quality Assurance (Inspeksi Mutu)';
+        document.getElementById('topbarSubtitle').innerText = 'Formulir sidak mutu & rating kebersihan area publik';
+        document.getElementById('view-qa').classList.remove('hidden');
+        loadQAData();
+      } else if (viewName === 'dashboard') {
+        document.getElementById('topbarTitle').innerText   = 'Dashboard Personal';
         document.getElementById('topbarSubtitle').innerText = 'Ringkasan data checklist aktif';
         document.getElementById('view-dashboard').classList.remove('hidden');
         loadDashboardData();
@@ -1280,11 +1856,535 @@
     }
 
     function refreshCurrentPage() {
-      if      (activeView === 'dashboard') loadDashboardData();
+      if      (activeView === 'supervisor') loadSupervisorData();
+      else if (activeView === 'qa')         loadQAData();
+      else if (activeView === 'dashboard')  loadDashboardData();
       else if (activeView === 'kebersihan') loadMonitoringData('Kebersihan');
       else if (activeView === 'pelayanan')  loadMonitoringData('Pelayanan');
       else if (activeView === 'keamanan')   loadJadwalKeamanan();
       else if (activeView === 'rekap')      loadRekapData();
+    }
+
+    /**
+     * =========================================================================
+     * MODUL DASHBOARD EKSEKUTIF SUPERVISOR / KASUBBAG UMUM / PPK
+     * =========================================================================
+     */
+    async function loadSupervisorData() {
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+      const filterUnit = document.getElementById('supFilterUnit') ? document.getElementById('supFilterUnit').value : 'SEMUA';
+      const filterLantai = document.getElementById('supFilterLantai') ? document.getElementById('supFilterLantai').value : 'SEMUA';
+
+      showLoader(true);
+      try {
+        const res = await callBackend('getSupervisorDashboardData', {
+          token: sessionToken,
+          bulan: bulan,
+          tahun: tahun,
+          filterUnit: filterUnit,
+          filterLantai: filterLantai
+        });
+        showLoader(false);
+        if (res && res.success) {
+          cachedSupervisorData = res.data;
+          renderSupervisorUI(res.data);
+        } else {
+          handleApiError(res);
+        }
+      } catch (err) {
+        showLoader(false);
+        showToast("Gagal memuat data supervisor: " + err.message, "error");
+      }
+    }
+
+    function renderSupervisorUI(d) {
+      if (!d) return;
+
+      // 1. Render Macro Cards
+      const m = d.macro || {};
+      document.getElementById('supMacroTotalPersen').innerText = (m.kepatuhanTotal || 0) + '%';
+      document.getElementById('supMacroTotalBar').style.width = (m.kepatuhanTotal || 0) + '%';
+      document.getElementById('supMacroTotalSubtitle').innerText = (m.totalSelesai || 0) + ' Selesai / ' + (m.totalTarget || 0) + ' Total Target';
+
+      document.getElementById('supMacroCsPersen').innerText = (m.kepatuhanCs || 0) + '%';
+      document.getElementById('supMacroCsBar').style.width = (m.kepatuhanCs || 0) + '%';
+
+      document.getElementById('supMacroPstPersen').innerText = (m.kepatuhanPst || 0) + '%';
+      document.getElementById('supMacroPstBar').style.width = (m.kepatuhanPst || 0) + '%';
+
+      document.getElementById('supMacroSecPersen').innerText = (m.kepatuhanSecurity || 0) + '%';
+      document.getElementById('supMacroSecBar').style.width = (m.kepatuhanSecurity || 0) + '%';
+
+      const qaScore = m.qaAverageScore || 0;
+      document.getElementById('supMacroQAScore').innerText = qaScore > 0 ? qaScore.toFixed(1) : '0.0';
+      document.getElementById('supMacroQACount').innerText = (m.qaTotalAudits || 0) + ' Sesi Inspeksi Mutu';
+
+      renderStarIcons('supMacroQAStars', qaScore);
+
+      // 2. Render Approval Cards
+      renderSupervisorApprovalCards(d.approvals);
+
+      // 3. Render Employee Table
+      renderSupervisorEmployeeTable(d.employees);
+    }
+
+    function renderStarIcons(containerId, score) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      let html = '';
+      const rounded = Math.round(score);
+      for (let i = 1; i <= 5; i++) {
+        if (i <= rounded) {
+          html += '<i class="fa-solid fa-star text-amber-400"></i>';
+        } else {
+          html += '<i class="fa-regular fa-star text-slate-300"></i>';
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderSupervisorApprovalCards(approvals) {
+      const container = document.getElementById('supApprovalCardsContainer');
+      if (!container) return;
+
+      const appData = approvals || {};
+      const units = [
+        { key: 'CS', name: 'Unit Kebersihan (CS)', icon: 'fa-sparkles', color: 'orange' },
+        { key: 'PELAYANAN', name: 'Unit Pelayanan (PST)', icon: 'fa-hand-holding-heart', color: 'blue' },
+        { key: 'SECURITY', name: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved', color: 'indigo' }
+      ];
+
+      let html = '';
+      units.forEach(u => {
+        const item = appData[u.key] || { status: 'BELUM_DIVERIFIKASI', verifikator: '', tanggal: '', catatan: '' };
+        const isApproved = (item.status === 'DISETUJUI');
+
+        html += `
+          <div class="p-4 rounded-2xl border ${isApproved ? 'border-emerald-200 bg-emerald-50/40' : 'border-amber-200 bg-amber-50/30'} flex flex-col justify-between space-y-3 transition-all hover:shadow-xs">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl ${isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} flex items-center justify-center text-xs font-bold">
+                  <i class="fa-solid ${u.icon}"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-900">${escapeHtml(u.name)}</h4>
+                  <p class="text-[10px] text-slate-500">Laporan Bulanan Tenaga Alih Daya</p>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${isApproved ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
+                ${isApproved ? '✓ DISETUJUI' : '⏳ MENUNGGU'}
+              </span>
+            </div>
+
+            <div class="text-[11px] space-y-1 text-slate-600 bg-white/70 p-2.5 rounded-xl border border-slate-200/60">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Verifikator:</span>
+                <span class="font-bold text-slate-800">${escapeHtml(item.verifikator || 'Belum diverifikasi')}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Tanggal:</span>
+                <span class="font-medium text-slate-700">${escapeHtml(item.tanggal || '—')}</span>
+              </div>
+              ${item.catatan ? `
+                <div class="pt-1 border-t border-slate-100 text-[10px] text-slate-500 italic line-clamp-2" title="${escapeHtml(item.catatan)}">
+                  "${escapeHtml(item.catatan)}"
+                </div>
+              ` : ''}
+            </div>
+
+            <button onclick="openApprovalModal('${u.key}')" class="w-full py-2 px-3 rounded-xl ${isApproved ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-98">
+              <i class="fa-solid ${isApproved ? 'fa-pen-to-square' : 'fa-stamp'} text-[11px]"></i>
+              <span>${isApproved ? 'Perbarui Approval' : 'Verifikasi & Setujui'}</span>
+            </button>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderSupervisorEmployeeTable(employees) {
+      const tbody = document.getElementById('supEmployeeTableBody');
+      if (!tbody) return;
+
+      if (!employees || employees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 text-xs">Tidak ada data pegawai yang sesuai dengan filter.</td></tr>';
+        return;
+      }
+
+      const searchVal = (document.getElementById('supSearchPegawai') ? document.getElementById('supSearchPegawai').value : '').toLowerCase().trim();
+      const filterUnit = document.getElementById('supFilterUnit') ? document.getElementById('supFilterUnit').value : 'SEMUA';
+
+      const filtered = employees.filter(emp => {
+        if (filterUnit !== 'SEMUA' && emp.role !== filterUnit) return false;
+        if (searchVal && !emp.namaPegawai.toLowerCase().includes(searchVal) && !emp.username.toLowerCase().includes(searchVal)) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 text-xs">Pencarian tidak menemukan nama pegawai yang cocok.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      filtered.forEach((emp, idx) => {
+        const initial = emp.namaPegawai ? emp.namaPegawai.charAt(0).toUpperCase() : 'U';
+        const roleBadgeClass = emp.role === 'CS' ? 'bg-orange-50 text-orange-700 border-orange-200' : (emp.role === 'PELAYANAN' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200');
+
+        html += `
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="p-3 text-center font-bold text-slate-400 text-[11px]">${idx + 1}</td>
+            <td class="p-3">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                  ${initial}
+                </div>
+                <div>
+                  <p class="font-bold text-slate-900 leading-tight">${escapeHtml(emp.namaPegawai)}</p>
+                  <p class="text-[10px] text-slate-400">@${escapeHtml(emp.username)}</p>
+                </div>
+              </div>
+            </td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleBadgeClass}">
+                ${escapeHtml(emp.roleLabel)}
+              </span>
+            </td>
+            <td class="p-3 text-center font-semibold text-slate-700">${emp.totalTarget}</td>
+            <td class="p-3 text-center font-bold text-emerald-600">${emp.totalSelesai}</td>
+            <td class="p-3 text-center font-bold ${emp.totalBelum > 0 ? 'text-rose-600' : 'text-slate-400'}">${emp.totalBelum}</td>
+            <td class="p-3">
+              <div class="space-y-1">
+                <div class="flex justify-between text-[11px] font-bold">
+                  <span class="${emp.persen === 100 ? 'text-emerald-600' : 'text-slate-800'}">${emp.persen}%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full ${emp.persen >= 90 ? 'bg-emerald-500' : (emp.persen >= 75 ? 'bg-blue-500' : (emp.persen >= 60 ? 'bg-amber-500' : 'bg-rose-500'))}" style="width: ${emp.persen}%"></div>
+                </div>
+              </div>
+            </td>
+            <td class="p-3 text-center">
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${emp.statusKinerja.badge}">
+                ${escapeHtml(emp.statusKinerja.label)}
+              </span>
+            </td>
+            <td class="p-3 text-center">
+              <button onclick="quickAuditForRoom('${escapeHtml(emp.roomsSummary && emp.roomsSummary[0] ? emp.roomsSummary[0] : 'Lobby Utama')}')" title="Beri Sidak Mutu Ruangan Pegawai Ini"
+                class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1">
+                <i class="fa-solid fa-star text-[10px] text-amber-500"></i>
+                <span>Sidak QA</span>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+    }
+
+    function filterSupervisorEmployees() {
+      if (cachedSupervisorData && cachedSupervisorData.employees) {
+        renderSupervisorEmployeeTable(cachedSupervisorData.employees);
+      }
+    }
+
+    function openApprovalModal(unitKey = 'ALL') {
+      const modal = document.getElementById('modalMonthlyApproval');
+      if (!modal) return;
+
+      const selUnit = document.getElementById('appModalUnit');
+      if (selUnit) selUnit.value = unitKey || 'ALL';
+
+      const bulanSelect = document.getElementById('globalMonthSelect');
+      const bulanText = bulanSelect.options[bulanSelect.selectedIndex] ? bulanSelect.options[bulanSelect.selectedIndex].text : '';
+      const tahunText = document.getElementById('globalYearSelect').value;
+      document.getElementById('appModalPeriode').value = bulanText + ' ' + tahunText;
+
+      const verifInput = document.getElementById('appModalVerifikator');
+      if (verifInput) {
+        verifInput.value = currentUser ? currentUser.namaPegawai : 'Kasubbag Umum / PPK';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeApprovalModal() {
+      const modal = document.getElementById('modalMonthlyApproval');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function handleApprovalSubmit(event) {
+      event.preventDefault();
+      const unit = document.getElementById('appModalUnit').value;
+      const verifikator = document.getElementById('appModalVerifikator').value.trim();
+      const catatan = document.getElementById('appModalCatatan').value.trim();
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+      const btnSubmit = document.getElementById('btnSubmitApproval');
+
+      if (!verifikator) {
+        showToast("Nama pejabat verifikator wajib diisi.", "error");
+        return;
+      }
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-xs"></i><span>Memproses Approval...</span>';
+
+      try {
+        const res = await callBackend('approveMonthlyReport', {
+          token: sessionToken,
+          unitKerja: unit,
+          verifikator: verifikator,
+          catatan: catatan,
+          bulan: bulan,
+          tahun: tahun
+        });
+
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-stamp text-xs"></i><span>Tanda Tangan & Setujui Laporan</span>';
+
+        if (res && res.success) {
+          showToast(res.message || "Approval laporan berhasil disimpan!", "success");
+          closeApprovalModal();
+          loadSupervisorData();
+        } else {
+          showToast((res && res.message) ? res.message : "Gagal memberikan approval.", "error");
+        }
+      } catch (err) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-stamp text-xs"></i><span>Tanda Tangan & Setujui Laporan</span>';
+        showToast("Kesalahan server: " + err.message, "error");
+      }
+    }
+
+    /**
+     * =========================================================================
+     * MODUL QUALITY ASSURANCE (INSPEKSI MUTU & SIDAK KEBERSIHAN)
+     * =========================================================================
+     */
+    async function loadQAData() {
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+      showLoader(true);
+
+      try {
+        const res = await callBackend('getQualityAudits', {
+          token: sessionToken,
+          bulan: bulan,
+          tahun: tahun
+        });
+        showLoader(false);
+        if (res && res.success) {
+          cachedQAData = res.data;
+          renderQAUI(res.data);
+        } else {
+          handleApiError(res);
+        }
+      } catch (err) {
+        showLoader(false);
+        showToast("Gagal memuat data QA: " + err.message, "error");
+      }
+    }
+
+    function renderQAUI(d) {
+      if (!d) return;
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const tglInput = document.getElementById('qaTanggal');
+      if (tglInput && !tglInput.value) {
+        tglInput.value = todayStr;
+      }
+
+      const auditorInput = document.getElementById('qaAuditor');
+      if (auditorInput) {
+        auditorInput.value = currentUser ? currentUser.namaPegawai : 'Supervisor';
+      }
+
+      const avgScore = d.averageScore || 0;
+      document.getElementById('qaSummaryBigScore').innerText = avgScore > 0 ? avgScore.toFixed(1) : '0.0';
+      document.getElementById('qaSummaryTotalText').innerText = 'Berdasarkan ' + (d.monthTotalAudits || d.totalAudits || 0) + ' sesi sidak mutu';
+      renderStarIcons('qaSummaryStars', avgScore);
+
+      // Render Area Scores List
+      const areaContainer = document.getElementById('qaAreaScoresList');
+      if (areaContainer) {
+        const areaMap = d.areaScores || {};
+        const areaKeys = Object.keys(areaMap);
+
+        if (areaKeys.length === 0) {
+          areaContainer.innerHTML = '<div class="text-center py-6 text-xs text-slate-400">Belum ada skor audit mutu per area.</div>';
+        } else {
+          let html = '';
+          areaKeys.forEach(area => {
+            const sc = areaMap[area] || 0;
+            const pct = Math.min(100, Math.round((sc / 5) * 100));
+            html += `
+              <div class="p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-slate-50/50">
+                <div class="flex items-center justify-between text-xs mb-1">
+                  <span class="font-bold text-slate-800 truncate">${escapeHtml(area)}</span>
+                  <span class="font-bold text-amber-600 flex items-center gap-1">
+                    <span>${sc.toFixed(1)}</span>
+                    <i class="fa-solid fa-star text-[10px] text-amber-400"></i>
+                  </span>
+                </div>
+                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-amber-500 h-full rounded-full" style="width: ${pct}%"></div>
+                </div>
+              </div>
+            `;
+          });
+          areaContainer.innerHTML = html;
+        }
+      }
+
+      // Render History Table
+      const tbody = document.getElementById('qaHistoryTableBody');
+      if (tbody) {
+        const list = d.recentAudits || d.audits || [];
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400 text-xs">Belum ada rekaman sidak mutu kebersihan.</td></tr>';
+        } else {
+          let html = '';
+          list.forEach(item => {
+            html += `
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="p-3 font-mono font-bold text-[11px] text-brand-700">${escapeHtml(item.auditId)}</td>
+                <td class="p-3 text-slate-700 whitespace-nowrap">${escapeHtml(item.tanggal)}</td>
+                <td class="p-3 font-semibold text-slate-900">${escapeHtml(item.auditor)}</td>
+                <td class="p-3 font-bold text-slate-800">${escapeHtml(item.areaRuangan)}</td>
+                <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold">${escapeHtml(item.lantai)}</span></td>
+                <td class="p-3 text-center">
+                  <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-black text-xs inline-flex items-center gap-1">
+                    <span>${item.skorBintang}</span>
+                    <i class="fa-solid fa-star text-[10px] text-amber-500"></i>
+                  </span>
+                </td>
+                <td class="p-3 text-slate-600 max-w-xs truncate" title="${escapeHtml(item.catatanEvaluasi)}">${escapeHtml(item.catatanEvaluasi)}</td>
+                <td class="p-3 text-center">
+                  ${item.fotoTemuanUrl ? `
+                    <a href="${escapeHtml(item.fotoTemuanUrl)}" target="_blank" class="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-[10px] font-bold inline-flex items-center gap-1">
+                      <i class="fa-solid fa-image"></i>
+                      <span>Foto</span>
+                    </a>
+                  ` : '<span class="text-slate-300 text-xs">—</span>'}
+                </td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        }
+      }
+    }
+
+    function setQARating(score) {
+      currentQARating = Number(score) || 5;
+      document.getElementById('qaRatingValue').value = currentQARating;
+
+      const starButtons = document.querySelectorAll('#qaStarPicker .qa-star');
+      starButtons.forEach((btn, idx) => {
+        if (idx < currentQARating) {
+          btn.className = 'qa-star text-2xl text-amber-400 hover:scale-125 transition-transform';
+        } else {
+          btn.className = 'qa-star text-2xl text-slate-300 hover:scale-125 transition-transform';
+        }
+      });
+
+      const labelMap = {
+        1: '1 / 5 ⭐ (Sangat Kotor / Perlu Dibenahi)',
+        2: '2 / 5 ⭐ (Kurang Bersih / Perhatian Khusus)',
+        3: '3 / 5 ⭐ (Cukup Bersih / Standar)',
+        4: '4 / 5 ⭐ (Bersih, Rapi & Tertata)',
+        5: '5 / 5 ⭐ (Sangat Bersih, Harum & Prima)'
+      };
+
+      document.getElementById('qaRatingLabel').innerText = labelMap[currentQARating] || (currentQARating + ' / 5 ⭐');
+    }
+
+    function autoSelectQALantai() {
+      const area = document.getElementById('qaAreaRuangan').value;
+      const lantaiSelect = document.getElementById('qaLantai');
+      if (!area || !lantaiSelect) return;
+
+      const areaLower = area.toLowerCase();
+      if (areaLower.includes('lantai 2') || areaLower.includes('lt 2')) {
+        lantaiSelect.value = 'Lantai 2';
+      } else if (areaLower.includes('lantai 3') || areaLower.includes('lt 3')) {
+        lantaiSelect.value = 'Lantai 3';
+      } else if (areaLower.includes('halaman') || areaLower.includes('parkir') || areaLower.includes('pos')) {
+        lantaiSelect.value = 'Luar / Halaman';
+      } else {
+        lantaiSelect.value = 'Lantai 1';
+      }
+    }
+
+    function quickAuditForRoom(roomName) {
+      navigateTo('qa');
+      const areaSelect = document.getElementById('qaAreaRuangan');
+      if (areaSelect) {
+        let matchedOpt = false;
+        for (let i = 0; i < areaSelect.options.length; i++) {
+          if (areaSelect.options[i].value.toLowerCase().includes(roomName.toLowerCase()) || roomName.toLowerCase().includes(areaSelect.options[i].value.toLowerCase())) {
+            areaSelect.selectedIndex = i;
+            matchedOpt = true;
+            break;
+          }
+        }
+        autoSelectQALantai();
+      }
+      setTimeout(() => {
+        const catInput = document.getElementById('qaCatatan');
+        if (catInput) catInput.focus();
+      }, 300);
+    }
+
+    async function handleQualityAuditSubmit(event) {
+      event.preventDefault();
+      const tanggal = document.getElementById('qaTanggal').value;
+      const areaRuangan = document.getElementById('qaAreaRuangan').value;
+      const lantai = document.getElementById('qaLantai').value;
+      const skorBintang = document.getElementById('qaRatingValue').value;
+      const catatan = document.getElementById('qaCatatan').value.trim();
+      const fotoUrl = document.getElementById('qaFotoUrl').value.trim();
+      const btnSubmit = document.getElementById('btnSubmitQA');
+
+      if (!catatan) {
+        showToast("Catatan evaluasi sidak mutu wajib diisi.", "error");
+        return;
+      }
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-xs"></i><span>Menyimpan Hasil Sidak...</span>';
+
+      try {
+        const res = await callBackend('submitQualityAudit', {
+          token: sessionToken,
+          tanggal: tanggal,
+          areaRuangan: areaRuangan,
+          lantai: lantai,
+          skorBintang: skorBintang,
+          catatanEvaluasi: catatan,
+          fotoTemuanUrl: fotoUrl,
+          auditor: currentUser ? currentUser.namaPegawai : 'Supervisor'
+        });
+
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i><span>Kirim & Simpan Hasil Inspeksi Mutu</span>';
+
+        if (res && res.success) {
+          showToast(res.message || "Inspeksi mutu kebersihan berhasil dicatat ke spreadsheet!", "success");
+          document.getElementById('qaCatatan').value = '';
+          document.getElementById('qaFotoUrl').value = '';
+          setQARating(5);
+          loadQAData();
+        } else {
+          showToast((res && res.message) ? res.message : "Gagal menyimpan inspeksi mutu.", "error");
+        }
+      } catch (err) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i><span>Kirim & Simpan Hasil Inspeksi Mutu</span>';
+        showToast("Kesalahan server: " + err.message, "error");
+      }
     }
 
     /**
