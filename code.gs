@@ -25,30 +25,36 @@ const SKIP_ROW_KEYWORDS = [
 const ALIAS_MAP = {
   'dede': ['nurramadhanial', 'ramadhanial', 'nur ramadhanial', 'dede'],
   'nurramadhanial': ['dede', 'ramadhanial', 'nur ramadhanial'],
-  'eddy': ['edi', 'eddy', 'edi suryadi', 'eddy suryadi'],
-  'eddysuryadi': ['edi', 'eddy', 'edi suryadi', 'eddy suryadi'],
-  'feri': ['ferry', 'fery', 'feri yustami', 'ferry yustami'],
-  'feriyustami': ['ferry', 'fery', 'feri yustami', 'ferry yustami'],
-  'reza': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza'],
-  'syreza': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza'],
-  'syarifrezanopriadrianalkadri': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza'],
-  'syukri': ['m syukri', 'muhammad syukri', 'syukri'],
-  'msyukri': ['m syukri', 'muhammad syukri', 'syukri'],
-  'rizki': ['rizky', 'rizqi', 'rizki fadil', 'rizky fadil'],
-  'rizkifadil': ['rizky', 'rizqi', 'rizki fadil', 'rizky fadil'],
-  'slamet': ['slamet riyadi', 'slamet'],
-  'slametriyadi': ['slamet riyadi', 'slamet'],
-  'eko': ['eko prasetyo', 'eko'],
-  'ekoprasetyo': ['eko prasetyo', 'eko'],
-  'agus': ['agus tetriansyah', 'agus'],
-  'agustetriansyah': ['agus tetriansyah', 'agus'],
-  'yuni': ['yuni juniarti', 'yuni'],
-  'yunijuniarti': ['yuni juniarti', 'yuni'],
-  'rania': ['rania naila husna', 'rania'],
-  'ranianailahusna': ['rania naila husna', 'rania'],
+  'eddy': ['edi', 'eddy', 'edi suryadi', 'eddy suryadi', 'eddysuryadi'],
+  'eddysuryadi': ['edi', 'eddy', 'edi suryadi', 'eddy suryadi', 'eddysuryadi'],
+  'feri': ['ferry', 'fery', 'feri yustami', 'ferry yustami', 'feriyustami'],
+  'feriyustami': ['ferry', 'fery', 'feri yustami', 'ferry yustami', 'feriyustami'],
+  'reza': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza', 'syarifrezanopriadrianalkadri'],
+  'syreza': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza', 'syarifrezanopriadrianalkadri'],
+  'syarifrezanopriadrianalkadri': ['sy reza', 'syreza', 'sy. reza', 'syarif reza', 'reza nopriadrian', 'reza', 'syarifrezanopriadrianalkadri'],
+  'syukri': ['m syukri', 'muhammad syukri', 'syukri', 'msyukri', 'muhammadsyukri'],
+  'msyukri': ['m syukri', 'muhammad syukri', 'syukri', 'msyukri', 'muhammadsyukri'],
+  'muhammadsyukri': ['m syukri', 'muhammad syukri', 'syukri', 'msyukri', 'muhammadsyukri'],
+  'rizki': ['rizky', 'rizqi', 'rizki fadil', 'rizky fadil', 'rizkifadil'],
+  'rizkifadil': ['rizky', 'rizqi', 'rizki fadil', 'rizky fadil', 'rizkifadil'],
+  'slamet': ['slamet riyadi', 'slamet', 'slametriyadi'],
+  'slametriyadi': ['slamet riyadi', 'slamet', 'slametriyadi'],
+  'eko': ['eko prasetyo', 'eko', 'ekoprasetyo'],
+  'ekoprasetyo': ['eko prasetyo', 'eko', 'ekoprasetyo'],
+  'agus': ['agus tetriansyah', 'agus', 'agustetriansyah'],
+  'agustetriansyah': ['agus tetriansyah', 'agus', 'agustetriansyah'],
+  'yuni': ['yuni juniarti', 'yuni', 'yunijuniarti'],
+  'yunijuniarti': ['yuni juniarti', 'yuni', 'yunijuniarti'],
+  'rania': ['rania naila husna', 'rania', 'ranianailahusna'],
+  'ranianailahusna': ['rania naila husna', 'rania', 'ranianailahusna'],
+  'alfiana': ['alfiana ayuni', 'alfiana', 'alfianaayuni'],
+  'alfianaayuni': ['alfiana ayuni', 'alfiana', 'alfianaayuni'],
   'mawardi': ['mawardi', 'ardi'],
+  'ardi': ['mawardi', 'ardi'],
   'ramadhan': ['ramadhan', 'rama'],
-  'admin': ['administrator', 'admin simpelku', 'admin'],
+  'rama': ['ramadhan', 'rama'],
+  'admin': ['administrator', 'admin simpelku', 'admin', 'admin it', 'adminit'],
+  'adminit': ['administrator', 'admin simpelku', 'admin', 'admin it', 'adminit'],
   'supervisor': ['kabag umum', 'kasubbag umum', 'kabag', 'supervisor'],
   'humas': ['tim umum dan humas', 'tim humas', 'humas', 'tim umum'],
   'korlap': ['koordinator lapangan', 'korlap']
@@ -167,8 +173,16 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+var _cachedDb = null;
 function getDb() {
-  if (_cachedDb) return _cachedDb;
+  if (_cachedDb) {
+    try {
+      _cachedDb.getId();
+      return _cachedDb;
+    } catch (e) {
+      _cachedDb = null;
+    }
+  }
   
   // 1. Coba SpreadsheetApp.getActiveSpreadsheet() terlebih dahulu
   try {
@@ -471,14 +485,18 @@ function determineUnit(jenis, role, customUnit) {
     if (cu.includes('keamanan') || cu.includes('security') || cu.includes('satpam')) return 'Keamanan';
     if (cu.includes('manajemen') || cu.includes('pimpinan') || cu.includes('tu') || cu.includes('umum')) return 'Manajemen';
   }
+
+  const rUpper = String(role || '').toUpperCase();
+  if (rUpper.includes('ADMIN') || rUpper.includes('SUPERVISOR') || rUpper.includes('KABAG') || rUpper.includes('MANAJEMEN')) return 'Manajemen';
+  if (rUpper.includes('HUMAS') || rUpper.includes('KORLAP')) return 'Umum';
+  if (rUpper.includes('RESEPSIONIS') || rUpper.includes('PELAYANAN')) return 'Pelayanan';
+  if (rUpper.includes('KEAMANAN') || rUpper.includes('SECURITY') || rUpper.includes('SATPAM')) return 'Keamanan';
+  if (rUpper.includes('KEBERSIHAN')) return 'Kebersihan';
+
   const jUpper = String(jenis || '').toUpperCase();
-  if (jUpper.includes('KEBERSIHAN')) return 'Kebersihan';
   if (jUpper.includes('RESEPSIONIS') || jUpper.includes('PELAYANAN')) return 'Pelayanan';
   if (jUpper.includes('KEAMANAN') || jUpper.includes('SECURITY')) return 'Keamanan';
-  
-  const rUpper = String(role || '').toUpperCase();
-  if (rUpper.includes('ADMIN') || rUpper.includes('SUPERVISOR') || rUpper.includes('KABAG')) return 'Manajemen';
-  if (rUpper.includes('HUMAS') || rUpper.includes('KORLAP')) return 'Umum';
+  if (jUpper.includes('KEBERSIHAN')) return 'Kebersihan';
 
   return 'Kebersihan';
 }
@@ -579,23 +597,22 @@ function login(username, password) {
     let detectedRole = matchedUser.role;
     const uLower = matchedUser.username.toLowerCase();
     const nLower = matchedUser.namaPegawai.toLowerCase();
+    const rLower = (matchedUser.role || '').toLowerCase();
 
-    if (!detectedRole) {
-      if (uLower === 'admin' || uLower.includes('admin') || nLower.includes('admin')) {
-        detectedRole = 'Admin';
-      } else if (uLower === 'supervisor' || uLower.includes('supervisor') || uLower.includes('kabag') || uLower.includes('kasubbag') || nLower.includes('kabag') || nLower.includes('kasubbag')) {
-        detectedRole = 'Supervisor';
-      } else if (uLower.includes('humas') || nLower.includes('humas') || uLower.includes('timumum')) {
-        detectedRole = 'Tim Umum dan Humas';
-      } else if (uLower.includes('korlap') || nLower.includes('korlap') || nLower.includes('koordinator')) {
-        detectedRole = 'Koordinator Lapangan';
-      } else if (jenisSheet === 'KEAMANAN KANTOR') {
-        detectedRole = 'Petugas Keamanan';
-      } else if (jenisSheet === 'RESEPSIONIS') {
-        detectedRole = 'Petugas Pelayanan';
-      } else {
-        detectedRole = 'Petugas Kebersihan';
-      }
+    if (rLower.includes('admin') || uLower === 'admin' || uLower.includes('admin') || nLower.includes('admin')) {
+      detectedRole = 'Admin';
+    } else if (rLower.includes('supervisor') || uLower === 'supervisor' || uLower.includes('supervisor') || uLower.includes('kabag') || uLower.includes('kasubbag') || nLower.includes('kabag') || nLower.includes('kasubbag')) {
+      detectedRole = 'Supervisor';
+    } else if (rLower.includes('humas') || uLower.includes('humas') || nLower.includes('humas') || uLower.includes('timumum')) {
+      detectedRole = 'Tim Umum dan Humas';
+    } else if (rLower.includes('korlap') || uLower.includes('korlap') || nLower.includes('korlap') || nLower.includes('koordinator')) {
+      detectedRole = 'Koordinator Lapangan';
+    } else if (rLower.includes('keamanan') || rLower.includes('satpam') || rLower.includes('security') || jenisSheet === 'KEAMANAN KANTOR') {
+      detectedRole = 'Petugas Keamanan';
+    } else if (rLower.includes('resepsionis') || rLower.includes('pelayanan') || jenisSheet === 'RESEPSIONIS') {
+      detectedRole = 'Petugas Pelayanan';
+    } else {
+      detectedRole = 'Petugas Kebersihan';
     }
 
     const detectedUnit = determineUnit(jenisSheet, detectedRole, matchedUser.unit);
