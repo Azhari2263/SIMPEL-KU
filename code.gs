@@ -998,7 +998,7 @@ function getDashboardData(token, bulan, tahun) {
 }
 
 /**
- * Mengambil Data Matriks Monitoring Lengkap (Mendukung Supervisor/Admin & Staff)
+ * Mengambil Data Matriks Monitoring Lengkap (Mendukung Unit Kebersihan, Pelayanan, dan Keamanan)
  */
 function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStatus, targetUser) {
   try {
@@ -1010,33 +1010,77 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
     const ss = getDb();
     if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
 
+    const isSupervisorOrAdmin = (session.role === 'SUPERVISOR' || session.role === 'ADMIN');
+    const allStaff = getAllStaffList(ss);
+
+    // KASUS KHUSUS: UNIT KEAMANAN (SATPAM)
+    if (jenis === 'Keamanan' || session.role === 'SECURITY' || session.jenis === 'KEAMANAN KANTOR') {
+      const resKeamanan = getJadwalKeamanan(token, bulan, tahun, targetUser);
+      if (resKeamanan && resKeamanan.success) {
+        const kData = resKeamanan.data;
+        const secEmployees = allStaff.filter(s => s.role === 'SECURITY').map(s => ({
+          username: s.username,
+          namaPegawai: s.namaPegawai,
+          namaSheet: s.namaSheet
+        }));
+
+        return {
+          success: true,
+          data: {
+            namaPegawai: kData.namaPegawai,
+            namaSheet: 'JadwalPiketSecurity',
+            jenis: 'Keamanan',
+            isSecurity: true,
+            jadwal: kData.jadwal,
+            summary: kData.summary,
+            totalHariKerja: kData.totalHariKerja,
+            taskItems: kData.taskItems,
+            availableEmployees: secEmployees
+          }
+        };
+      } else {
+        return resKeamanan || { success: false, message: "Gagal memuat jadwal keamanan." };
+      }
+    }
+
+    // KASUS: UNIT KEBERSIHAN (CS) & UNIT PELAYANAN (PST)
     let targetSheetName = session.namaSheet;
     let targetNamaPegawai = session.namaPegawai;
     let targetUsername = session.username;
 
-    const isSupervisorOrAdmin = (session.role === 'SUPERVISOR' || session.role === 'ADMIN');
-
-    // Jika Supervisor atau Admin
     if (isSupervisorOrAdmin) {
       if (targetUser && targetUser !== 'SEMUA' && targetUser !== 'ALL') {
         targetUsername = targetUser;
-        targetNamaPegawai = targetUser;
-        targetSheetName = targetUser;
+        const matched = allStaff.find(s => s.username.toLowerCase() === targetUser.toLowerCase() || s.namaPegawai.toLowerCase() === targetUser.toLowerCase());
+        if (matched) {
+          targetNamaPegawai = matched.namaPegawai;
+          targetSheetName = matched.namaSheet;
+        } else {
+          targetNamaPegawai = targetUser;
+          targetSheetName = targetUser;
+        }
       } else {
-        // Otomatis cari sheet pertama yang sesuai jenis
-        const allSheets = ss.getSheets();
-        for (let i = 0; i < allSheets.length; i++) {
-          const s = allSheets[i];
-          if (isSystemSheet(s.getName())) continue;
-          const j = getSheetJenis(s, null, ss);
-          if (jenis === 'Pelayanan' && j === 'RESEPSIONIS') {
-            targetSheetName = s.getName();
-            targetNamaPegawai = s.getName();
-            break;
-          } else if (jenis === 'Kebersihan' && j === 'PIKET KEBERSIHAN KANTOR') {
-            targetSheetName = s.getName();
-            targetNamaPegawai = s.getName();
-            break;
+        // Otomatis cari sheet pertama yang sesuai jenis unit
+        const matchingStaff = allStaff.filter(s => (jenis === 'Pelayanan' ? s.role === 'PELAYANAN' : s.role === 'CS'));
+        if (matchingStaff.length > 0) {
+          targetSheetName = matchingStaff[0].namaSheet;
+          targetNamaPegawai = matchingStaff[0].namaPegawai;
+          targetUsername = matchingStaff[0].username;
+        } else {
+          const allSheets = ss.getSheets();
+          for (let i = 0; i < allSheets.length; i++) {
+            const s = allSheets[i];
+            if (isSystemSheet(s.getName())) continue;
+            const j = getSheetJenis(s, null, ss);
+            if (jenis === 'Pelayanan' && j === 'RESEPSIONIS') {
+              targetSheetName = s.getName();
+              targetNamaPegawai = s.getName();
+              break;
+            } else if (jenis === 'Kebersihan' && j === 'PIKET KEBERSIHAN KANTOR') {
+              targetSheetName = s.getName();
+              targetNamaPegawai = s.getName();
+              break;
+            }
           }
         }
       }
@@ -1044,7 +1088,6 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
 
     let sheet = findEmployeeSheet(ss, targetSheetName, targetNamaPegawai, targetUsername);
     if (!sheet) {
-      // Fallback: cari sheet pertama yang bukan system sheet
       const allSheets = ss.getSheets();
       for (let i = 0; i < allSheets.length; i++) {
         if (!isSystemSheet(allSheets[i].getName())) {
@@ -1056,7 +1099,7 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
     }
 
     if (!sheet) {
-      return { success: false, message: "Sheet monitoring tidak ditemukan pada spreadsheet." };
+      return { success: false, message: "Sheet monitoring untuk '" + (targetNamaPegawai || targetUsername) + "' tidak ditemukan." };
     }
 
     const parsedData = readSheetMonitoring(sheet, bulan, tahun);
@@ -1075,38 +1118,14 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
       });
     }
 
-    // Ambil daftar pegawai yang tersedia untuk dropdown switcher jika Supervisor/Admin
-    const availableEmployees = [];
-    if (isSupervisorOrAdmin) {
-      const userSheet = findSheet(ss, "Users");
-      if (userSheet) {
-        const uVals = userSheet.getDataRange().getValues();
-        let colU = 0, colN = 1, colS = 2, colR = -1;
-        for (let r = 0; r < Math.min(5, uVals.length); r++) {
-          for (let c = 0; c < uVals[r].length; c++) {
-            const h = cleanStr(uVals[r][c]).toLowerCase();
-            if (h === 'username' || (h.includes('user') && !h.includes('nama') && !h.includes('daftar'))) colU = c;
-            if (h === 'nama pegawai' || h === 'nama lengkap' || (h.includes('nama') && !h.includes('sheet') && !h.includes('user'))) colN = c;
-            if (h === 'nama sheet' || h === 'sheet' || (h.includes('sheet') && !h.includes('pegawai'))) colS = c;
-            if (h === 'role' || h === 'peran' || h === 'jabatan' || (h.includes('role') || h.includes('akses'))) colR = c;
-          }
-        }
-        for (let r = 1; r < uVals.length; r++) {
-          const u = cleanStr(uVals[r][colU]);
-          const n = cleanStr(uVals[r][colN]);
-          const s = cleanStr(uVals[r][colS]);
-          const rol = (colR !== -1 && uVals[r][colR]) ? cleanStr(uVals[r][colR]).toUpperCase() : '';
-          const uAlpha = getAlphaOnly(u) || getAlphaOnly(n);
-          let itemRole = (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha] ? KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role : (rol || (n.toLowerCase().includes('rania') || n.toLowerCase().includes('mawardi') || n.toLowerCase().includes('alfiana') ? 'PELAYANAN' : 'CS')));
-
-          if (jenis === 'Pelayanan' && itemRole === 'PELAYANAN') {
-            availableEmployees.push({ username: u, namaPegawai: n, namaSheet: s });
-          } else if (jenis === 'Kebersihan' && itemRole === 'CS') {
-            availableEmployees.push({ username: u, namaPegawai: n, namaSheet: s });
-          }
-        }
-      }
-    }
+    // Ambil daftar pegawai yang sesuai dengan unit aktif (Kebersihan atau Pelayanan)
+    const availableEmployees = allStaff
+      .filter(s => (jenis === 'Pelayanan' ? s.role === 'PELAYANAN' : s.role === 'CS'))
+      .map(s => ({
+        username: s.username,
+        namaPegawai: s.namaPegawai,
+        namaSheet: s.namaSheet
+      }));
 
     return {
       success: true,
@@ -1114,6 +1133,7 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
         namaPegawai: targetNamaPegawai || sheet.getName(),
         namaSheet: sheet.getName(),
         jenis: parsedData.jenis,
+        isSecurity: false,
         daysInMonth: parsedData.daysInMonth,
         activeDays: parsedData.activeDays,
         headers: parsedData.headers,
