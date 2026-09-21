@@ -1531,13 +1531,13 @@
           } else if (action === 'getDashboardData') {
             runner.getDashboardData(params.token, params.bulan, params.tahun);
           } else if (action === 'getMonitoringData') {
-            runner.getMonitoringData(params.token, params.jenis, params.bulan, params.tahun, params.filterRuangan || 'SEMUA', params.filterStatus || 'SEMUA');
+            runner.getMonitoringData(params.token, params.jenis, params.bulan, params.tahun, params.filterRuangan || 'SEMUA', params.filterStatus || 'SEMUA', params.targetUser || '');
           } else if (action === 'updateMonitoringStatus') {
             runner.updateMonitoringStatus(params.token, params.sheetRowIndex, params.colIndex, params.newStatus, params.dayNum, params.bulan, params.tahun);
           } else if (action === 'getRekapMonitoring') {
-            runner.getRekapMonitoring(params.token, params.bulan, params.tahun);
+            runner.getRekapMonitoring(params.token, params.bulan, params.tahun, params.targetUser || '');
           } else if (action === 'getJadwalKeamanan') {
-            runner.getJadwalKeamanan(params.token, params.bulan, params.tahun);
+            runner.getJadwalKeamanan(params.token, params.bulan, params.tahun, params.targetUser || '');
           } else if (action === 'changeCredentials') {
             runner.changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
           } else if (action === 'getSupervisorDashboardData') {
@@ -1909,10 +1909,7 @@
       if (document.getElementById('nav-profil')) document.getElementById('nav-profil').classList.remove('hidden');
       if (document.getElementById('nav-rekap')) document.getElementById('nav-rekap').classList.remove('hidden');
 
-      if (r === 'SUPERVISOR') {
-        document.getElementById('nav-supervisor').classList.remove('hidden');
-        document.getElementById('nav-qa').classList.remove('hidden');
-      } else if (r === 'ADMIN') {
+      if (r === 'SUPERVISOR' || r === 'ADMIN') {
         document.getElementById('nav-supervisor').classList.remove('hidden');
         document.getElementById('nav-qa').classList.remove('hidden');
         document.getElementById('nav-dashboard').classList.remove('hidden');
