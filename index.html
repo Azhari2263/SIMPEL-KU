@@ -376,6 +376,10 @@
                   <i class="fa-solid fa-clipboard-check"></i>
                   <span>Sidak Mutu (QA)</span>
                 </button>
+                <button onclick="openSecurityScheduleModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 active:scale-95">
+                  <i class="fa-solid fa-calendar-days"></i>
+                  <span>Jadwal Satpam</span>
+                </button>
                 <button onclick="openApprovalModal('ALL')" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-amber-500/30 transition-all flex items-center gap-2 active:scale-95">
                   <i class="fa-solid fa-stamp"></i>
                   <span>Approval Bulanan</span>
@@ -446,7 +450,7 @@
               <p class="text-[10px] text-indigo-600/70 mt-1.5 font-medium">Shift & Patroli Satpam</p>
             </div>
 
-            <!-- 5. Indeks Mutu Kebersihan (QA) -->
+            <!-- 5. Indeks Mutu Terpadu (QA) -->
             <div class="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-semibold text-amber-600 uppercase tracking-wider">Mutu Sidak (QA)</span>
@@ -489,47 +493,48 @@
             </div>
           </div>
 
-          <!-- Section: Filter & Tabel Komparasi Kepatuhan Antar-Pegawai (Real-Time) -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-5">
+          <!-- Section: Evaluasi Kepatuhan Tenaga Alih Daya Terpisah per Unit (Unit Kebersihan, Unit Pelayanan, Unit Keamanan) -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-5 p-5">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                  <i class="fa-solid fa-users-viewfinder text-brand-600"></i>
-                  <span>Tabel Komparasi Real-Time Kepatuhan Antar-Pegawai</span>
+                  <i class="fa-solid fa-layer-group text-brand-600"></i>
+                  <span>Monitoring & Evaluasi Kepatuhan Pegawai per Unit</span>
                 </h3>
-                <p class="text-xs text-slate-500 mt-0.5">Pantau capaian target, penyelesaian tugas, dan status kinerja individual.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Pemantauan terpisah antara Unit Kebersihan, Unit Keamanan, dan Unit Pelayanan.</p>
               </div>
-              <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg flex items-center gap-1.5 self-start sm:self-auto">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Live Sync Spreadsheet</span>
-              </span>
+              <div class="flex items-center gap-2">
+                <button onclick="openSecurityScheduleModal()" class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors">
+                  <i class="fa-solid fa-calendar-days text-indigo-600"></i>
+                  <span>Kelola Shift Satpam</span>
+                </button>
+                <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Live Data</span>
+                </span>
+              </div>
             </div>
 
-            <!-- Filter Controls: Unit Kerja, Lantai Gedung, Pencarian Pegawai -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Unit Kerja</label>
-                <select id="supFilterUnit" onchange="filterSupervisorEmployees()" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                  <option value="SEMUA">Semua Unit Kerja (CS, PST, Satpam)</option>
-                  <option value="CS">Kebersihan (Cleaning Service)</option>
-                  <option value="PELAYANAN">Pelayanan (Front Office / PST)</option>
-                  <option value="SECURITY">Keamanan (Satpam / Security)</option>
-                </select>
+            <!-- Segmented Unit Tabs & Search Controls -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-3 border-t border-slate-100">
+              <!-- Unit Selector Tabs -->
+              <div class="bg-slate-100 p-1 rounded-xl border border-slate-200/80 flex items-center space-x-1 text-xs font-semibold overflow-x-auto">
+                <button type="button" onclick="setSupervisorUnitTab('ALL')" id="supTab-ALL" class="px-3.5 py-1.5 rounded-lg bg-white text-brand-700 shadow-xs font-bold transition-all whitespace-nowrap">
+                  <i class="fa-solid fa-table-cells-large mr-1.5"></i>Semua Unit
+                </button>
+                <button type="button" onclick="setSupervisorUnitTab('CS')" id="supTab-CS" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 font-medium transition-all whitespace-nowrap">
+                  <i class="fa-solid fa-sparkles mr-1.5 text-accent-500"></i>Unit Kebersihan
+                </button>
+                <button type="button" onclick="setSupervisorUnitTab('PELAYANAN')" id="supTab-PELAYANAN" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 font-medium transition-all whitespace-nowrap">
+                  <i class="fa-solid fa-hand-holding-heart mr-1.5 text-blue-500"></i>Unit Pelayanan
+                </button>
+                <button type="button" onclick="setSupervisorUnitTab('SECURITY')" id="supTab-SECURITY" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 font-medium transition-all whitespace-nowrap">
+                  <i class="fa-solid fa-shield-halved mr-1.5 text-indigo-500"></i>Unit Keamanan
+                </button>
               </div>
 
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Lantai Gedung</label>
-                <select id="supFilterLantai" onchange="loadSupervisorData()" class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl px-3 py-2 font-semibold text-slate-700 focus:ring-2 focus:ring-brand-500 focus:outline-none">
-                  <option value="SEMUA">Semua Lantai & Area</option>
-                  <option value="Lantai 1">Lantai 1</option>
-                  <option value="Lantai 2">Lantai 2</option>
-                  <option value="Lantai 3">Lantai 3</option>
-                  <option value="Luar / Halaman">Luar / Halaman / Pos Satpam</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Pencarian Pegawai</label>
+              <!-- Search Pegawai -->
+              <div class="w-full md:w-72">
                 <div class="relative">
                   <input type="text" id="supSearchPegawai" oninput="filterSupervisorEmployees()" placeholder="Cari nama pegawai..." 
                     class="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl pl-8 pr-3 py-2 font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none">
@@ -538,43 +543,24 @@
               </div>
             </div>
 
-            <!-- Tabel Data Pegawai -->
-            <div class="w-full overflow-x-auto rounded-xl border border-slate-200">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead class="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
-                  <tr>
-                    <th class="p-3 text-center w-10">No</th>
-                    <th class="p-3">Nama Pegawai</th>
-                    <th class="p-3">Unit / Tugas</th>
-                    <th class="p-3 text-center">Target</th>
-                    <th class="p-3 text-center">Selesai</th>
-                    <th class="p-3 text-center">Belum</th>
-                    <th class="p-3 min-w-[150px]">Kepatuhan (%)</th>
-                    <th class="p-3 text-center">Status Kinerja</th>
-                    <th class="p-3 text-center w-28">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="supEmployeeTableBody" class="divide-y divide-slate-100 text-xs">
-                  <tr>
-                    <td colspan="9" class="p-8 text-center text-slate-400">Memuat data perbandingan pegawai...</td>
-                  </tr>
-                </tbody>
-              </table>
+            <!-- Segregated Employee Units Container -->
+            <div id="supSegregatedUnitsContainer" class="space-y-6">
+              <div class="p-8 text-center text-slate-400 text-xs">Memuat data monitoring per unit...</div>
             </div>
           </div>
         </section>
 
-        <!-- ================= VIEW QA: INSPEKSI MUTU / QUALITY ASSURANCE ================= -->
+        <!-- ================= VIEW QA: INSPEKSI MUTU TERPADU (QUALITY ASSURANCE) ================= -->
         <section id="view-qa" class="hidden space-y-6">
           <!-- Header Card QA -->
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i class="fa-solid fa-clipboard-check text-emerald-600"></i>
-                <span>Quality Assurance (Inspeksi Mutu & Sidak Kebersihan)</span>
+                <span>Quality Assurance & Inspeksi Mutu Terpadu</span>
               </h3>
               <p class="text-xs text-slate-500 mt-0.5">
-                Evaluasi mutu riil dan audit kebersihan area publik kantor BPS Provinsi Kalimantan Barat.
+                Evaluasi mutu standar operasional terpadu: Kebersihan, Keamanan, Pelayanan PST, serta Sarana & Prasarana BPS Provinsi Kalimantan Barat.
               </p>
             </div>
             <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200/80 self-start sm:self-auto flex items-center gap-1.5">
@@ -596,7 +582,21 @@
               </div>
 
               <form id="formQualityAudit" onsubmit="handleQualityAuditSubmit(event)" class="space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <!-- Kategori Aspek Mutu -->
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Kategori Mutu <span class="text-rose-500">*</span>
+                    </label>
+                    <select id="qaKategoriMutu" onchange="handleQAKategoriChange()" required 
+                      class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                      <option value="Kebersihan">Kebersihan (CS)</option>
+                      <option value="Keamanan">Keamanan (Satpam)</option>
+                      <option value="Pelayanan">Pelayanan (PST)</option>
+                      <option value="Sarana & Prasarana">Sarana & Prasarana</option>
+                    </select>
+                  </div>
+
                   <!-- Tanggal Inspeksi -->
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -609,7 +609,7 @@
                   <!-- Auditor -->
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Nama Auditor / Pengawas
+                      Auditor / Pengawas
                     </label>
                     <input type="text" id="qaAuditor" readonly 
                       class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-not-allowed">
@@ -617,10 +617,10 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <!-- Area / Ruangan Publik -->
+                  <!-- Area / Objek Sidak -->
                   <div>
                     <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Area / Ruangan Publik <span class="text-rose-500">*</span>
+                      Area / Objek Penilaian <span class="text-rose-500">*</span>
                     </label>
                     <select id="qaAreaRuangan" onchange="autoSelectQALantai()" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
                       <option value="Lobby Utama">Lobby Utama (Lt 1)</option>
@@ -667,7 +667,7 @@
                       <button type="button" onclick="setQARating(5)" class="qa-star text-2xl text-amber-400 hover:scale-125 transition-transform"><i class="fa-solid fa-star"></i></button>
                     </div>
                     <div class="text-left sm:text-right">
-                      <span class="text-sm font-black text-amber-700" id="qaRatingLabel">5 / 5 ⭐ (Sangat Bersih & Prima)</span>
+                      <span class="text-sm font-black text-amber-700" id="qaRatingLabel">5 / 5 ⭐ (Sangat Prima & Memuaskan)</span>
                       <p class="text-[10px] text-amber-600/80">Klik bintang untuk memilih skor mutu</p>
                     </div>
                   </div>
@@ -679,7 +679,7 @@
                   <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                     Catatan Evaluasi / Temuan Sidak <span class="text-rose-500">*</span>
                   </label>
-                  <textarea id="qaCatatan" rows="2.5" required placeholder="Contoh: Area sangat bersih dan wangi, tempat sampah kosong, kaca bersih mengkilap..."
+                  <textarea id="qaCatatan" rows="2.5" required placeholder="Tuliskan temuan mutu, kesesuaian SOP, rekomendasi perbaikan, atau apresiasi..."
                     class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800"></textarea>
                 </div>
 
@@ -692,7 +692,7 @@
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <i class="fa-solid fa-camera text-xs"></i>
                     </span>
-                    <input type="url" id="qaFotoUrl" placeholder="https://drive.google.com/... atau link foto temuan"
+                    <input type="url" id="qaFotoUrl" placeholder="https://drive.google.com/... atau tautan foto dokumentasi"
                       class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800">
                   </div>
                 </div>
@@ -709,31 +709,81 @@
 
             <!-- Panel Ringkasan Skor Mutu & Standar Area (5 Kolom) -->
             <div class="lg:col-span-5 space-y-4">
-              <!-- Widget Skor Rata-Rata Mutu -->
-              <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-6 text-center space-y-3">
-                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-sm">
+              <!-- Widget Skor Rata-Rata Mutu Terpadu -->
+              <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 p-5 text-center space-y-3">
+                <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-xl shadow-sm">
                   <i class="fa-solid fa-award"></i>
                 </div>
                 <div>
-                  <p class="text-xs font-bold text-amber-800 uppercase tracking-wider">Indeks Rata-Rata Mutu Kebersihan</p>
-                  <div class="flex items-baseline justify-center gap-1.5 mt-2">
-                    <span class="text-4xl font-black text-amber-700" id="qaSummaryBigScore">0.0</span>
-                    <span class="text-sm font-bold text-amber-600/70">/ 5.0</span>
+                  <p class="text-xs font-bold text-amber-800 uppercase tracking-wider">Indeks Mutu Terpadu</p>
+                  <div class="flex items-baseline justify-center gap-1.5 mt-1">
+                    <span class="text-3xl font-black text-amber-700" id="qaSummaryBigScore">0.0</span>
+                    <span class="text-xs font-bold text-amber-600/70">/ 5.0</span>
                   </div>
-                  <div class="flex justify-center space-x-1 mt-2 text-amber-500 text-base" id="qaSummaryStars">
+                  <div class="flex justify-center space-x-1 mt-1.5 text-amber-500 text-sm" id="qaSummaryStars">
                     <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
                   </div>
-                  <p class="text-xs text-amber-700 font-medium mt-1" id="qaSummaryTotalText">Berdasarkan 0 sesi sidak mutu</p>
+                  <p class="text-[11px] text-amber-700 font-medium mt-1" id="qaSummaryTotalText">Berdasarkan 0 sesi sidak mutu</p>
                 </div>
               </div>
 
-              <!-- Skor Rata-rata per Ruangan -->
-              <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <!-- Skor Rata-Rata Berdasarkan 4 Aspek Mutu -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                 <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Skor Mutu per Area Publik</span>
+                  <span>Skor per Aspek Mutu</span>
+                  <i class="fa-solid fa-layer-group text-brand-600 text-xs"></i>
+                </h4>
+                <div class="grid grid-cols-2 gap-2.5" id="qaAspectScoresContainer">
+                  <!-- Kebersihan -->
+                  <div class="p-2.5 rounded-xl border border-orange-100 bg-orange-50/40">
+                    <div class="flex items-center justify-between text-[11px] text-orange-700 font-bold mb-1">
+                      <span>Kebersihan</span>
+                      <span id="qaAspectScore-kebersihan">0.0 ⭐</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                      <div id="qaAspectBar-kebersihan" class="bg-accent-600 h-full rounded-full" style="width: 0%"></div>
+                    </div>
+                  </div>
+                  <!-- Keamanan -->
+                  <div class="p-2.5 rounded-xl border border-indigo-100 bg-indigo-50/40">
+                    <div class="flex items-center justify-between text-[11px] text-indigo-700 font-bold mb-1">
+                      <span>Keamanan</span>
+                      <span id="qaAspectScore-keamanan">0.0 ⭐</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                      <div id="qaAspectBar-keamanan" class="bg-indigo-600 h-full rounded-full" style="width: 0%"></div>
+                    </div>
+                  </div>
+                  <!-- Pelayanan -->
+                  <div class="p-2.5 rounded-xl border border-blue-100 bg-blue-50/40">
+                    <div class="flex items-center justify-between text-[11px] text-blue-700 font-bold mb-1">
+                      <span>Pelayanan</span>
+                      <span id="qaAspectScore-pelayanan">0.0 ⭐</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                      <div id="qaAspectBar-pelayanan" class="bg-blue-600 h-full rounded-full" style="width: 0%"></div>
+                    </div>
+                  </div>
+                  <!-- Sarpras -->
+                  <div class="p-2.5 rounded-xl border border-emerald-100 bg-emerald-50/40">
+                    <div class="flex items-center justify-between text-[11px] text-emerald-700 font-bold mb-1">
+                      <span>Sarpras</span>
+                      <span id="qaAspectScore-sarpras">0.0 ⭐</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-1 rounded-full overflow-hidden">
+                      <div id="qaAspectBar-sarpras" class="bg-emerald-600 h-full rounded-full" style="width: 0%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Skor Rata-rata per Ruangan / Objek -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                  <span>Skor Mutu per Area / Objek</span>
                   <i class="fa-solid fa-chart-column text-amber-500"></i>
                 </h4>
-                <div class="space-y-2 max-h-60 overflow-y-auto pr-1" id="qaAreaScoresList">
+                <div class="space-y-2 max-h-48 overflow-y-auto pr-1" id="qaAreaScoresList">
                   <div class="text-center py-6 text-xs text-slate-400">Memuat skor per area...</div>
                 </div>
               </div>
@@ -748,7 +798,7 @@
                   <i class="fa-solid fa-clock-rotate-left text-brand-600"></i>
                   <span>Riwayat & Feed Log Inspeksi Mutu Terkini</span>
                 </h4>
-                <p class="text-xs text-slate-500 mt-0.5">Daftar rekaman sidak mutu kebersihan yang tersimpan pada sheet Quality_Audits.</p>
+                <p class="text-xs text-slate-500 mt-0.5">Daftar rekaman sidak mutu terpadu yang tersimpan pada sheet Quality_Audits.</p>
               </div>
               <button onclick="loadQAData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 self-start sm:self-auto">
                 <i class="fa-solid fa-arrows-rotate text-xs"></i>
@@ -762,8 +812,9 @@
                   <tr>
                     <th class="p-3">ID Audit</th>
                     <th class="p-3">Tanggal</th>
+                    <th class="p-3">Kategori</th>
                     <th class="p-3">Auditor</th>
-                    <th class="p-3">Area / Ruangan</th>
+                    <th class="p-3">Area / Objek</th>
                     <th class="p-3">Lantai</th>
                     <th class="p-3 text-center">Skor</th>
                     <th class="p-3">Catatan Evaluasi</th>
@@ -772,7 +823,7 @@
                 </thead>
                 <tbody id="qaHistoryTableBody" class="divide-y divide-slate-100 text-xs">
                   <tr>
-                    <td colspan="8" class="p-8 text-center text-slate-400">Memuat riwayat sidak mutu...</td>
+                    <td colspan="9" class="p-8 text-center text-slate-400">Memuat riwayat sidak mutu...</td>
                   </tr>
                 </tbody>
               </table>
@@ -953,60 +1004,88 @@
 
         <!-- ================= VIEW 3: REKAP MONITORING ================= -->
         <section id="view-rekap" class="hidden space-y-6">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <i class="fa-solid fa-chart-simple text-brand-600"></i>
-              <span>Rekapitulasi & Visualisasi Pencapaian</span>
-            </h3>
-            <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-brand-600"></i>
+                <span>Rekapitulasi & Visualisasi Pencapaian</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+            </div>
+            <button onclick="loadRekapData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 self-start sm:self-auto">
+              <i class="fa-solid fa-arrows-rotate text-xs"></i>
+              <span>Segarkan Data</span>
+            </button>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Tren Kepatuhan Checklist Harian</span>
-                <i class="fa-solid fa-chart-line text-brand-500"></i>
-              </h4>
-              <div class="relative h-64">
-                <canvas id="chartTrenHarian"></canvas>
+          <!-- Error Alert State Container (Tampil Jika Rekapitulasi Gagal) -->
+          <div id="rekapErrorContainer" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-sm">
+            <div class="w-16 h-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="max-w-md mx-auto space-y-1">
+              <h4 class="text-base font-bold text-rose-900">Gagal Memuat Rekapitulasi Monitoring</h4>
+              <p class="text-xs text-rose-700 leading-relaxed" id="rekapErrorDesc">
+                Terjadi kendala saat membaca atau memproses rekapitulasi data dari spreadsheet.
+              </p>
+            </div>
+            <div class="pt-2">
+              <button onclick="loadRekapData()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-600/20 transition-all inline-flex items-center gap-2 active:scale-95">
+                <i class="fa-solid fa-arrows-rotate"></i>
+                <span>Coba Lagi (Muat Ulang)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Rekap Visual & Table Content Container -->
+          <div id="rekapContentContainer" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                  <span>Tren Kepatuhan Checklist Harian</span>
+                  <i class="fa-solid fa-chart-line text-brand-500"></i>
+                </h4>
+                <div class="relative h-64">
+                  <canvas id="chartTrenHarian"></canvas>
+                </div>
+              </div>
+
+              <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                  <span>Pencapaian Berdasarkan Ruangan</span>
+                  <i class="fa-solid fa-chart-bar text-accent-500"></i>
+                </h4>
+                <div class="relative h-64">
+                  <canvas id="chartRuangan"></canvas>
+                </div>
               </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Pencapaian Berdasarkan Ruangan</span>
-                <i class="fa-solid fa-chart-bar text-accent-500"></i>
-              </h4>
-              <div class="relative h-64">
-                <canvas id="chartRuangan"></canvas>
+            <!-- Tabel Rekapitulasi Detail -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <h4 class="text-sm font-bold text-slate-800">Tabel Ringkasan Per Ruangan</h4>
+                <span class="text-xs text-slate-400 font-medium">Bulan Aktif</span>
               </div>
-            </div>
-          </div>
-
-          <!-- Tabel Rekapitulasi Detail -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h4 class="text-sm font-bold text-slate-800">Tabel Ringkasan Per Ruangan</h4>
-              <span class="text-xs text-slate-400 font-medium">Bulan Aktif</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] border-b border-slate-200">
-                  <tr>
-                    <th class="p-3.5">Nama Ruangan</th>
-                    <th class="p-3.5 text-center">Jumlah Kegiatan</th>
-                    <th class="p-3.5 text-center">Total Target Checklist</th>
-                    <th class="p-3.5 text-center">Selesai Dikerjakan</th>
-                    <th class="p-3.5 text-center">Persentase</th>
-                    <th class="p-3.5 min-w-[160px]">Status Bar</th>
-                  </tr>
-                </thead>
-                <tbody id="rekapTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="6" class="p-6 text-center text-slate-400">Memuat rekapitulasi...</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead class="bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] border-b border-slate-200">
+                    <tr>
+                      <th class="p-3.5">Nama Ruangan</th>
+                      <th class="p-3.5 text-center">Jumlah Kegiatan</th>
+                      <th class="p-3.5 text-center">Total Target Checklist</th>
+                      <th class="p-3.5 text-center">Selesai Dikerjakan</th>
+                      <th class="p-3.5 text-center">Persentase</th>
+                      <th class="p-3.5 min-w-[160px]">Status Bar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rekapTableBody" class="divide-y divide-slate-100">
+                    <tr>
+                      <td colspan="6" class="p-6 text-center text-slate-400">Memuat rekapitulasi...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </section>
@@ -1333,6 +1412,70 @@
     </div>
   </div>
 
+  <!-- ================= MODAL KELOLA JADWAL & SHIFT SATPAM (SUPERVISOR & ADMIN) ================= -->
+  <div id="modalManageSecuritySchedule" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden transform transition-all">
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-6 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900 text-white flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 flex items-center justify-center text-lg shadow-inner">
+            <i class="fa-solid fa-calendar-days"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black">Kelola Jadwal & Shift Satpam</h3>
+            <p class="text-[11px] text-slate-300">Pengaturan Shift (Pagi, Siang, Malam, Off) - Tersimpan ke Sheet JadwalPiketSecurity</p>
+          </div>
+        </div>
+        <button onclick="closeSecurityScheduleModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Controls & Legend Bar -->
+      <div class="p-3.5 sm:p-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-shrink-0">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-bold text-slate-700">Periode:</span>
+          <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-lg" id="secSchedModalPeriodeLabel">Bulan Aktif</span>
+          <button onclick="loadSecurityScheduleMatrix()" title="Segarkan Matriks" class="p-1.5 bg-white hover:bg-slate-200 border border-slate-200 rounded-lg text-slate-600 text-xs transition-colors">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+
+        <!-- Legend Shift -->
+        <div class="flex flex-wrap items-center gap-2 text-[10px] font-bold">
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+            <span class="w-2 h-2 rounded-full bg-blue-600"></span> P = Pagi (06.00–16.00)
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+            <span class="w-2 h-2 rounded-full bg-amber-600"></span> S = Siang (15.30–23.30)
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 border border-indigo-200">
+            <span class="w-2 h-2 rounded-full bg-indigo-600"></span> M = Malam (23.00–07.30)
+          </span>
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-300">
+            <span class="w-2 h-2 rounded-full bg-slate-400"></span> O = Off (Libur)
+          </span>
+        </div>
+      </div>
+
+      <!-- Matrix Container (Scrollable Table) -->
+      <div id="secSchedMatrixContainer" class="p-4 overflow-auto flex-1 text-xs">
+        <div class="text-center py-12 text-slate-400">Memuat matriks jadwal piket security...</div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3.5 sm:p-4 border-t border-slate-100 bg-white flex items-center justify-between flex-shrink-0 text-xs">
+        <span class="text-[11px] text-slate-500">
+          <i class="fa-solid fa-circle-info text-indigo-500 mr-1"></i>
+          Ubah opsi dropdown shift pada tabel untuk langsung memperbarui jadwal piket.
+        </span>
+        <button onclick="closeSecurityScheduleModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
     /**
@@ -1355,6 +1498,8 @@
     let cachedKeamananData       = null;
     let cachedSupervisorData     = null;
     let cachedQAData             = null;
+    let cachedSecurityMatrix     = null;
+    let supervisorActiveTab      = 'ALL';                     // 'ALL' | 'CS' | 'PELAYANAN' | 'SECURITY'
     let currentQARating          = 5;
     let selectedKeamananDay      = 1;
     let chartTrenInstance        = null;
@@ -1405,6 +1550,10 @@
             runner.approveMonthlyReport(params.token, params);
           } else if (action === 'getMonthlyApprovals') {
             runner.getMonthlyApprovals(params.token, params.bulan, params.tahun);
+          } else if (action === 'getSecurityScheduleMatrix') {
+            runner.getSecurityScheduleMatrix(params.token, params.bulan, params.tahun);
+          } else if (action === 'updateSecurityShift') {
+            runner.updateSecurityShift(params.token, params.targetUserOrName, params.tanggal, params.newShift, params.bulan, params.tahun);
           } else {
             reject(new Error('Aksi tidak dikenali: ' + action));
           }
@@ -1898,6 +2047,21 @@
       }
     }
 
+    function setSupervisorUnitTab(tabKey) {
+      supervisorActiveTab = tabKey || 'ALL';
+      ['ALL', 'CS', 'PELAYANAN', 'SECURITY'].forEach(t => {
+        const btn = document.getElementById('supTab-' + t);
+        if (btn) {
+          if (t === supervisorActiveTab) {
+            btn.className = 'px-3.5 py-1.5 rounded-lg bg-white text-brand-700 shadow-xs font-bold transition-all whitespace-nowrap';
+          } else {
+            btn.className = 'px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 font-medium transition-all whitespace-nowrap';
+          }
+        }
+      });
+      filterSupervisorEmployees();
+    }
+
     function renderSupervisorUI(d) {
       if (!d) return;
 
@@ -1925,7 +2089,7 @@
       // 2. Render Approval Cards
       renderSupervisorApprovalCards(d.approvals);
 
-      // 3. Render Employee Table
+      // 3. Render Segregated Employee Tables per Unit
       renderSupervisorEmployeeTable(d.employees);
     }
 
@@ -2004,83 +2168,210 @@
       container.innerHTML = html;
     }
 
+    /**
+     * RENDER TABEL EVALUASI PEGAWAI TERPISAH KETAT PER UNIT
+     * (Unit Kebersihan, Unit Keamanan, Unit Pelayanan)
+     */
     function renderSupervisorEmployeeTable(employees) {
-      const tbody = document.getElementById('supEmployeeTableBody');
-      if (!tbody) return;
+      const container = document.getElementById('supSegregatedUnitsContainer');
+      if (!container) return;
 
       if (!employees || employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 text-xs">Tidak ada data pegawai yang sesuai dengan filter.</td></tr>';
+        container.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">Tidak ada data pegawai yang tersedia.</div>';
         return;
       }
 
       const searchVal = (document.getElementById('supSearchPegawai') ? document.getElementById('supSearchPegawai').value : '').toLowerCase().trim();
-      const filterUnit = document.getElementById('supFilterUnit') ? document.getElementById('supFilterUnit').value : 'SEMUA';
 
-      const filtered = employees.filter(emp => {
-        if (filterUnit !== 'SEMUA' && emp.role !== filterUnit) return false;
-        if (searchVal && !emp.namaPegawai.toLowerCase().includes(searchVal) && !emp.username.toLowerCase().includes(searchVal)) return false;
-        return true;
-      });
+      const unitDefinitions = [
+        {
+          key: 'CS',
+          title: 'Unit Kebersihan (Cleaning Service)',
+          icon: 'fa-sparkles',
+          headerBg: 'bg-orange-50/70 border-orange-200',
+          headerText: 'text-orange-900',
+          badgeBg: 'bg-orange-100 text-orange-800 border-orange-300',
+          desc: 'Petugas kebersihan area kerja, lobby, koridor, mushola & toilet kantor'
+        },
+        {
+          key: 'PELAYANAN',
+          title: 'Unit Pelayanan (Front Office PST)',
+          icon: 'fa-hand-holding-heart',
+          headerBg: 'bg-blue-50/70 border-blue-200',
+          headerText: 'text-blue-900',
+          badgeBg: 'bg-blue-100 text-blue-800 border-blue-300',
+          desc: 'Petugas pelayanan PST, penerimaan tamu & standar front office'
+        },
+        {
+          key: 'SECURITY',
+          title: 'Unit Keamanan (Satpam / Security)',
+          icon: 'fa-shield-halved',
+          headerBg: 'bg-indigo-50/70 border-indigo-200',
+          headerText: 'text-indigo-900',
+          badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+          desc: 'Petugas keamanan, pos satpam, patroli & kontrol shift (Pagi, Sore, Malam, Off)'
+        }
+      ];
 
-      if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 text-xs">Pencarian tidak menemukan nama pegawai yang cocok.</td></tr>';
-        return;
-      }
+      // Filter unit definitions based on active tab
+      const visibleUnits = unitDefinitions.filter(u => supervisorActiveTab === 'ALL' || u.key === supervisorActiveTab);
 
-      let html = '';
-      filtered.forEach((emp, idx) => {
-        const initial = emp.namaPegawai ? emp.namaPegawai.charAt(0).toUpperCase() : 'U';
-        const roleBadgeClass = emp.role === 'CS' ? 'bg-orange-50 text-orange-700 border-orange-200' : (emp.role === 'PELAYANAN' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200');
+      let fullHtml = '';
+      let totalVisibleEmployees = 0;
 
-        html += `
-          <tr class="hover:bg-slate-50/80 transition-colors">
-            <td class="p-3 text-center font-bold text-slate-400 text-[11px]">${idx + 1}</td>
-            <td class="p-3">
-              <div class="flex items-center space-x-2.5">
-                <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
-                  ${initial}
+      visibleUnits.forEach(uDef => {
+        let unitEmployees = employees.filter(emp => emp.role === uDef.key);
+
+        if (searchVal) {
+          unitEmployees = unitEmployees.filter(emp => 
+            emp.namaPegawai.toLowerCase().includes(searchVal) || 
+            emp.username.toLowerCase().includes(searchVal)
+          );
+        }
+
+        totalVisibleEmployees += unitEmployees.length;
+
+        // Hitung Subtotal per Unit
+        let unitTarget = 0;
+        let unitSelesai = 0;
+        let unitBelum = 0;
+        unitEmployees.forEach(e => {
+          unitTarget += (e.totalTarget || 0);
+          unitSelesai += (e.totalSelesai || 0);
+          unitBelum += (e.totalBelum || 0);
+        });
+        const unitPersen = unitTarget > 0 ? Math.round((unitSelesai / unitTarget) * 100) : 0;
+
+        let rowsHtml = '';
+        if (unitEmployees.length === 0) {
+          rowsHtml = `<tr><td colspan="9" class="p-6 text-center text-slate-400 text-xs">Tidak ada data pegawai ${uDef.title} yang cocok.</td></tr>`;
+        } else {
+          unitEmployees.forEach((emp, idx) => {
+            const initial = emp.namaPegawai ? emp.namaPegawai.charAt(0).toUpperCase() : 'U';
+            const isSecurity = (emp.role === 'SECURITY');
+
+            rowsHtml += `
+              <tr class="hover:bg-slate-50/80 transition-colors">
+                <td class="p-3 text-center font-bold text-slate-400 text-[11px]">${idx + 1}</td>
+                <td class="p-3">
+                  <div class="flex items-center space-x-2.5">
+                    <div class="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                      ${initial}
+                    </div>
+                    <div>
+                      <p class="font-bold text-slate-900 leading-tight">${escapeHtml(emp.namaPegawai)}</p>
+                      <p class="text-[10px] text-slate-400">@${escapeHtml(emp.username)}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${uDef.badgeBg}">
+                    ${escapeHtml(emp.roleLabel || uDef.key)}
+                  </span>
+                </td>
+                <td class="p-3 text-center font-semibold text-slate-700">${emp.totalTarget}</td>
+                <td class="p-3 text-center font-bold text-emerald-600">${emp.totalSelesai}</td>
+                <td class="p-3 text-center font-bold ${emp.totalBelum > 0 ? 'text-rose-600' : 'text-slate-400'}">${emp.totalBelum}</td>
+                <td class="p-3">
+                  <div class="space-y-1">
+                    <div class="flex justify-between text-[11px] font-bold">
+                      <span class="${emp.persen === 100 ? 'text-emerald-600' : 'text-slate-800'}">${emp.persen}%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                      <div class="h-full rounded-full ${emp.persen >= 90 ? 'bg-emerald-500' : (emp.persen >= 75 ? 'bg-blue-500' : (emp.persen >= 60 ? 'bg-amber-500' : 'bg-rose-500'))}" style="width: ${emp.persen}%"></div>
+                    </div>
+                  </div>
+                </td>
+                <td class="p-3 text-center">
+                  <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${emp.statusKinerja.badge}">
+                    ${escapeHtml(emp.statusKinerja.label)}
+                  </span>
+                </td>
+                <td class="p-3 text-center">
+                  <div class="inline-flex items-center gap-1.5">
+                    <button onclick="quickAuditForRoom('${escapeHtml(emp.roomsSummary && emp.roomsSummary[0] ? emp.roomsSummary[0] : 'Lobby Utama')}', '${uDef.key}')" title="Beri Sidak Mutu"
+                      class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1">
+                      <i class="fa-solid fa-star text-[10px] text-amber-500"></i>
+                      <span>Sidak QA</span>
+                    </button>
+                    ${isSecurity ? `
+                      <button onclick="openSecurityScheduleModal()" title="Ubah Shift Piket Petugas Ini"
+                        class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold rounded-lg border border-indigo-200 transition-colors inline-flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-pen text-[10px]"></i>
+                        <span>Shift</span>
+                      </button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>
+            `;
+          });
+        }
+
+        fullHtml += `
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
+            <!-- Header Unit Card -->
+            <div class="p-4 sm:p-5 border-b ${uDef.headerBg} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-white shadow-xs border border-slate-200/80 flex items-center justify-center text-sm font-bold ${uDef.headerText}">
+                  <i class="fa-solid ${uDef.icon}"></i>
                 </div>
                 <div>
-                  <p class="font-bold text-slate-900 leading-tight">${escapeHtml(emp.namaPegawai)}</p>
-                  <p class="text-[10px] text-slate-400">@${escapeHtml(emp.username)}</p>
+                  <h4 class="text-sm sm:text-base font-black ${uDef.headerText} flex items-center gap-2">
+                    <span>${uDef.title}</span>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full ${uDef.badgeBg}">${unitEmployees.length} Pegawai</span>
+                  </h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5">${uDef.desc}</p>
                 </div>
               </div>
-            </td>
-            <td class="p-3">
-              <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleBadgeClass}">
-                ${escapeHtml(emp.roleLabel)}
-              </span>
-            </td>
-            <td class="p-3 text-center font-semibold text-slate-700">${emp.totalTarget}</td>
-            <td class="p-3 text-center font-bold text-emerald-600">${emp.totalSelesai}</td>
-            <td class="p-3 text-center font-bold ${emp.totalBelum > 0 ? 'text-rose-600' : 'text-slate-400'}">${emp.totalBelum}</td>
-            <td class="p-3">
-              <div class="space-y-1">
-                <div class="flex justify-between text-[11px] font-bold">
-                  <span class="${emp.persen === 100 ? 'text-emerald-600' : 'text-slate-800'}">${emp.persen}%</span>
+
+              <!-- Subtotal Kepatuhan Unit -->
+              <div class="flex items-center space-x-3 bg-white/90 backdrop-blur-xs px-3.5 py-1.5 rounded-xl border border-slate-200/80 text-xs self-start sm:self-auto">
+                <div class="text-right">
+                  <p class="text-[10px] text-slate-400 font-bold uppercase">Capaian Unit</p>
+                  <p class="text-xs font-black ${unitPersen >= 80 ? 'text-emerald-600' : 'text-slate-800'}">${unitPersen}% (${unitSelesai}/${unitTarget})</p>
                 </div>
-                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div class="h-full rounded-full ${emp.persen >= 90 ? 'bg-emerald-500' : (emp.persen >= 75 ? 'bg-blue-500' : (emp.persen >= 60 ? 'bg-amber-500' : 'bg-rose-500'))}" style="width: ${emp.persen}%"></div>
+                <div class="w-16 bg-slate-100 h-2 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full ${unitPersen >= 80 ? 'bg-emerald-500' : 'bg-brand-500'}" style="width: ${unitPersen}%"></div>
                 </div>
               </div>
-            </td>
-            <td class="p-3 text-center">
-              <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold ${emp.statusKinerja.badge}">
-                ${escapeHtml(emp.statusKinerja.label)}
-              </span>
-            </td>
-            <td class="p-3 text-center">
-              <button onclick="quickAuditForRoom('${escapeHtml(emp.roomsSummary && emp.roomsSummary[0] ? emp.roomsSummary[0] : 'Lobby Utama')}')" title="Beri Sidak Mutu Ruangan Pegawai Ini"
-                class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1">
-                <i class="fa-solid fa-star text-[10px] text-amber-500"></i>
-                <span>Sidak QA</span>
-              </button>
-            </td>
-          </tr>
+            </div>
+
+            <!-- Tabel Pegawai Unit -->
+            <div class="w-full overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead class="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200">
+                  <tr>
+                    <th class="p-3 text-center w-10">No</th>
+                    <th class="p-3">Nama Pegawai</th>
+                    <th class="p-3">Unit</th>
+                    <th class="p-3 text-center">Target</th>
+                    <th class="p-3 text-center">Selesai</th>
+                    <th class="p-3 text-center">Belum</th>
+                    <th class="p-3 min-w-[140px]">Kepatuhan (%)</th>
+                    <th class="p-3 text-center">Status Kinerja</th>
+                    <th class="p-3 text-center w-32">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
         `;
       });
 
-      tbody.innerHTML = html;
+      if (totalVisibleEmployees === 0 && searchVal) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-slate-200">
+            Pencarian "<strong>${escapeHtml(searchVal)}</strong>" tidak menemukan data pegawai pada unit yang dipilih.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = fullHtml;
     }
 
     function filterSupervisorEmployees() {
@@ -2160,9 +2451,69 @@
 
     /**
      * =========================================================================
-     * MODUL QUALITY ASSURANCE (INSPEKSI MUTU & SIDAK KEBERSIHAN)
+     * MODUL QUALITY ASSURANCE (INSPEKSI MUTU TERPADU)
      * =========================================================================
      */
+    const QA_AREA_PRESETS = {
+      'Kebersihan': [
+        'Lobby Utama',
+        'Pelayanan PST',
+        'Toilet Pria Lantai 1',
+        'Toilet Wanita Lantai 1',
+        'Toilet Lantai 2',
+        'Toilet Lantai 3',
+        'Ruang Rapat Utama (Lt 2)',
+        'Ruang Rapat Pimpinan (Lt 3)',
+        'Mushola Kantor',
+        'Ruang Kepala BPS',
+        'Halaman & Parkiran Kantor',
+        'Pos Keamanan Satpam',
+        'Koridor & Tangga'
+      ],
+      'Keamanan': [
+        'Pos Satpam Utama & Barrier Gate',
+        'Pintu Masuk Gedung Utama',
+        'Area Parkir Roda 2 & Roda 4',
+        'CCTV & Panel Kontrol Keamanan',
+        'Perimeter Pagar & Halaman Luar',
+        'Jalur Evakuasi & Titik Kumpul'
+      ],
+      'Pelayanan': [
+        'Loket PST / Front Office',
+        'Ruang Konsultasi Statistik',
+        'Meja Resepsionis & Buku Tamu',
+        'Ruang Tunggu Pengunjung',
+        'Fasilitas Difabel & Ramah Anak'
+      ],
+      'Sarana & Prasarana': [
+        'Ruang Genset & Ruang Server',
+        'Pompa Air & Tandon',
+        'Penerangan Gedung & Lampu Sorot',
+        'APAR (Alat Pemadam Api Ringan)',
+        'Jaringan Listrik & Pendingin AC',
+        'Sanitasi & Saluran Pembuangan'
+      ]
+    };
+
+    function handleQAKategoriChange() {
+      const katSelect = document.getElementById('qaKategoriMutu');
+      const areaSelect = document.getElementById('qaAreaRuangan');
+      if (!katSelect || !areaSelect) return;
+
+      const kat = katSelect.value || 'Kebersihan';
+      const areas = QA_AREA_PRESETS[kat] || QA_AREA_PRESETS['Kebersihan'];
+
+      areaSelect.innerHTML = '';
+      areas.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.innerText = a;
+        areaSelect.appendChild(opt);
+      });
+
+      autoSelectQALantai();
+    }
+
     async function loadQAData() {
       const bulan = document.getElementById('globalMonthSelect').value;
       const tahun = document.getElementById('globalYearSelect').value;
@@ -2206,6 +2557,23 @@
       document.getElementById('qaSummaryTotalText').innerText = 'Berdasarkan ' + (d.monthTotalAudits || d.totalAudits || 0) + ' sesi sidak mutu';
       renderStarIcons('qaSummaryStars', avgScore);
 
+      // Render 4 Aspect Scores
+      const asp = d.aspectScores || {};
+      const aspectKeys = [
+        { key: 'kebersihan', label: 'Kebersihan' },
+        { key: 'keamanan', label: 'Keamanan' },
+        { key: 'pelayanan', label: 'Pelayanan' },
+        { key: 'sarpras', label: 'Sarpras' }
+      ];
+
+      aspectKeys.forEach(a => {
+        const scoreEl = document.getElementById('qaAspectScore-' + a.key);
+        const barEl = document.getElementById('qaAspectBar-' + a.key);
+        const sc = asp[a.key] || 0;
+        if (scoreEl) scoreEl.innerText = (sc > 0 ? sc.toFixed(1) : '0.0') + ' ⭐';
+        if (barEl) barEl.style.width = Math.min(100, Math.round((sc / 5) * 100)) + '%';
+      });
+
       // Render Area Scores List
       const areaContainer = document.getElementById('qaAreaScoresList');
       if (areaContainer) {
@@ -2220,10 +2588,10 @@
             const sc = areaMap[area] || 0;
             const pct = Math.min(100, Math.round((sc / 5) * 100));
             html += `
-              <div class="p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-slate-50/50">
+              <div class="p-2 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-slate-50/50">
                 <div class="flex items-center justify-between text-xs mb-1">
                   <span class="font-bold text-slate-800 truncate">${escapeHtml(area)}</span>
-                  <span class="font-bold text-amber-600 flex items-center gap-1">
+                  <span class="font-bold text-amber-600 flex items-center gap-1 text-[11px]">
                     <span>${sc.toFixed(1)}</span>
                     <i class="fa-solid fa-star text-[10px] text-amber-400"></i>
                   </span>
@@ -2238,19 +2606,34 @@
         }
       }
 
-      // Render History Table
+      // Render History Table (9 Kolom termasuk Kategori Mutu)
       const tbody = document.getElementById('qaHistoryTableBody');
       if (tbody) {
         const list = d.recentAudits || d.audits || [];
         if (list.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-400 text-xs">Belum ada rekaman sidak mutu kebersihan.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-400 text-xs">Belum ada rekaman sidak mutu terpadu.</td></tr>';
         } else {
+          const CATEGORY_BADGES = {
+            'Kebersihan': 'bg-orange-50 text-orange-700 border-orange-200',
+            'Keamanan': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            'Pelayanan': 'bg-blue-50 text-blue-700 border-blue-200',
+            'Sarana & Prasarana': 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          };
+
           let html = '';
           list.forEach(item => {
+            const katName = item.kategoriMutu || 'Kebersihan';
+            const badgeClass = CATEGORY_BADGES[katName] || 'bg-slate-100 text-slate-700 border-slate-200';
+
             html += `
               <tr class="hover:bg-slate-50 transition-colors">
                 <td class="p-3 font-mono font-bold text-[11px] text-brand-700">${escapeHtml(item.auditId)}</td>
                 <td class="p-3 text-slate-700 whitespace-nowrap">${escapeHtml(item.tanggal)}</td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">
+                    ${escapeHtml(katName)}
+                  </span>
+                </td>
                 <td class="p-3 font-semibold text-slate-900">${escapeHtml(item.auditor)}</td>
                 <td class="p-3 font-bold text-slate-800">${escapeHtml(item.areaRuangan)}</td>
                 <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold">${escapeHtml(item.lantai)}</span></td>
@@ -2291,11 +2674,11 @@
       });
 
       const labelMap = {
-        1: '1 / 5 ⭐ (Sangat Kotor / Perlu Dibenahi)',
-        2: '2 / 5 ⭐ (Kurang Bersih / Perhatian Khusus)',
-        3: '3 / 5 ⭐ (Cukup Bersih / Standar)',
-        4: '4 / 5 ⭐ (Bersih, Rapi & Tertata)',
-        5: '5 / 5 ⭐ (Sangat Bersih, Harum & Prima)'
+        1: '1 / 5 ⭐ (Sangat Kurang / Perlu Evaluasi Serius)',
+        2: '2 / 5 ⭐ (Kurang Memuaskan / Perlu Pembenahan)',
+        3: '3 / 5 ⭐ (Cukup / Sesuai Standar Minimal)',
+        4: '4 / 5 ⭐ (Baik, Rapi & Tertib)',
+        5: '5 / 5 ⭐ (Sangat Prima & Memuaskan)'
       };
 
       document.getElementById('qaRatingLabel').innerText = labelMap[currentQARating] || (currentQARating + ' / 5 ⭐');
@@ -2311,17 +2694,25 @@
         lantaiSelect.value = 'Lantai 2';
       } else if (areaLower.includes('lantai 3') || areaLower.includes('lt 3')) {
         lantaiSelect.value = 'Lantai 3';
-      } else if (areaLower.includes('halaman') || areaLower.includes('parkir') || areaLower.includes('pos')) {
+      } else if (areaLower.includes('halaman') || areaLower.includes('parkir') || areaLower.includes('pos') || areaLower.includes('pagar') || areaLower.includes('gate')) {
         lantaiSelect.value = 'Luar / Halaman';
       } else {
         lantaiSelect.value = 'Lantai 1';
       }
     }
 
-    function quickAuditForRoom(roomName) {
+    function quickAuditForRoom(roomName, unitRole = 'CS') {
       navigateTo('qa');
+      const katSelect = document.getElementById('qaKategoriMutu');
+      if (katSelect) {
+        if (unitRole === 'SECURITY') katSelect.value = 'Keamanan';
+        else if (unitRole === 'PELAYANAN') katSelect.value = 'Pelayanan';
+        else katSelect.value = 'Kebersihan';
+        handleQAKategoriChange();
+      }
+
       const areaSelect = document.getElementById('qaAreaRuangan');
-      if (areaSelect) {
+      if (areaSelect && roomName) {
         let matchedOpt = false;
         for (let i = 0; i < areaSelect.options.length; i++) {
           if (areaSelect.options[i].value.toLowerCase().includes(roomName.toLowerCase()) || roomName.toLowerCase().includes(areaSelect.options[i].value.toLowerCase())) {
@@ -2340,6 +2731,7 @@
 
     async function handleQualityAuditSubmit(event) {
       event.preventDefault();
+      const kategoriMutu = document.getElementById('qaKategoriMutu').value;
       const tanggal = document.getElementById('qaTanggal').value;
       const areaRuangan = document.getElementById('qaAreaRuangan').value;
       const lantai = document.getElementById('qaLantai').value;
@@ -2359,6 +2751,7 @@
       try {
         const res = await callBackend('submitQualityAudit', {
           token: sessionToken,
+          kategoriMutu: kategoriMutu,
           tanggal: tanggal,
           areaRuangan: areaRuangan,
           lantai: lantai,
@@ -2372,7 +2765,7 @@
         btnSubmit.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i><span>Kirim & Simpan Hasil Inspeksi Mutu</span>';
 
         if (res && res.success) {
-          showToast(res.message || "Inspeksi mutu kebersihan berhasil dicatat ke spreadsheet!", "success");
+          showToast(res.message || "Inspeksi mutu berhasil dicatat ke spreadsheet!", "success");
           document.getElementById('qaCatatan').value = '';
           document.getElementById('qaFotoUrl').value = '';
           setQARating(5);
@@ -3498,6 +3891,10 @@
     async function loadRekapData() {
       const bulan = document.getElementById('globalMonthSelect').value;
       const tahun = document.getElementById('globalYearSelect').value;
+      const errorContainer = document.getElementById('rekapErrorContainer');
+      const errorDesc = document.getElementById('rekapErrorDesc');
+      const contentContainer = document.getElementById('rekapContentContainer');
+
       showLoader(true);
 
       try {
@@ -3508,15 +3905,41 @@
         });
         showLoader(false);
         if (res && res.success) {
+          if (errorContainer) errorContainer.classList.add('hidden');
+          if (contentContainer) contentContainer.classList.remove('hidden');
           renderRekapCharts(res.data);
           renderRekapTable(res.data.rekapRuangan);
         } else {
-          handleApiError(res);
+          showRekapError((res && res.message) ? res.message : 'Gagal memuat rekapitulasi data dari spreadsheet.');
         }
       } catch (err) {
         showLoader(false);
-        showToast("Gagal memuat rekapitulasi: " + err.message, "error");
+        showRekapError(err.message || 'Koneksi ke spreadsheet backend bermasalah.');
       }
+    }
+
+    function showRekapError(message) {
+      const errorContainer = document.getElementById('rekapErrorContainer');
+      const errorDesc = document.getElementById('rekapErrorDesc');
+      const contentContainer = document.getElementById('rekapContentContainer');
+
+      if (chartTrenInstance) {
+        chartTrenInstance.destroy();
+        chartTrenInstance = null;
+      }
+      if (chartRuanganInstance) {
+        chartRuanganInstance.destroy();
+        chartRuanganInstance = null;
+      }
+
+      if (contentContainer) contentContainer.classList.add('hidden');
+      if (errorContainer) {
+        errorContainer.classList.remove('hidden');
+        if (errorDesc) {
+          errorDesc.innerText = 'Penyebab: ' + message;
+        }
+      }
+      showToast('Rekapitulasi gagal: ' + message, 'error');
     }
 
     function renderRekapCharts(data) {
@@ -3616,6 +4039,189 @@
         `;
       });
       tbody.innerHTML = html;
+    }
+
+    /**
+     * =========================================================================
+     * MODUL KELOLA JADWAL & SHIFT SATPAM (SUPERVISOR & ADMIN)
+     * =========================================================================
+     */
+    function openSecurityScheduleModal() {
+      if (userRole !== 'SUPERVISOR' && userRole !== 'ADMIN') {
+        showToast('Akses ditolak: Hanya Supervisor dan Admin yang dapat mengelola jadwal satpam.', 'error');
+        return;
+      }
+      const modal = document.getElementById('modalManageSecuritySchedule');
+      if (!modal) return;
+
+      const bulanSelect = document.getElementById('globalMonthSelect');
+      const bulanText = bulanSelect.options[bulanSelect.selectedIndex] ? bulanSelect.options[bulanSelect.selectedIndex].text : '';
+      const tahunText = document.getElementById('globalYearSelect').value;
+      const label = document.getElementById('secSchedModalPeriodeLabel');
+      if (label) label.innerText = bulanText + ' ' + tahunText;
+
+      modal.classList.remove('hidden');
+      loadSecurityScheduleMatrix();
+    }
+
+    function closeSecurityScheduleModal() {
+      const modal = document.getElementById('modalManageSecuritySchedule');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function loadSecurityScheduleMatrix() {
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+      const container = document.getElementById('secSchedMatrixContainer');
+      if (container) {
+        container.innerHTML = '<div class="text-center py-12 text-slate-400 text-xs"><i class="fa-solid fa-spinner animate-spin mr-2 text-indigo-600"></i>Memuat matriks jadwal piket security...</div>';
+      }
+
+      try {
+        const res = await callBackend('getSecurityScheduleMatrix', {
+          token: sessionToken,
+          bulan: bulan,
+          tahun: tahun
+        });
+        if (res && res.success) {
+          cachedSecurityMatrix = res.data;
+          renderSecurityScheduleMatrix(res.data);
+        } else {
+          if (container) {
+            container.innerHTML = `<div class="p-8 text-center text-rose-600 text-xs bg-rose-50 border border-rose-200 rounded-xl">Gagal memuat jadwal: ${(res && res.message) ? res.message : 'Kesalahan server'}</div>`;
+          }
+          showToast((res && res.message) ? res.message : 'Gagal memuat jadwal satpam', 'error');
+        }
+      } catch (err) {
+        if (container) {
+          container.innerHTML = `<div class="p-8 text-center text-rose-600 text-xs bg-rose-50 border border-rose-200 rounded-xl">Kesalahan: ${err.message}</div>`;
+        }
+        showToast('Gagal memuat jadwal: ' + err.message, 'error');
+      }
+    }
+
+    function renderSecurityScheduleMatrix(data) {
+      const container = document.getElementById('secSchedMatrixContainer');
+      if (!container || !data) return;
+
+      const activeDays = data.activeDays || [];
+      const officers = data.officers || [];
+
+      if (officers.length === 0) {
+        container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">Tidak ada petugas keamanan (Security) yang terdaftar.</div>';
+        return;
+      }
+
+      let headerDaysHtml = '';
+      activeDays.forEach(d => {
+        headerDaysHtml += `
+          <th class="p-2 text-center w-12 min-w-[46px] border border-slate-200 bg-slate-100 text-[10px] font-black text-slate-700">
+            Tgl ${d}
+          </th>
+        `;
+      });
+
+      let rowsHtml = '';
+      officers.forEach((off, idx) => {
+        const initial = off.namaPegawai ? off.namaPegawai.charAt(0).toUpperCase() : 'S';
+        let cellsHtml = '';
+
+        activeDays.forEach(d => {
+          const curShift = (off.shifts && off.shifts[d]) ? off.shifts[d] : 'O';
+          let selectClass = 'bg-slate-100 text-slate-600 border-slate-300 font-bold';
+          if (curShift === 'P') selectClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+          else if (curShift === 'S') selectClass = 'bg-amber-100 text-amber-800 border-amber-300 font-black';
+          else if (curShift === 'M') selectClass = 'bg-indigo-100 text-indigo-800 border-indigo-300 font-black';
+
+          cellsHtml += `
+            <td class="p-1 text-center border border-slate-200">
+              <select onchange="handleShiftChange('${escapeHtml(off.username || off.namaPegawai)}', ${d}, this.value)"
+                class="w-full text-center text-xs py-1 px-0.5 rounded-lg border focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-all ${selectClass}">
+                <option value="P" ${curShift === 'P' ? 'selected' : ''}>P</option>
+                <option value="S" ${curShift === 'S' ? 'selected' : ''}>S</option>
+                <option value="M" ${curShift === 'M' ? 'selected' : ''}>M</option>
+                <option value="O" ${curShift === 'O' ? 'selected' : ''}>O</option>
+              </select>
+            </td>
+          `;
+        });
+
+        rowsHtml += `
+          <tr class="hover:bg-slate-50/80">
+            <td class="p-2.5 text-center font-bold text-slate-400 text-[11px] border border-slate-200">${idx + 1}</td>
+            <td class="p-2.5 border border-slate-200 sticky left-0 bg-white z-10 shadow-xs min-w-[160px]">
+              <div class="flex items-center space-x-2">
+                <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                  ${initial}
+                </div>
+                <div>
+                  <p class="font-bold text-slate-900 leading-tight">${escapeHtml(off.namaPegawai)}</p>
+                  <p class="text-[10px] text-slate-400">@${escapeHtml(off.username)}</p>
+                </div>
+              </div>
+            </td>
+            ${cellsHtml}
+          </tr>
+        `;
+      });
+
+      container.innerHTML = `
+        <div class="w-full overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr>
+                <th class="p-2.5 text-center w-10 border border-slate-200 bg-slate-100 text-[10px] font-black text-slate-700">No</th>
+                <th class="p-2.5 border border-slate-200 bg-slate-100 text-[10px] font-black text-slate-700 sticky left-0 z-20">Petugas Keamanan</th>
+                ${headerDaysHtml}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-xs">
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    async function handleShiftChange(targetUserOrName, tanggal, newShift) {
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      showToast(`Menyimpan shift ${targetUserOrName} Tgl ${tanggal} -> '${newShift}'...`, 'info');
+
+      try {
+        const res = await callBackend('updateSecurityShift', {
+          token: sessionToken,
+          targetUserOrName: targetUserOrName,
+          tanggal: tanggal,
+          newShift: newShift,
+          bulan: bulan,
+          tahun: tahun
+        });
+
+        if (res && res.success) {
+          showToast(res.message || `Shift ${targetUserOrName} berhasil diperbarui!`, 'success');
+          // Update cached matrix
+          if (cachedSecurityMatrix && cachedSecurityMatrix.officers) {
+            const off = cachedSecurityMatrix.officers.find(o => o.username === targetUserOrName || o.namaPegawai === targetUserOrName);
+            if (off && off.shifts) {
+              off.shifts[tanggal] = newShift;
+            }
+          }
+          // If supervisor view is active or security view is active, refresh lightly
+          if (activeView === 'keamanan') {
+            loadJadwalKeamanan();
+          } else if (activeView === 'supervisor') {
+            loadSupervisorData();
+          }
+        } else {
+          showToast((res && res.message) ? res.message : 'Gagal memperbarui shift.', 'error');
+          loadSecurityScheduleMatrix(); // Re-render from server
+        }
+      } catch (err) {
+        showToast('Kesalahan server saat ubah shift: ' + err.message, 'error');
+        loadSecurityScheduleMatrix();
+      }
     }
 
     /**

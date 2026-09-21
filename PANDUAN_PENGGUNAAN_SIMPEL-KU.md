@@ -5,7 +5,7 @@
 
 ---
 
-## 📑 DAFTAR ISI
+### 📑 DAFTAR ISI
 1. [Tentang Aplikasi SIMPEL-KU](#1-tentang-aplikasi-simpel-ku)
 2. [Sistem Multi-Role & Autentikasi Pengguna](#2-sistem-multi-role--autentikasi-pengguna)
    - 2.1 Struktur Peran (Role) & Hak Akses
@@ -18,14 +18,14 @@
 4. [Panduan Modul: Dashboard Eksekutif Supervisor & Kasubbag Umum](#4-panduan-modul-dashboard-eksekutif-supervisor--kasubbag-umum)
    - 4.1 Banner Pengawasan & Aksi Cepat
    - 4.2 Kartu Ringkasan Performa Makro (5 Indikator Utama)
-   - 4.3 Panel Filter Multi-Dimensi (Unit Kerja & Lantai)
-   - 4.4 Tabel Komparasi Kepatuhan Antar-Pegawai Real-Time
+   - 4.3 Pemisahan Unit Kerja Terpadu & Subtotal Metrik (CS, PST, Security)
+   - 4.4 Pengelolaan & Pengubahan Jadwal Shift Satpam (P, S, M, O)
    - 4.5 Modul Verifikasi & Approval Laporan Bulanan Tenaga Alih Daya
-5. [Panduan Modul: Quality Assurance (Inspeksi Mutu & Sidak Kebersihan)](#5-panduan-modul-quality-assurance-inspeksi-mutu--sidak-kebersihan)
-   - 5.1 Formulir Penilaian Cepat Rating Bintang 1–5
-   - 5.2 Pemilihan Area Publik & Deteksi Lantai Otomatis
+5. [Panduan Modul: Quality Assurance (Inspeksi Mutu Terpadu)](#5-panduan-modul-quality-assurance-inspeksi-mutu-terpadu)
+   - 5.1 4 Kategori Aspek Mutu (Kebersihan, Keamanan, Pelayanan, Sarpras)
+   - 5.2 Formulir Penilaian Cepat Rating Bintang 1–5 & Preset Area
    - 5.3 Catatan Evaluasi & Dokumentasi Foto Temuan
-   - 5.4 Widget Skor Mutu Per Area & Timeline Riwayat Sidak
+   - 5.4 Widget Skor Mutu Per Kategori Aspek & Timeline Riwayat Audit
    - 5.5 Fitur Pintas "Audit Cepat" dari Tabel Pegawai
 6. [Panduan Modul: Dashboard Personal Pegawai Pelaksana](#6-panduan-modul-dashboard-personal-pegawai-pelaksana)
 7. [Panduan Modul: Monitoring Kebersihan & Pelayanan](#7-panduan-modul-monitoring-kebersihan--pelayanan)
@@ -38,9 +38,10 @@
    - 8.1 Ringkasan Distribusi Shift Kerja Bulanan
    - 8.2 Memilih Tanggal & Membaca Legenda Shift (P, S, M, O)
    - 8.3 Pengisian Checklist Tugas Sesuai Jam Dinas
-9. [Panduan Modul: Rekapitulasi & Visualisasi Grafis](#9-panduan-modul-rekapitulasi--visualisasi-grafis)
-   - 9.1 Grafik Tren Harian & Grafik Pencapaian Ruangan
-   - 9.2 Tabel Matriks Rekapitulasi Per Ruangan
+9. [Panduan Modul: Rekapitulasi & Penanganan Kendala (Error State & Coba Lagi)](#9-panduan-modul-rekapitulasi--penanganan-kendala-error-state--coba-lagi)
+   - 9.1 Penanganan Kegagalan Rekapitulasi & Tombol Coba Lagi
+   - 9.2 Grafik Tren Harian & Grafik Pencapaian Ruangan
+   - 9.3 Tabel Matriks Rekapitulasi Per Ruangan
 10. [Panduan Modul: Profil Akun & Ganti Kredensial Mandiri](#10-panduan-modul-profil-akun--ganti-kredensial-mandiri)
 11. [Tanya Jawab (FAQ) & Solusi Kendala Teknis](#11-tanya-jawab-faq--solusi-kendala-teknis)
 
@@ -50,10 +51,11 @@
 
 **SIMPEL-KU** (*Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum*) adalah aplikasi manajemen operasional dan pengawasan terpadu berbasis cloud yang dirancang khusus untuk memonitor, mengevaluasi, mengaudit mutu, dan merekapitulasi pelaksanaan tugas harian tenaga pendukung (alih daya) di lingkungan **BPS Provinsi Kalimantan Barat**.
 
-### 🌟 Fitur Unggulan Tahap 3:
-* **Sistem Multi-Role & Otorisasi Berjenjang**: Memisahkan peran kerja operasional (CS, Pelayanan, Satpam) dengan fungsi manajerial pengawasan (Supervisor / Kasubbag Umum / PPK / Admin TI).
-* **Dashboard Eksekutif Supervisor**: Pemantauan kepatuhan makro seluruh unit kerja alih daya secara real-time disertai komparasi kinerja antar-pegawai.
-* **Modul Quality Assurance (QA) / Sidak Mutu Kebersihan**: Fasilitas evaluasi mutu berkala bintang 1–5 ⭐ pada area-area publik dengan dukungan catatan evaluasi dan URL bukti foto temuan lapangan.
+### 🌟 Fitur Unggulan Terbaru:
+* **Quality Assurance (Inspeksi Mutu Terpadu)**: Memperluas cakupan audit mutu ke 4 pilar utama: **Kebersihan**, **Keamanan**, **Pelayanan**, dan **Sarana & Prasarana** dengan skala bintang 1–5 ⭐, preset area otomatis, dan kartu breakdown skor per aspek.
+* **Pemisahan Unit Kerja Tegas (*Strict Segregation*)**: Mengelompokkan monitoring kinerja per unit terpisah (**Unit Kebersihan**, **Unit Keamanan**, dan **Unit Pelayanan**) dengan subtotal metrik masing-masing sehingga tidak bercampur aduk.
+* **Editor Jadwal & Matriks Shift Satpam (P, S, M, O)**: Memberikan wewenang bagi Supervisor dan Admin TI untuk meninjau dan mengubah langsung jadwal shift piket satpam dengan penyimpanan instan ke sheet `JadwalPiketSecurity`.
+* **Penanganan Error Rekapitulasi & Tombol Coba Lagi**: Deteksi eksplisit saat gagal memuat data rekapitulasi, menampilkan kotak peringatan informatif dan tombol muat ulang tanpa memberikan data palsu/kosong.
 * **Verifikasi & Approval Laporan Bulanan Resmi**: Alur tanda tangan persetujuan digital laporan bulanan alih daya oleh Kasubbag Umum / PPK langsung tersimpan di spreadsheet dengan stempel verifikasi resmi.
 * **Checklist Real-Time Terintegrasi (*Live Sync*)**: Seluruh interaksi pengguna tersinkronisasi langsung dengan Google Spreadsheet sebagai database utama.
 * **Smart History Locking**: Mengunci otomatis checklist tanggal lampau yang berstatus selesai (*TRUE*), sementara checklist hari ini dapat dikoreksi jika terjadi kekeliruan.
@@ -68,8 +70,8 @@ Aplikasi SIMPEL-KU membagi kewenangan pengguna ke dalam 5 peran (*Role*):
 
 | Role | Target Pengguna | Hak Akses & Menu |
 | :--- | :--- | :--- |
-| **`SUPERVISOR`** | Kasubbag Umum, PPK, Koordinator Lapangan | Dashboard Pengawasan Makro, Modul Quality Assurance (Sidak Mutu), Approval Laporan Bulanan, Monitoring Semua Unit, Rekapitulasi Eksekutif, Profil Akun. |
-| **`ADMIN`** | Administrator TI BPS Kalbar | Akses Penuh (*Super Admin*): Dashboard Supervisor, Seluruh Lembar Monitoring CS/PST/Satpam, QA Mutu, Approval, Rekapitulasi, Pengaturan Sistem & Kredensial. |
+| **`SUPERVISOR`** | Kasubbag Umum, PPK, Koordinator Lapangan | Dashboard Pengawasan Makro, Modul QA (4 Aspek Mutu), Approval Laporan Bulanan, Pengelolaan Jadwal Shift Satpam, Monitoring Semua Unit (Tergrup Terpisah), Rekapitulasi Eksekutif, Profil Akun. |
+| **`ADMIN`** | Administrator TI BPS Kalbar | Akses Penuh (*Super Admin*): Dashboard Supervisor, Seluruh Lembar Monitoring CS/PST/Satpam, QA Mutu Terpadu, Approval, Editor Jadwal Satpam, Rekapitulasi, Pengaturan Sistem & Kredensial. |
 | **`CS`** | Petugas Kebersihan (*Cleaning Service*) | Dashboard Personal CS, Lembar Monitoring Kebersihan Ruangan/Lantai/Toilet/Halaman, Rekapitulasi Personal, Profil Akun. |
 | **`PELAYANAN`** | Petugas Resepsionis / Front Office PST | Dashboard Personal PST, Lembar Monitoring Standar Layanan PST & Kebersihan Area Tamu, Rekapitulasi Personal, Profil Akun. |
 | **`SECURITY`** | Petugas Keamanan / Satpam | Dashboard Personal Satpam, Kalender Jadwal Shift Piket (Pagi/Sore/Malam), Checklist Tugas Keamanan & Patroli Gedung, Rekapitulasi Personal, Profil Akun. |
@@ -125,11 +127,11 @@ Berikut adalah akun default yang telah terdaftar pada database sheet **`Users`**
 |-------------------------------------------------------------------------------|
 | [Sidebar Navigasi] |  [Banner: Portal Pengawasan Manajerial & Approval]       |
 | - Dashboard Sup    |  +-----------+ +-----------+ +-----------+ +-----------+ |
-| - Sidak Mutu (QA)  |  | Total 92% | | CS: 94%   | | PST: 98%  | | Sec: 86%  | |
+| - Inspeksi QA      |  | Total 92% | | CS: 94%   | | PST: 98%  | | Sec: 86%  | |
 | - Rekapitulasi     |  +-----------+ +-----------+ +-----------+ +-----------+ |
 | - Profil Akun      |                                                          |
-|                    |  [Verifikasi & Approval Laporan Bulanan: CS | PST | SEC] |
-| [Keluar / Logout]  |  [Tabel Komparasi Kepatuhan Pegawai (Filter Unit/Lantai)]|
+|                    |  [Tab Unit: Semua | Kebersihan (CS) | PST | Keamanan]    |
+| [Keluar / Logout]  |  [Tabel Komparasi Terpisah Per Unit & Subtotal Kinerja]  |
 +-------------------------------------------------------------------------------+
 ```
 
@@ -158,53 +160,79 @@ Modul ini adalah pusat kendali pengawasan bagi Kasubbag Umum, PPK, dan Koordinat
 +-------------------------------------------------------------------------------+
 |  PORTAL PENGAWASAN MANAJERIAL & APPROVAL                                       |
 |  Dashboard Pengawasan Kasubbag Umum / PPK                                     |
-|  [⚡ Sidak Mutu (QA)]  [📜 Approval Bulanan]                                   |
+|  [⚡ Inspeksi Mutu (QA)]  [🛡️ Jadwal Satpam]  [📜 Approval Bulanan]           |
 +-------------------------------------------------------------------------------+
 | [ Total: 92% ] [ CS: 94% ] [ PST: 98% ] [ Satpam: 86% ] [ Mutu QA: 4.8 ⭐ ]    |
 +-------------------------------------------------------------------------------+
 | STATUS PERSETUJUAN BULANAN (September 2026):                                  |
 | [ CS: ✓ TELAH DISETUJUI ]   [ PST: ✓ TELAH DISETUJUI ]   [ SEC: ⏳ MENUNGGU ]  |
 +-------------------------------------------------------------------------------+
-| Filter Unit: [ Semua v ] | Filter Lantai: [ Semua Lantai v ] | [ Cari Pegawai ]|
+| TAB UNIT KERJA: [ ( Semua Unit ) ] [ Kebersihan ] [ Pelayanan ] [ Keamanan ]  |
+| Filter Lantai : [ Semua Lantai v ] | Cari Pegawai: [                     ]    |
++-------------------------------------------------------------------------------+
+| === UNIT KEBERSIHAN (CLEANING SERVICE) === [Subtotal: 94% (580/617 Tugas)]    |
 | +---------------------------------------------------------------------------+ |
-| | Pegawai       | Unit      | Target | Selesai | % Kepatuhan | Status | Aksi | |
-| | Slamet Riyadi | Kebersihan|  120   |   118   |    98%      | Sangat | [QA] | |
-| | Eddy Suryadi  | Keamanan  |   22   |    20   |    91%      | Baik   | [QA] | |
+| | Slamet Riyadi | Kebersihan | 120   | 118   | 98%   | 🟢 Sangat Baik | [QA] | |
+| +---------------------------------------------------------------------------+ |
+| === UNIT KEAMANAN (SATPAM / SECURITY) === [Subtotal: 86% (128/148 Shift)]     |
+| +---------------------------------------------------------------------------+ |
+| | Eddy Suryadi  | Keamanan   | 22    | 20    | 91%   | 🟢 Sangat Baik |[Shift]|
 | +---------------------------------------------------------------------------+ |
 +-------------------------------------------------------------------------------+
 ```
 
 ### 4.1 Banner Pengawasan & Aksi Cepat
-* **Tombol Sidak Mutu (QA)**: Melompat langsung ke halaman formulir inspeksi mutu kebersihan.
-* **Tombol Approval Bulanan**: Membuka modal konfirmasi persetujuan laporan bulanan untuk seluruh unit atau unit tertentu.
+* **Tombol Inspeksi Mutu (QA)**: Melompat langsung ke formulir inspeksi mutu terpadu (Kebersihan, Keamanan, Pelayanan, Sarpras).
+* **Tombol Jadwal Satpam**: Membuka modal matriks kalender shift security seluruh personil untuk memantau atau mengedit jadwal dinas.
+* **Tombol Approval Bulanan**: Membuka modal konfirmasi persetujuan laporan bulanan alih daya.
 
 ### 4.2 Kartu Ringkasan Performa Makro (5 Indikator Utama)
 1. **Kepatuhan Total**: Persentase agregat kepatuhan seluruh unit alih daya pada bulan aktif.
 2. **Kepatuhan Kebersihan (CS)**: Tingkat penyelesaian checklist kebersihan gedung dan toilet.
 3. **Kepatuhan Pelayanan (PST)**: Tingkat kepatuhan standar pembukaan loket, kebersihan ruang tunggu PST, dan perlengkapan ATK tamu.
 4. **Kepatuhan Keamanan (Satpam)**: Persentase pelaksanaan checklist patroli dan tugas jaga shift keamanan.
-5. **Indeks Mutu Kebersihan (QA)**: Rata-rata skor bintang (1.0 – 5.0 ⭐) dari hasil sidak lapangan oleh Supervisor.
+5. **Indeks Mutu Terpadu (QA)**: Rata-rata skor bintang (1.0 – 5.0 ⭐) gabungan dari seluruh kategori sidak lapangan oleh Supervisor.
 
 ---
 
-### 4.3 Panel Filter Multi-Dimensi
-* **Filter Unit Kerja**: Menyaring tampilan pegawai berdasarkan *Semua Unit*, *Kebersihan (CS)*, *Pelayanan (PST)*, atau *Keamanan (Satpam)*.
-* **Filter Lantai Gedung**: Menyaring pegawai yang bertugas di *Lantai 1*, *Lantai 2*, *Lantai 3*, atau *Area Luar / Halaman*.
-* **Pencarian Cepat**: Mengetik nama pegawai untuk memfilter tabel secara instan.
+### 4.3 Pemisahan Unit Kerja Terpadu & Subtotal Metrik
+Data pegawai alih daya tidak lagi dicampur dalam satu tabel datar, melainkan dikelompokkan secara terpisah:
+* **Tab Navigasi Unit**: Memungkinkan Supervisor beralih cepat antara tab **Semua Unit**, **Unit Kebersihan (CS)**, **Unit Pelayanan (PST)**, dan **Unit Keamanan (Satpam)**.
+* **Header Kartu Unit & Subtotal**: Setiap unit memiliki kartu tersendiri dengan informasi subtotal target, tugas terselesaikan, dan persentase kepatuhan unit tersebut.
+* **Filter Lantai & Pencarian**: Tetap responsif dalam menyaring personil di dalam masing-masing blok unit.
 
 ---
 
-### 4.4 Tabel Komparasi Kepatuhan Antar-Pegawai Real-Time
-Menampilkan matriks komparasi kinerja setiap personil alih daya:
-* **Nama & Avatar Pegawai**: Identitas personil beserta unit kerja.
-* **Total Target, Selesai, dan Belum**: Angka riil akumulasi kegiatan dalam bulan terpilih.
-* **Progress Bar Kepatuhan (%)**: Visualisasi capaian persentase tugas.
-* **Badge Status Performa**:
-  * 🟢 **Sangat Baik** (Kepatuhan $\ge 90\%$)
-  * 🔵 **Baik** (Kepatuhan $75\% - 89\%$)
-  * 🟡 **Cukup** (Kepatuhan $60\% - 74\%$)
-  * 🔴 **Perlu Ditingkatkan** (Kepatuhan $< 60\%$)
-* **Tombol Aksi Cepat [Sidak]**: Tombol pintas untuk langsung menilai mutu kebersihan pada ruangan kerja yang ditugaskan ke pegawai bersangkutan.
+### 4.4 Pengelolaan & Pengubahan Jadwal Shift Satpam (P, S, M, O)
+
+Supervisor dan Admin TI memiliki wewenang penuh untuk mengatur pembagian shift piket satpam langsung dari aplikasi:
+
+```
++-------------------------------------------------------------------------------+
+|  MODAL PENGELOLAAN & JADWAL SHIFT SECURITY                                    |
+|  Periode: September 2026 (Klik cell shift untuk mengubah P/S/M/O)             |
++-------------------------------------------------------------------------------+
+| Petugas          | Tgl 1 | Tgl 2 | Tgl 3 | Tgl 4 | Tgl 5 | ... | Tgl 30 | Tgl 31|
+|------------------+-------+-------+-------+-------+-------+-----+--------+-------|
+| Eddy Suryadi     | [ P ] | [ P ] | [ S ] | [ M ] | [ O ] | ... | [ P ]  | [ O ] |
+| Syarif Reza      | [ S ] | [ S ] | [ M ] | [ O ] | [ P ] | ... | [ S ]  | [ P ] |
+| Feri Yustami     | [ M ] | [ M ] | [ O ] | [ P ] | [ S ] | ... | [ M ]  | [ S ] |
++-------------------------------------------------------------------------------+
+| [ 🔵 P = Pagi ]  [ 🟡 S = Siang/Sore ]  [ 🟣 M = Malam ]  [ ⚪ O = Off/Libur ]   |
++-------------------------------------------------------------------------------+
+```
+
+#### Langkah Mengubah Shift Satpam:
+1. Klik tombol **🛡️ Jadwal Satpam** di banner dashboard supervisor atau tombol **Shift** di tabel satpam.
+2. Modal matriks jadwal seluruh personil satpam untuk bulan aktif akan ditampilkan.
+3. Cari nama petugas dan tanggal dinas yang ingin diubah.
+4. Pilih kode shift baru dari dropdown/pilihan cell:
+   * **`P`** : Dinas Pagi (06.00 – 16.00)
+   * **`S`** : Dinas Siang/Sore (15.30 – 23.30)
+   * **`M`** : Dinas Malam (23.00 – 07.30)
+   * **`O`** : Lepas Dinas / Libur (Off)
+5. Sistem langsung mengirim pembaruan ke backend dan mencatatnya ke sheet **`JadwalPiketSecurity`** di spreadsheet tanpa perlu reload halaman.
+6. Badge warna shift pada tabel akan berubah seketika dan jadwal checklist petugas bersangkutan langsung terupdate.
 
 ---
 
@@ -238,64 +266,67 @@ Fasilitas resmi bagi Kasubbag Umum / PPK untuk memverifikasi dan menandatangani 
 
 ---
 
-## 5. Panduan Modul: Quality Assurance (Inspeksi Mutu & Sidak Kebersihan)
+## 5. Panduan Modul: Quality Assurance (Inspeksi Mutu Terpadu)
 
-Modul **Quality Assurance (QA)** memungkinkan Pimpinan dan Supervisor melakukan inspeksi lapangan berkala (*spot check* / sidak) terhadap kebersihan dan kerapian area kantor BPS Provinsi Kalimantan Barat.
+Modul **Quality Assurance (QA)** kini diperluas untuk mengaudit **seluruh aspek mutu layanan dan sarana kantor**, tidak terbatas hanya pada kebersihan saja.
 
 ```
 +-------------------------------------------------------------------------------+
-|  FORMULIR INSPEKSI MUTU & SIDAK KEBERSIHAN                                    |
+|  FORMULIR INSPEKSI & AUDIT MUTU TERPADU                                       |
 +-------------------------------------------------------------------------------+
-|  1. Area Ruangan : [ Lobby Utama & Resepsionis v ]   Lantai: [ Lantai 1 ]     |
-|  2. Tanggal Sidak: [ 2026-09-21 ]                                             |
-|  3. Skor Mutu    : [ ⭐ ] [ ⭐ ] [ ⭐ ] [ ⭐ ] [ ⭐ ]  -> (5.0 - Sangat Bersih) |
-|  4. Catatan      : [ Lantai bersih berkilau, kaca pintu utama bebas debu ]    |
-|  5. URL Foto     : [ https://drive.google.com/.../foto_temuan.jpg ]           |
+|  1. Kategori Mutu: [ 🛡️ Keamanan & Patroli v ]                                |
+|  2. Area Objek   : [ Pos Satpam & Barrier Gate v ]   Lantai: [ Luar/Halaman ] |
+|  3. Tanggal Sidak: [ 2026-09-21 ]                                             |
+|  4. Skor Mutu    : [ ⭐ ] [ ⭐ ] [ ⭐ ] [ ⭐ ] [ ⭐ ]  -> (5.0 - Sangat Baik)   |
+|  5. Catatan      : [ Palang barrier gate berfungsi prima, buku tamu tertib ]  |
+|  6. URL Foto     : [ https://drive.google.com/.../foto_temuan.jpg ]           |
 |                                                                               |
-|                           [ 💾 Simpan Hasil Inspeksi ]                        |
+|                           [ 💾 Simpan Hasil Audit ]                           |
 +-------------------------------------------------------------------------------+
-| RINGKASAN SKOR PER AREA PUBLIK:                                               |
-| - Lobby Utama: 4.9 ⭐ | PST: 4.8 ⭐ | Toilet Lt 1: 4.5 ⭐ | Toilet Lt 2: 4.2 ⭐|
+| REKAPITULASI RATA-RATA SKOR PER ASPEK MUTU:                                   |
+| [ 🧹 Kebersihan: 4.8 ⭐ ] [ 🛡️ Keamanan: 4.9 ⭐ ] [ 👥 Pelayanan: 5.0 ⭐ ] [ ⚙️ Sarpras: 4.6 ⭐ ] |
 +-------------------------------------------------------------------------------+
-| TIMELINE RIWAYAT SIDAK TERKINI:                                               |
-| [21 Sep 2026] Lobby Utama - 5 ⭐ ("Bersih & Rapi") oleh Kasubbag Umum [Foto]  |
-| [20 Sep 2026] Toilet Lt 2 - 3 ⭐ ("Wastafel perlu disikat") oleh Supervisor   |
+| TIMELINE RIWAYAT AUDIT TERKINI:                                               |
+| [21 Sep] [Keamanan] Pos Satpam - 5 ⭐ ("Tertib & Siaga") oleh Kasubbag Umum   |
+| [20 Sep] [Kebersihan] Toilet Lt 2 - 4 ⭐ ("Wastafel bersih") oleh Supervisor  |
+| [19 Sep] [Pelayanan] Loket PST - 5 ⭐ ("Display brosur rapi") oleh Supervisor |
 +-------------------------------------------------------------------------------+
 ```
 
-### 5.1 Formulir Penilaian Cepat Rating Bintang 1–5
-Supervisor dapat memberikan penilaian mutu dengan menyentuh / mengklik ikon bintang interaktif:
-* ⭐ (1 Bintang): **Buruk** (Banyak kotoran / sampah menumpuk / tidak terawat).
-* ⭐⭐ (2 Bintang): **Kurang** (Kurang bersih / debu tebal / lantai licin).
-* ⭐⭐⭐ (3 Bintang): **Cukup** (Kebersihan standar, ada beberapa titik perlu perbaikan).
-* ⭐⭐⭐⭐ (4 Bintang): **Baik** (Bersih, rapi, wangi, sesuai standar kantor).
-* ⭐⭐⭐⭐⭐ (5 Bintang): **Sangat Bersih** (Sangat higienis, mengkilap, dan tertata sempurna).
+### 5.1 4 Kategori Aspek Mutu
+Supervisor dapat memilih kategori inspeksi yang sesuai dari dropdown:
+1. **🧹 Kebersihan**: Kebersihan toilet, koridor, ruang rapat, mushola, ruang kerja, dan kaca.
+2. **🛡️ Keamanan**: Kesiapsiagaan pos satpam, kepatuhan buku tamu, ketertiban parkir kendaraan, fungsi CCTV, dan patroli perimeter.
+3. **👥 Pelayanan**: Kesiapan loket PST, keramahan front office, ruang konsultasi statistik, dan fasilitas ramah difabel/anak.
+4. **⚙️ Sarana & Prasarana**: Kesiapan genset, penerangan, sistem pendingin AC, pompa air/tandon, dan kesiapan APAR.
 
-### 5.2 Pemilihan Area Publik & Deteksi Lantai Otomatis
-Pilih area ruangan yang sedang disidak dari dropdown:
-* *Lobby Utama & Resepsionis* (Lantai 1)
-* *Pelayanan Statistik Terpadu (PST)* (Lantai 1)
-* *Ruang Tamu Pimpinan & Kepala BPS* (Lantai 2)
-* *Ruang Rapat Utama Lt 2* (Lantai 2)
-* *Ruang Rapat Lt 3* (Lantai 3)
-* *Ruang Kerja Pegawai & Bagian Umum* (Lantai 1/2)
-* *Toilet Pria / Wanita Lantai 1* (Lantai 1)
-* *Toilet Pria / Wanita Lantai 2* (Lantai 2)
-* *Toilet Pria / Wanita Lantai 3* (Lantai 3)
-* *Mushola Kantor* (Lantai 1)
-* *Halaman Depan, Area Parkir & Pos Satpam* (Luar / Halaman)
-*(Sistem secara cerdas mendeteksi dan mengisi kolom Lantai Gedung secara otomatis).*
+---
+
+### 5.2 Formulir Penilaian Cepat Rating Bintang 1–5 & Preset Area
+* **Preset Area Dinamis**: Saat memilih kategori mutu, daftar dropdown area objek sidak otomatis menyesuaikan (misal memilih *Keamanan* menampilkan *Pos Satpam*, *Barrier Gate*, *CCTV Control*, dsb).
+* **Rating Bintang Universal (1–5 ⭐)**:
+  * ⭐ (1 Bintang): **Buruk** (Banyak kekurangan, tidak sesuai SOP).
+  * ⭐⭐ (2 Bintang): **Kurang** (Kurang tertib / ada kendala operasional).
+  * ⭐⭐⭐ (3 Bintang): **Cukup** (Kondisi standar, ada poin catatan pembenahan).
+  * ⭐⭐⭐⭐ (4 Bintang): **Baik** (Tertib, bersih, berfungsi baik sesuai SOP).
+  * ⭐⭐⭐⭐⭐ (5 Bintang): **Sangat Baik** (Prima, higienis, sempurna, memuaskan).
+
+---
 
 ### 5.3 Catatan Evaluasi & Dokumentasi Foto Temuan
-* **Catatan Evaluasi**: Tuliskan temuan positif atau aspek yang perlu dibenahi oleh petugas kebersihan (misal: *Wastafel bersih, mohon kaca jendela sudut timur dibersihkan*).
-* **URL Foto Bukti / Temuan**: Masukkan tautan foto dokumentasi (dari Google Drive / Google Photos / Imgur / WhatsApp Web) jika ada temuan khusus yang memerlukan perbaikan.
+* **Catatan Evaluasi**: Tuliskan temuan positif atau aspek yang perlu dibenahi oleh petugas bersangkutan.
+* **URL Foto Bukti**: Tautkan link foto dokumentasi dari Google Drive / Google Photos jika ada temuan khusus.
 
-### 5.4 Widget Skor Mutu Per Area & Timeline Riwayat Sidak
-* **Widget Rata-rata Bintang Per Area**: Memperlihatkan performa kebersihan pada setiap titik area publik dalam bentuk kartu nilai rata-rata bintang.
-* **Timeline Riwayat Sidak**: Menampilkan feed audit terbaru secara kronologis, mencantumkan tanggal sidak, nama auditor, skor bintang, catatan evaluasi, dan thumbnail tautan foto bukti lapangan.
+---
+
+### 5.4 Widget Skor Mutu Per Kategori Aspek & Timeline Riwayat Audit
+* **4 Kartu Skor Aspek**: Menampilkan rata-rata skor bintang untuk masing-masing pilar (*Kebersihan*, *Keamanan*, *Pelayanan*, *Sarpras*).
+* **Timeline Riwayat Audit**: Daftar kronologis seluruh audit mutu lengkap dengan badge warna kategori, skor bintang, catatan, nama auditor, dan tautan foto.
+
+---
 
 ### 5.5 Fitur Pintas "Audit Cepat" dari Tabel Pegawai
-Pada Dashboard Supervisor, klik tombol **[Sidak]** di samping nama pegawai untuk otomatis mengisi form QA dengan ruangan yang menjadi tanggung jawab petugas tersebut.
+Pada Dashboard Supervisor, klik tombol **[Sidak]** di samping nama pegawai untuk otomatis memilih kategori unit dan mengisi area kerja pegawai tersebut.
 
 ---
 
@@ -380,7 +411,7 @@ Mode Harian merupakan format yang paling praktis dan fokus untuk operasional seh
 
 ## 8. Panduan Modul: Monitoring & Piket Keamanan (Satpam)
 
-Modul khusus bagi **Petugas Keamanan / Satpam** yang terhubung langsung dengan sheet jadwal piket security kantor.
+Modul khusus bagi **Petugas Keamanan / Satpam** yang terhubung langsung dengan jadwal piket security kantor.
 
 ```
 +-------------------------------------------------------------------------------+
@@ -424,17 +455,36 @@ Daftar checklist otomatis menyesuaikan kode shift pada tanggal yang dipilih:
 
 ---
 
-## 9. Panduan Modul: Rekapitulasi & Visualisasi Grafis
+## 9. Panduan Modul: Rekapitulasi & Penanganan Kendala (Error State & Coba Lagi)
 
-Modul Rekapitulasi menyajikan analisis visual dan tabular untuk pelaporan bulanan:
+Modul Rekapitulasi menyajikan analisis visual dan tabular untuk pelaporan bulanan dengan proteksi integritas data:
 
-### 9.1 Grafik Tren Harian & Grafik Pencapaian Ruangan
+```
++-------------------------------------------------------------------------------+
+|  KONDISI KETIKA REKAPITULASI MENGALAMI KENDALA (ERROR STATE)                  |
++-------------------------------------------------------------------------------+
+|  ⚠️ Gagal Memuat Data Rekapitulasi                                             |
+|  Terjadi kendala saat menyusun data rekapitulasi: [Koneksi jaringan terputus] |
+|  Silakan periksa koneksi internet Anda atau coba muat ulang data.             |
+|                                                                               |
+|                      [ 🔄 Coba Lagi (Muat Ulang Data) ]                       |
++-------------------------------------------------------------------------------+
+```
+
+### 9.1 Penanganan Kegagalan Rekapitulasi & Tombol Coba Lagi
+* **Proteksi Tampilan Palsu**: Jika terjadi kegagalan jaringan atau kendala pembacaan spreadsheet, sistem **tidak akan** menampilkan grafik kosong yang menyesatkan seolah-olah data 0% atau berhasil.
+* **Kotak Peringatan Interaktif**: Menampilkan kotak pesan error berlatar merah/oranye lengkap dengan penyebab teknis kegagalan.
+* **Tombol Coba Lagi**: Pengguna cukup mengklik tombol **Coba Lagi (Muat Ulang Data)** untuk melakukan sinkronisasi ulang tanpa perlu me-refresh seluruh halaman browser.
+
+---
+
+### 9.2 Grafik Tren Harian & Grafik Pencapaian Ruangan
 1. **Grafik Tren Kepatuhan Checklist Harian (Line Chart)**:
    * Menggambarkan kurva fluktuasi jumlah kegiatan yang diselesaikan dari tanggal 1 hingga akhir bulan.
 2. **Grafik Pencapaian Berdasarkan Ruangan (Bar Chart)**:
    * Menampilkan perbandingan diagram batang hijau (selesai) vs batang abu-abu (target) untuk setiap area kerja.
 
-### 9.2 Tabel Matriks Rekapitulasi Per Ruangan
+### 9.3 Tabel Matriks Rekapitulasi Per Ruangan
 Menyajikan tabel rincian data:
 * Nama Ruangan / Area
 * Jumlah Item Tugas
@@ -476,30 +526,31 @@ Modul Profil memungkinkan pegawai memeriksa identitas akun serta memperbarui use
 
 ## 11. Tanya Jawab (FAQ) & Solusi Kendala Teknis
 
-#### Q1: Siapa saja yang dapat melihat Dashboard Supervisor dan melakukan Approval Laporan Bulanan?
-> **Jawaban:** Hanya akun dengan peran **SUPERVISOR** (Kasubbag Umum / PPK / Koordinator) dan **ADMIN** (Admin TI) yang memiliki wewenang untuk membuka Dashboard Pengawasan, mengisi formulir Sidak Mutu (QA), serta menandatangani Approval Laporan Bulanan.
+#### Q1: Siapa saja yang dapat melihat Dashboard Supervisor, mengubah Jadwal Satpam, dan melakukan Approval?
+> **Jawaban:** Hanya akun dengan peran **SUPERVISOR** (Kasubbag Umum / PPK / Koordinator) dan **ADMIN** (Admin TI) yang memiliki wewenang untuk membuka Dashboard Pengawasan, mengedit matriks Jadwal Piket Security, mengisi formulir Sidak Mutu (QA), serta menandatangani Approval Laporan Bulanan.
 
-#### Q2: Mengapa saya tidak bisa membatalkan centang (TRUE) pada tanggal yang sudah lewat beberapa hari lalu?
+#### Q2: Apa saja yang bisa dinilai pada modul Quality Assurance (QA) sekarang?
+> **Jawaban:** Modul QA kini mencakup 4 pilar mutu terpadu: **Kebersihan** (ruangan, toilet, koridor), **Keamanan** (pos satpam, CCTV, barrier gate), **Pelayanan** (loket PST, keramahan, ruang tunggu), dan **Sarana & Prasarana** (genset, AC, APAR, pompa air).
+
+#### Q3: Bagaimana jika Supervisor ingin menukar jadwal dinas petugas keamanan?
+> **Jawaban:** Pada Dashboard Supervisor, klik tombol **Jadwal Satpam** di banner atas atau tombol **Shift** di tabel pegawai unit keamanan. Matriks kalender satpam akan terbuka. Klik cell shift tanggal yang ingin diubah lalu pilih kode shift baru (`P`, `S`, `M`, atau `O`). Perubahan langsung tersimpan ke sheet `JadwalPiketSecurity`.
+
+#### Q4: Mengapa muncul kotak peringatan merah saat saya membuka menu Rekapitulasi?
+> **Jawaban:** Kotak tersebut menandakan bahwa aplikasi mengalami kendala saat membaca data spreadsheet (misalnya jaringan internet sempat terputus). Cukup klik tombol **Coba Lagi (Muat Ulang Data)** di dalam kotak tersebut untuk memuat ulang data.
+
+#### Q5: Mengapa saya tidak bisa membatalkan centang (TRUE) pada tanggal yang sudah lewat beberapa hari lalu?
 > **Jawaban:** Untuk menjamin akuntabilitas data, checklist pada tanggal lampau yang sudah berstatus selesai (*TRUE*) terkunci secara otomatis oleh sistem. Pembatalan centang hanya diperbolehkan untuk checklist pada **Hari Ini**.
 
-#### Q3: Bagaimana alur Approval Laporan Bulanan oleh Kasubbag Umum / PPK?
-> **Jawaban:** Pada Dashboard Supervisor, Kasubbag Umum meninjau persentase kepatuhan makro dan komparasi pegawai. Selanjutnya klik tombol **Verifikasi Sekarang** pada kartu unit kerja (CS/PST/Satpam), isi catatan evaluasi, lalu klik **Simpan Verifikasi & Setujui**. Sistem akan mencatat persetujuan tersebut ke sheet `Monthly_Approvals` dan menyematkan badge stempel resmi disetujui.
+#### Q6: Di mana data hasil Sidak Mutu (QA) disimpan?
+> **Jawaban:** Seluruh data penilaian bintang, kategori aspek mutu, area objek, lantai, auditor, catatan evaluasi, dan tautan foto temuan otomatis tersimpan di sheet **`Quality_Audits`** pada spreadsheet database SIMPEL-KU.
 
-#### Q4: Di mana data hasil Sidak Mutu Kebersihan (QA) disimpan?
-> **Jawaban:** Seluruh data penilaian bintang, area ruangan, lantai, auditor, catatan evaluasi, dan tautan foto temuan otomatis tersimpan di sheet **`Quality_Audits`** pada spreadsheet database SIMPEL-KU.
-
-#### Q5: Mengapa jadwal shift Satpam saya berbeda dengan rekan yang lain?
-> **Jawaban:** Sistem SIMPEL-KU membaca baris jadwal piket unik untuk masing-masing personil dari sheet `Jadwal_Satpam` berdasarkan username atau nama lengkap pegawai yang sedang login.
-
-#### Q6: Saya lupa password akun saya, bagaimana cara resetnya?
+#### Q7: Saya lupa password akun saya, bagaimana cara resetnya?
 > **Jawaban:** Hubungi Admin TI atau Kasubbag Umum BPS Provinsi Kalimantan Barat. Admin dapat mereset password akun Anda secara langsung melalui sheet `Users` di Google Spreadsheet.
-
-#### Q7: Apakah aplikasi SIMPEL-KU aman dibuka melalui HP pribadi pegawai?
-> **Jawaban:** Sangat aman. Seluruh transmisi data menggunakan protokol enkripsi HTTPS Google Apps Script, sesi pengguna diamankan dengan token terenkripsi selama 6 jam, dan kredensial tersimpan rapi di Google Sheets terpusat.
 
 ---
 
 **Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum (SIMPEL-KU)**  
 *Subbagian Umum / Tim TI - BPS Provinsi Kalimantan Barat*  
-*Versi Aplikasi: 3.0 (Multi-Role, Executive Supervisor Dashboard & QA Audit)*
+*Versi Aplikasi: 3.5 (Multi-Aspect QA, Unit Segregation, Error Handling & Security Shift Matrix)*
+
 
