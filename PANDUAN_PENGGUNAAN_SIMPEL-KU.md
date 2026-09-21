@@ -1,4 +1,4 @@
-﻿# 📘 BUKU PANDUAN PENGGUNAAN APLIKASI
+# 📘 BUKU PANDUAN PENGGUNAAN APLIKASI
 ## **SIMPEL-KU**
 ### *(Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum)*
 **Badan Pusat Statistik (BPS) Provinsi Kalimantan Barat**
@@ -7,319 +7,300 @@
 
 ## 📑 DAFTAR ISI
 1. [Tentang Aplikasi SIMPEL-KU](#1-tentang-aplikasi-simpel-ku)
-2. [Akses dan Autentikasi Pengguna](#2-akses-dan-autentikasi-pengguna)
-   - 2.1 Membuka Aplikasi
-   - 2.2 Langkah Login
-   - 2.3 Durasi Sesi & Logout
-3. [Mengenal Antarmuka & Navigasi](#3-mengenal-antarmuka--navigasi)
-   - 3.1 Sidebar & Fitur Ciutkan (Collapse)
-   - 3.2 Topbar & Pemilih Periode Global (Bulan/Tahun)
-   - 3.3 Penyesuaian Menu Berdasarkan Peran (Role)
-4. [Panduan Modul: Dashboard Ringkasan](#4-panduan-modul-dashboard-ringkasan)
-5. [Panduan Modul: Monitoring Kebersihan & Pelayanan](#5-panduan-modul-monitoring-kebersihan--pelayanan)
-   - 5.1 Mode Tampilan Harian (Kartu & Tabel)
-   - 5.2 Mode Tampilan Mingguan
-   - 5.3 Mode Tampilan Bulanan
-   - 5.4 Fitur Filter Ruangan, Status, dan Pencarian
-   - 5.5 Aturan & Validasi Checklist (Hari Ini vs Tanggal Lampau)
-   - 5.6 Penanganan Hari Libur (Sabtu & Minggu)
-6. [Panduan Modul: Monitoring & Piket Keamanan (Satpam)](#6-panduan-modul-monitoring--piket-keamanan-satpam)
-   - 6.1 Ringkasan Shift Kerja
-   - 6.2 Memilih Tanggal & Melihat Kode Shift
-   - 6.3 Mengisi Checklist Tugas Shift (Pagi, Jam Kerja, Malam)
-7. [Panduan Modul: Rekapitulasi & Visualisasi](#7-panduan-modul-rekapitulasi--visualisasi)
-   - 7.1 Grafik Tren Harian & Pencapaian Ruangan
-   - 7.2 Tabel Rekapitulasi Per Ruangan
-8. [Panduan Modul: Profil Akun & Ganti Kredensial](#8-panduan-modul-profil-akun--ganti-kredensial)
-   - 8.1 Melihat Informasi Akun
-   - 8.2 Prosedur Ganti Username & Password Mandiri
-9. [Tanya Jawab (FAQ) & Penyelesaian Masalah](#9-tanya-jawab-faq--penyelesaian-masalah)
+2. [Sistem Multi-Role dan Hak Akses Berjenjang](#2-sistem-multi-role-dan-hak-akses-berjenjang)
+3. [Akses dan Autentikasi Pengguna](#3-akses-dan-autentikasi-pengguna)
+   - 3.1 Membuka Aplikasi & Persyaratan Browser
+   - 3.2 Prosedur Login Akun
+   - 3.3 Sesi Aman & Prosedur Logout
+4. [Mengenal Antarmuka & Tata Letak Sistem](#4-mengenal-antarmuka--tata-letak-sistem)
+   - 4.1 Sidebar & Fitur Collapse Ramping
+   - 4.2 Topbar & Pemilih Periode Global (Bulan/Tahun)
+   - 4.3 Navigasi Dinamis Berbasis Peran
+5. [Panduan Modul: Dashboard Supervisor & Kasubbag Umum](#5-panduan-modul-dashboard-supervisor--kasubbag-umum)
+   - 5.1 Kartu Metrik Utama Pengawasan Manajerial
+   - 5.2 Status Inspeksi Mutu & Ringkasan Shift Keamanan
+   - 5.3 Rekapitulasi Kinerja Per Unit (Kebersihan, Pelayanan, Keamanan)
+   - 5.4 Rekapitulasi Progres Pegawai & Modal Rincian Tugas
+   - 5.5 Visualisasi Grafik Tren & Rekapitulasi Terpadu
+   - 5.6 Penanganan Error & Tombol Coba Lagi (Retry)
+6. [Panduan Modul: Monitoring Terpadu (Admin & Supervisor)](#6-panduan-modul-monitoring-terpadu-admin--supervisor)
+   - 6.1 Filter Multi-Kriteria (Unit, Pegawai, Ruangan, Status, Periode)
+   - 6.2 Navigasi Tanggal & Mode Harian/Mingguan/Bulanan
+   - 6.3 Kartu & Matriks Checklist Kegiatan
+7. [Panduan Modul: Pengaturan & Pertukaran Shift Security](#7-panduan-modul-pengaturan--pertukaran-shift-security)
+   - 7.1 Matriks Jadwal Piket Petugas Satpam Bulanan
+   - 7.2 Kode Shift Kerja: P, S, M, O (Off / Bebas Tugas)
+   - 7.3 Mengubah Shift Kerja Cepat Per Tanggal
+   - 7.4 Pertukaran Shift Antar Petugas (Fitur Swap)
+8. [Panduan Modul: Inspeksi Mutu Lintas Unit](#8-panduan-modul-inspeksi-mutu-lintas-unit)
+   - 8.1 Evaluasi Mutu Standar Layanan BPS Kalbar
+   - 8.2 Skala Penilaian Skor Mutu (1-5 Bintang) & Kelayakan
+   - 8.3 Menambahkan Rekam Inspeksi Mutu Baru
+   - 8.4 Memfilter & Memantau Rekam Mutu Serta Rekomendasi
+9. [Panduan Modul: Dashboard & Monitoring Staf Teknis](#9-panduan-modul-dashboard--monitoring-staf-teknis)
+   - 9.1 Dashboard Personal Staf
+   - 9.2 Checklist Kebersihan & Standar Pelayanan
+   - 9.3 Aturan Pengisian (Hari Ini vs Tanggal Lampau Terkunci)
+   - 9.4 Monitoring Jadwal Shift Petugas Keamanan (Personal)
+10. [Panduan Modul: Profil Akun & Ganti Kredensial](#10-panduan-modul-profil-akun--ganti-kredensial)
+    - 10.1 Melihat Detail Informasi Akun & NIP
+    - 10.2 Prosedur Mengubah Username & Password Mandiri
+11. [Daftar Akun Pengguna & Default Kredensial](#11-daftar-akun-pengguna--default-kredensial)
+12. [Tanya Jawab (FAQ) & Penyelesaian Masalah](#12-tanya-jawab-faq--penyelesaian-masalah)
 
 ---
 
 ## 1. Tentang Aplikasi SIMPEL-KU
 
-**SIMPEL-KU** (*Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum*) adalah aplikasi berbasis web yang dirancang khusus untuk memonitor, mencatat, dan merekapitulasi pelaksanaan tugas harian petugas pendukung di lingkungan **BPS Provinsi Kalimantan Barat**.
+**SIMPEL-KU** (*Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum*) adalah aplikasi operasional dan pengawasan manajerial berbasis web yang dirancang khusus untuk memonitor, mencatat, mengevaluasi, dan merekapitulasi pelaksanaan tugas harian seluruh staf pendukung operasional kantor di lingkungan **Badan Pusat Statistik (BPS) Provinsi Kalimantan Barat**.
 
-### 🌟 Fitur Utama Aplikasi:
-* **Checklist Real-Time Terintegrasi**: Terhubung langsung dengan Google Spreadsheet sebagai database utama (*live sync*).
-* **Personalisasi Berbasis Peran**: Setiap pegawai otomatis mendapatkan lembar kerja monitoring dan menu navigasi sesuai tugasnya:
-  1. **Petugas Kebersihan (Cleaning Service)**: Monitoring kebersihan ruangan, toilet, lobby, dan halaman kantor.
-  2. **Petugas Pelayanan / Resepsionis (Front Office / PST)**: Standar pelayanan tamu, perlengkapan ATK, dan kebersihan area pelayanan.
-  3. **Petugas Keamanan (Security / Satpam)**: Pemantauan jadwal shift kerja (*Pagi, Sore, Malam, Libur*) dan checklist patroli pengamanan gedung & aset.
-* **Aturan Penguncian Data Lampau**: Menjaga integritas data di mana checklist tanggal lampau yang sudah selesai (*TRUE*) terkunci otomatis, sementara checklist hari ini dapat dibatalkan jika terjadi salah klik.
-* **Tampilan Multi-Periode Responsif**: Mendukung mode Harian, Mingguan, dan Bulanan yang pas di layar perangkat komputer maupun smartphone.
-* **Ganti Kredensial Mandiri**: Pegawai dapat mengubah username dan password akunnya sendiri secara aman.
+### 🌟 Nilai Tambah & Fitur Unggulan SIMPEL-KU:
+* **Pengawasan Manajerial Terpusat (Supervisor Dashboard)**: Memberikan pimpinan dan pengawas ringkasan eksekutif menyeluruh mulai dari target, kepatuhan checklist, distribusi beban shift satpam, hingga rekam inspeksi mutu layanan.
+* **Sistem Multi-Role & Otorisasi Berjenjang**: Memisahkan kewenangan pimpinan/pengawas dengan petugas pelaksana teknis secara ketat tanpa tumpang tindih menu.
+* **Modul Inspeksi Mutu Lintas Unit**: Memungkinkan Kasubbag Umum, Tim Humas, dan Korlap melakukan audit kualitas mutu kebersihan, keamanan pos, dan standar pelayanan resepsionis/PST dengan rating bintang dan rekomendasi perbaikan.
+* **Pengaturan & Pertukaran Shift Security**: Fleksibilitas mengubah atau menukar jadwal shift kerja satpam (*Pagi, Sore, Malam, Off*) secara atomik langsung ke database Google Sheets.
+* **Integritas Data Valid**: Menerapkan aturan penguncian (*lock*) data tanggal lampau yang sudah berstatus selesai (*TRUE*), serta perlindungan pembatalan hanya untuk hari kerja berjalan.
 
 ---
 
-## 2. Akses dan Autentikasi Pengguna
+## 2. Sistem Multi-Role dan Hak Akses Berjenjang
 
-### 2.1 Membuka Aplikasi
-Aplikasi SIMPEL-KU dapat diakses melalui web browser modern (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari) pada komputer desktop, laptop, tablet, maupun smartphone melalui tautan web aplikasi yang disediakan oleh Administrator BPS Provinsi Kalimantan Barat.
+Aplikasi SIMPEL-KU membagi peran pengguna menjadi beberapa level hak akses:
 
-### 2.2 Langkah Login
-1. Buka halaman utama aplikasi SIMPEL-KU.
-2. Masukkan **Username** akun Anda (misalnya: slamet, dede, eddy, ania, yuni, dll.).
+| Peran (Role) | Unit Kerja | Deskripsi Wewenang | Menu Utama yang Diakses |
+| :--- | :--- | :--- | :--- |
+| **Admin** | Manajemen | Administrator teknis sistem dengan wewenang konfigurasi database, jadwal shift, dan evaluasi. | Dashboard Supervisor, Rekap Monitoring, Monitoring Terpadu, Jadwal & Shift Security, Inspeksi Mutu, Profil Akun |
+| **Supervisor / Kabag Umum** | Manajemen | Pengawasan manajerial operasional kantor, penetapan shift satpam, monitoring mutu, dan analisis tren kepatuhan. | Dashboard Supervisor, Rekap Monitoring, Monitoring Terpadu, Jadwal & Shift Security, Inspeksi Mutu, Profil Akun |
+| **Tim Umum dan Humas** | Umum / Humas | Pengawasan pelayanan PST, kebersihan area publik, audit standar layanan tamu, dan inspeksi mutu. | Dashboard Supervisor, Rekap Monitoring, Monitoring Terpadu, Inspeksi Mutu, Profil Akun |
+| **Koordinator Lapangan (Korlap)** | Umum / Operasional | Koordinasi teknis lapangan, inspeksi operasional, dan pengelolaan kesiapsiagaan shift satpam. | Dashboard Supervisor, Monitoring Terpadu, Jadwal & Shift Security, Inspeksi Mutu, Profil Akun |
+| **Petugas Kebersihan** | Kebersihan | Pelaksana teknis kebersihan ruangan, toilet, lobby, dan lingkungan gedung kantor BPS Kalbar. | Dashboard Personal, Monitoring Kebersihan, Rekapitulasi Ruangan Pribadi, Profil Akun |
+| **Petugas Pelayanan** | Pelayanan | Pelaksana standar operasional front office, resepsionis, buku tamu, dan Pelayanan Statistik Terpadu (PST). | Dashboard Personal, Monitoring Pelayanan, Rekapitulasi Pribadi, Profil Akun |
+| **Petugas Keamanan (Satpam)** | Keamanan | Petugas pengamanan kantor, pos jaga, patroli berkala, penyeberangan jalan, dan lalu lintas kendaraan. | Monitoring Keamanan (Jadwal Shift & Tugas), Profil Akun |
+
+---
+
+## 3. Akses dan Autentikasi Pengguna
+
+### 3.1 Membuka Aplikasi & Persyaratan Browser
+Aplikasi dapat dibuka melalui browser web modern (Google Chrome, Mozilla Firefox, Microsoft Edge, Safari) baik pada komputer/laptop maupun tablet dan smartphone melalui tautan resmi yang telah disediakan.
+
+### 3.2 Prosedur Login Akun
+1. Buka laman utama SIMPEL-KU.
+2. Masukkan **Username** akun Anda.
 3. Masukkan **Password** akun Anda.
-4. *(Opsional)* Klik ikon mata (<i class=fa-solid fa-eye></i>) pada kolom password jika ingin memastikan sandi yang diketik sudah benar.
+4. *(Opsional)* Klik ikon mata (<i class="fa-solid fa-eye"></i>) untuk memastikan kata sandi terketik dengan benar.
 5. Klik tombol **Masuk ke Dashboard**.
-6. Jika kredensial sesuai, sistem akan menampilkan notifikasi hijau *Login berhasil!* dan membuka antarmuka utama aplikasi.
+6. Sistem akan memverifikasi kredensial ke sheet `Users` dan otomatis mengarahkan ke dashboard yang sesuai dengan peran Anda.
 
-> 💡 **Catatan:** Jika muncul pesan kesalahan merah, periksa kembali penulisan huruf besar/kecil dan pastikan tidak ada spasi berlebih pada username maupun password.
-
-### 2.3 Durasi Sesi & Logout
-* **Durasi Sesi**: Sesi login aktif selama **6 Jam**. Setelah 6 jam, pengguna perlu login kembali untuk alasan keamanan data.
-* **Logout**: Untuk keluar dari aplikasi, buka menu navigasi (sidebar) lalu klik tombol **Keluar (Logout)** di bagian bawah atau melalui menu **Profil Akun**.
+### 3.3 Sesi Aman & Prosedur Logout
+* Sesi login berlaku selama **6 Jam**. Setelah 6 jam tidak aktif, sesi akan kedaluwarsa secara otomatis untuk menjaga keamanan data.
+* Untuk keluar, klik tombol **Keluar** pada bagian bawah sidebar atau melalui menu **Profil Akun**.
 
 ---
 
-## 3. Mengenal Antarmuka & Navigasi
+## 4. Mengenal Antarmuka & Tata Letak Sistem
 
-`
-+-------------------------------------------------------------------------------+
-| [Logo SIMPEL-KU]  [Dashboard Ringkasan]         [Bulan: September v] [2026 v] |
-|-------------------------------------------------------------------------------|
-| [Navigasi]        |  [Halo, Nama Pegawai!]                                    |
-| - Dashboard       |  +------------+ +------------+ +------------+ +---------+ |
-| - Monitoring      |  | Total: 120 | | Selesai:95 | | Belum: 25  | | 79%     | |
-| - Rekapitulasi    |  +------------+ +------------+ +------------+ +---------+ |
-| - Profil Akun     |                                                           |
-|                   |  [Progress Per Ruangan]       [Aksi Cepat]                |
-| [Keluar / Logout] |  - Ruang Rapat: 100%          [> Checklist Monitoring]    |
-|                   |  - Lobby Utama: 85%           [> Laporan & Rekap]         |
-+-------------------------------------------------------------------------------+
-`
+### 4.1 Sidebar & Fitur Collapse Ramping
+* **Sidebar Desktop**: Berisi identitas login Anda, NIP/Role, dan daftar menu aktif.
+* **Fitur Ciutkan (Collapse)**: Klik ikon panah di pojok kanan atas sidebar untuk menciutkan sidebar menjadi ikon ramping (lebar 80px) agar area tabel monitoring lebih luas.
+* **Drawer Mobile**: Pada layar HP, sidebar dapat dibuka-tutup dengan menekan tombol menu hamburger di sudut kiri atas.
 
-### 3.1 Sidebar & Fitur Ciutkan (Collapse)
-* **Sidebar Desktop**: Terletak di sisi kiri layar berisi info avatar pengguna, nama akun, serta menu navigasi aktif.
-* **Tombol Ciutkan (Collapse)**: Klik ikon panah di sudut kanan atas sidebar desktop untuk menciutkan navigasi menjadi ikon ramping. Fitur ini sangat berguna untuk memperlebar area kerja saat memantau matriks tabel.
-* **Navigasi Mobile (HP)**: Pada layar smartphone, menu navigasi dapat dibuka dengan menyentuh tombol ikon hamburger (<i class=fa-solid fa-bars></i>) di sudut kiri atas.
-
-### 3.2 Topbar & Pemilih Periode Global (Bulan & Tahun)
-Di bagian kanan atas layar selalu tersedia pemilih **Bulan** dan **Tahun**.
-* Secara otomatis terisi dengan bulan dan tahun berjalan saat ini.
-* Jika ingin melihat arsip atau checklist bulan sebelumnya / bulan mendatang, cukup ubah pilihan bulan atau tahun pada dropdown tersebut, maka seluruh data pada halaman aktif akan diperbarui seketika.
-
-### 3.3 Penyesuaian Menu Berdasarkan Peran (Role)
-Menu yang muncul di sidebar otomatis menyesuaikan peran pegawai yang sedang login:
-* **Petugas Kebersihan**: Muncul menu **Monitoring Kebersihan**.
-* **Petugas Pelayanan / Resepsionis**: Muncul menu **Monitoring Pelayanan**.
-* **Petugas Keamanan**: Muncul menu **Monitoring Keamanan** (dilengkapi jadwal shift & checklist tugas piket).
+### 4.2 Topbar & Pemilih Periode Global (Bulan/Tahun)
+Di baris atas layar terdapat:
+* **Judul & Subjudul Halaman Aktif**.
+* **Dropdown Bulan & Tahun Global**: Mengubah bulan atau tahun pada pemilih ini otomatis memperbarui seluruh data di halaman aktif.
+* **Tombol Segarkan (Refresh)**: Klik tombol ikon putar untuk memuat ulang data terkini dari spreadsheet.
 
 ---
 
-## 4. Panduan Modul: Dashboard Ringkasan
+## 5. Panduan Modul: Dashboard Supervisor & Kasubbag Umum
 
-Halaman Dashboard menyajikan ringkasan statistik performa kerja pegawai pada bulan aktif yang dipilih.
+Dashboard ini berfungsi sebagai pusat kendali pengawasan manajerial operasional kantor:
 
-### Komponen Dashboard:
-1. **Kartu Sambutan Pengguna**: Menampilkan nama pegawai dan ucapan selamat datang.
-2. **Kartu Statistik Utama**:
-   * **Total Checklist**: Jumlah seluruh target tugas yang harus dikerjakan pada bulan terpilih.
-   * **Selesai (Hijau)**: Total tugas yang telah berhasil dicentang (*TRUE*).
-   * **Belum (Merah)**: Total tugas yang masih berstatus belum selesai (*FALSE / Kotak Merah*).
-   * **Persentase Pencapaian**: Tingkat ketercapaian tugas dalam persen beserta progress bar visual.
-3. **Pencapaian Berdasarkan Ruangan**: Menampilkan daftar ruangan kerja beserta persentase penyelesaian tugas pada masing-masing ruangan.
-4. **Tombol Aksi Cepat**: Tombol pintas untuk langsung membuka lembar checklist tugas atau laporan grafik rekapitulasi.
+### 5.1 Kartu Metrik Utama Pengawasan Manajerial
+* **Total Monitoring**: Akumulasi seluruh target checklist dari semua staf teknis aktif.
+* **Selesai Terlaksana**: Jumlah checklist yang telah dicentang hijau (*TRUE*).
+* **Belum Dikerjakan**: Jumlah kegiatan checklist yang masih berstatus kotak merah (*FALSE*).
+* **Tingkat Kepatuhan**: Persentase ketercapaian operasional dengan indikator warna progress bar (*Hijau: >=90%, Biru: >=70%, Merah: <70%*).
 
----
+### 5.2 Status Inspeksi Mutu & Ringkasan Shift Keamanan
+* **Kartu Status Mutu**: Menampilkan skor rata-rata mutu keseluruhan (skala 1-5 bintang), predikat mutu (*Sangat Baik, Memenuhi Standar, Perlu Perbaikan*), dan total laporan inspeksi.
+* **Kartu Kesiapsiagaan Shift Keamanan**: Menampilkan jumlah dan nama-nama petugas satpam yang bertugas hari ini pada Shift Pagi (P), Shift Sore (S), Shift Malam (M), serta Shift Off (O).
 
-## 5. Panduan Modul: Monitoring Kebersihan & Pelayanan
+### 5.3 Rekapitulasi Kinerja Per Unit
+Menyajikan 3 kartu ringkasan terpisah untuk:
+1. **Unit Kebersihan**: Target kegiatan, selesai, belum, dan persentase kepatuhan area kebersihan.
+2. **Unit Pelayanan**: Target SOP resepsionis & PST, tingkat pemenuhan, dan persentase kepatuhan.
+3. **Unit Keamanan**: Kesiapsiagaan tugas pengamanan gedung dan kehadiran shift.
 
-Modul ini adalah lembar kerja utama untuk mencatat dan menandai pelaksanaan tugas sehari-hari.
+### 5.4 Rekapitulasi Progres Pegawai & Modal Rincian Tugas
+Tabel ini memuat seluruh nama pegawai, NIP, Unit Kerja, total target, checklist selesai, belum, dan progress bar.
+* Klik tombol **Detail** pada baris pegawai untuk membuka jendela popup (*modal*) rincian seluruh tugas dan progres checklist per ruangan yang menjadi tanggung jawab pegawai tersebut.
 
-`
-Pilihan Periode: [ [Harian (Default)] | [Mingguan] | [Bulanan] ]
----------------------------------------------------------------------------------------
-Sub-Nav Harian : [ Hari Ini ] | [<] Mg 1 (1-6) [>] | [Sen 1] [Sel 2] [Rab 3] [Kam 4] ...
-Format Tampilan: [ (o) Kartu ] [ ( ) Tabel ]
-Filter Bar     : [ Filter Ruangan: Semua v ] [ Filter Status: Semua v ] [ Cari Kegiatan... ]
-`
+### 5.5 Visualisasi Grafik Tren & Rekapitulasi Terpadu
+Tepat di bagian bawah dashboard supervisor disajikan:
+* **Grafik Tren Harian**: Garis pergerakan penyelesaian checklist dari tanggal 1 sampai akhir bulan.
+* **Grafik Pencapaian Ruangan**: Perbandingan tingkat kepatuhan antar ruangan kantor.
 
-### 5.1 Mode Tampilan Harian
-Mode Harian adalah tampilan default yang paling nyaman dan fokus untuk penggunaan harian:
-
-#### A. Format Kartu (Cards)
-* Menampilkan daftar kegiatan yang dikelompokkan rapi per ruangan untuk **satu tanggal yang dipilih**.
-* **Item Belum Dicentang**: Berwarna **merah muda** dengan tombol bertuliskan **Centang Selesai**. Cukup klik kartu tersebut untuk menandai kegiatan selesai.
-* **Item Sudah Dicentang**: Berwarna **hijau** dengan tulisan **✓ TRUE** dan teks kegiatan tercoret rapi.
-
-#### B. Format Tabel (Table)
-* Menampilkan daftar kegiatan dalam bentuk baris tabel dengan kolom tanggal terpilih di sisi kanan.
-* Kotak merah menandakan belum dikerjakan, kotak hijau menandakan telah selesai.
-
-#### C. Navigasi Slider Tanggal Harian
-* **Tombol Hari Ini**: Langsung melompat ke tanggal hari ini secara instan.
-* **Pills Tanggal**: Tombol-tombol tanggal (1, 2, 3, dst.) yang dilengkapi nama hari pendek. Klik tanggal yang diinginkan untuk berpindah hari.
-* **Navigasi Minggu (Mg 1, Mg 2, dst.)**: Gunakan tombol panah kiri/kanan pada badge minggu untuk melihat kelompok tanggal minggu berikutnya.
+### 5.6 Penanganan Error & Tombol Coba Lagi (Retry)
+Jika koneksi spreadsheet mengalami kendala sesaat saat memuat data rekapitulasi, sistem akan menampilkan kotak peringatan *"Gagal Memuat Data Pengawasan"* yang dilengkapi tombol **Coba Lagi** (*Retry*) untuk memicu penarikan data ulang tanpa perlu memuat ulang seluruh halaman web.
 
 ---
 
-### 5.2 Mode Tampilan Mingguan
-* Menampilkan matriks kegiatan untuk **1 minggu kalender penuh** (Senin s/d Minggu).
-* Pengguna dapat memilih tab **Minggu 1**, **Minggu 2**, **Minggu 3**, **Minggu 4**, atau **Minggu 5**.
-* Memudahkan pegawai untuk mengevaluasi kelengkapan checklist dalam rentang 1 pekan tanpa terpotong.
+## 6. Panduan Modul: Monitoring Terpadu (Admin & Supervisor)
+
+Modul ini menggabungkan pemantauan seluruh unit operasional ke dalam 1 tampilan:
+
+### 6.1 Filter Multi-Kriteria
+Pengawas dapat menyaring data secara presisi menggunakan:
+1. **Filter Unit**: Semua Unit, Unit Kebersihan, Unit Pelayanan, atau Unit Keamanan.
+2. **Filter Pegawai**: Semua Pegawai atau memilih salah satu petugas tertentu.
+3. **Filter Ruangan / Area**: Memilih area spesifik (misal: Ruang Kepala Kantor, PST, Pos Keamanan, dll.).
+4. **Filter Status**: Semua Status, Selesai Dikerjakan (Hijau), atau Belum Dikerjakan (Merah).
+5. **Pencarian Kegiatan**: Mengetik kata kunci kegiatan atau nama petugas.
+
+### 6.2 Mode Periode & Pemilih Tanggal
+* **Harian (Default)**: Slider baris tanggal 1 s.d. 31 yang dapat diklik untuk memantau hari tertentu.
+* **Mingguan**: Tombol filter Minggu ke-1 s.d. Minggu ke-5.
+* **Bulanan**: Tampilan akumulasi checklist satu bulan penuh.
 
 ---
 
-### 5.3 Mode Tampilan Bulanan
-* Menampilkan matriks seluruh kegiatan dalam satu bulan penuh.
-* Dilengkapi dengan **Pagination per Minggu Kalender** (*Minggu 1, Minggu 2, dst.*) sehingga tabel selalu pas dan rapi dalam satu layar monitor tanpa perlu menggulir (*scroll*) horizontal yang melelahkan.
+## 7. Panduan Modul: Pengaturan & Pertukaran Shift Security
+
+Modul ini memungkinkan Admin, Supervisor, dan Korlap mengelola jadwal satpam secara fleksibel:
+
+### 7.1 Matriks Jadwal Piket Petugas Satpam Bulanan
+Tabel horizontal yang menampilkan nama seluruh petugas satpam pada kolom kiri dan kolom tanggal 1 sampai 31 di sebelah kanan, disertai kolom ringkasan total shift (P, S, M, O) dan Total Hari Kerja aktif.
+
+### 7.2 Kode Shift Kerja:
+* **`P` (Pagi)**: Pukul 06.00 – 16.00 WIB (Kewajiban tugas penyeberangan, parkir, dan pos pagi).
+* **`S` (Sore)**: Pukul 15.30 – 23.30 WIB (Kewajiban pengawasan jam pulang dan operasional sore).
+* **`M` (Malam)**: Pukul 23.00 – 07.30 WIB (Kewajiban patroli malam, kunci pintu/jendela, dan CCTV).
+* **`O` (Off / Libur)**: Bebas tugas (*tidak dihitung sebagai beban kewajiban kerja bulanan*).
+
+### 7.3 Mengubah Shift Kerja Cepat Per Tanggal
+1. Buka menu **Jadwal & Shift Security**.
+2. Klik langsung pada sel shift kotak tanggal yang ingin diubah.
+3. Dialog pop-up ubah shift akan terbuka.
+4. Pilih shift baru (P, S, M, atau O).
+5. Klik **Simpan Shift**. Sistem akan langsung menyimpan perubahan ke sheet `JadwalPiketSecurity`.
+
+### 7.4 Pertukaran Shift Antar Petugas (Fitur Swap)
+1. Klik tombol **Tukar Shift (Swap)** di pojok kanan atas.
+2. Pilih tanggal pertukaran.
+3. Pilih **Petugas Pertama** dan **Petugas Kedua**.
+4. Klik tombol **Konfirmasi Pertukaran**. Jadwal shift kedua petugas pada tanggal tersebut akan otomatis bertukar secara atomik di spreadsheet.
 
 ---
 
-### 5.4 Fitur Filter Ruangan, Status, dan Pencarian
-1. **Filter Ruangan**: Memilih satu ruangan tertentu (misal: *Ruang Kepala BPS, Toilet Pria, Ruang Rapat*) atau *Semua Ruangan*.
-2. **Filter Status**:
-   * *Semua Item Checkbox*: Menampilkan semua kegiatan.
-   * *Belum Dicentang (Kotak Merah)*: Hanya menampilkan tugas-tugas yang belum selesai (sangat berguna untuk memeriksa tugas yang tersisa).
-   * *Sudah Dicentang (TRUE)*: Hanya menampilkan tugas yang telah selesai.
-3. **Pencarian Kegiatan**: Ketikkan kata kunci (misal: *sapu*, *kaca*, *sampah*, *formulir*) untuk menemukan tugas secara spesifik dalam hitungan detik.
+## 8. Panduan Modul: Inspeksi Mutu Lintas Unit
+
+Modul untuk menjaga kualitas dan audit standar operasional kantor:
+
+### 8.1 Evaluasi Mutu Standar Layanan BPS Kalbar
+Audit mutu mencakup 3 pilar:
+* **Mutu Kebersihan**: Kebersihan lantai, kaca, toilet, keharuman ruangan, dan kerapian halaman.
+* **Mutu Pelayanan**: Kerapian front office, keramahan petugas resepsionis/PST, kecepatan respon, dan ketersediaan buku tamu.
+* **Mutu Keamanan**: Kesiapsiagaan petugas satpam di pos jaga, kerapian kendaraan parkir, dan ketertiban penyeberangan.
+
+### 8.2 Skala Penilaian Skor Mutu (1-5 Bintang)
+* ⭐⭐⭐⭐⭐ (5.0): **Sangat Baik / Optimal** (Memenuhi seluruh SOP dengan sempurna).
+* ⭐⭐⭐⭐ (4.0): **Baik / Memenuhi Standar Mutu** (Operasional berjalan normal dan tertib).
+* ⭐⭐⭐ (3.0): **Cukup / Perlu Perbaikan** (Terdapat catatan temuan minor yang perlu ditindaklanjuti).
+* ⭐⭐ (2.0): **Kurang Memadai** (Memerlukan evaluasi langsung dari koordinator).
+* ⭐ (1.0): **Kritis** (Pelanggaran standar operasional).
+
+### 8.3 Menambahkan Rekam Inspeksi Mutu Baru
+1. Buka menu **Inspeksi Mutu** lalu klik **+ Tambah Inspeksi Mutu**.
+2. Pilih **Unit Kerja** (Kebersihan / Pelayanan / Keamanan).
+3. Masukkan **Tanggal Inspeksi** dan **Petugas / Area Kerja**.
+4. Pilih **Kategori Aspek Mutu**.
+5. Tentukan **Rating Skor Bintang** (1 s.d. 5).
+6. Tuliskan **Catatan Temuan / Evaluasi** dan **Rekomendasi Tindak Lanjut**.
+7. Klik **Simpan Hasil Inspeksi**. Data tersimpan ke sheet `InspeksiMutu`.
 
 ---
 
-### 5.5 Aturan & Validasi Checklist (Hari Ini vs Tanggal Lampau)
+## 9. Panduan Modul: Dashboard & Monitoring Staf Teknis
 
-| Kondisi Tanggal | Status Awal | Tindakan yang Terjadi Saat Diklik | Keterangan Aturan |
-| :--- | :---: | :---: | :--- |
-| **Hari Ini** | Belum (Merah / FALSE) | Berubah menjadi **Selesai (Hijau / TRUE)** | Menandai tugas hari ini berhasil dilaksanakan. |
-| **Hari Ini** | Selesai (Hijau / TRUE) | Berubah kembali menjadi **Belum (FALSE)** | **Dapat Dibatalkan:** Mencegah kesalahan apabila petugas salah menekan tombol. |
-| **Tanggal Lampau** | Selesai (Hijau / TRUE) | **Terkunci 🔒 (Tidak dapat diubah)** | Menjaga validitas dan kejujuran data monitoring yang telah lewat. |
-| **Tanggal Lampau** | Belum (Merah / FALSE) | Dapat diisi menjadi **Selesai (TRUE)** | Memungkinkan pengisian susulan jika baru sempat mencatat. |
+Bagi staf pelaksana (Kebersihan, Resepsionis, Satpam), alur kerja tetap sederhana dan fokus pada checklist pribadi:
 
----
+### 9.1 Dashboard Personal Staf
+Menampilkan target checklist pribadi bulan berjalan, jumlah tugas selesai, belum selesai, dan persentase capaian.
 
-### 5.6 Penanganan Hari Libur (Sabtu & Minggu)
-* Tanggal yang jatuh pada hari **Sabtu** atau **Minggu** otomatis ditandai sebagai **HARI LIBUR (Bebas Tugas)** dengan warna aksen merah muda.
-* Pada mode kartu harian, sistem akan menampilkan banner informatif *Hari Libur - Seluruh kegiatan checklist monitoring tidak wajib diisi pada hari ini.*
-* Pada mode tabel matriks, kolom hari Sabtu dan Minggu bertuliskan *Libur*.
+### 9.2 Checklist Kebersihan & Standar Pelayanan
+* Masuk ke menu **Monitoring Kebersihan** (bagi petugas kebersihan) atau **Monitoring Pelayanan** (bagi petugas resepsionis).
+* Pilih tanggal yang aktif pada slider baris tanggal.
+* Klik tombol **Tandai Selesai** untuk mengubah kotak merah menjadi hijau (*TRUE*).
 
----
+### 9.3 Aturan Pengisian Validasi Tanggal
+* **Hari Ini**: Pengguna bebas mencentang (*TRUE*) dan dapat membatalkannya (*FALSE*) jika terjadi salah klik.
+* **Tanggal Lampau**: Checklist yang sudah bertanda selesai (*TRUE*) dikunci otomatis oleh sistem dan tidak dapat diubah oleh staf teknis untuk mencegah manipulasi data historis.
+* **Sabtu & Minggu**: Ditetapkan sebagai hari libur operasional reguler.
 
-## 6. Panduan Modul: Monitoring & Piket Keamanan (Satpam)
-
-Modul khusus bagi **Petugas Keamanan / Satpam** yang terhubung langsung dengan sheet jadwal piket security kantor.
-
-`
-+-------------------------------------------------------------------------------+
-| Ringkasan Shift: [Total: 22 Hari] [Pagi: 10] [Sore: 6] [Malam: 6]             |
-|-------------------------------------------------------------------------------|
-| Kalender Shift : [ 1 Sen - Pagi ] [ 2 Sel - Pagi ] [ 3 Rab - Malam ] ...      |
-|-------------------------------------------------------------------------------|
-| Tanggal Terpilih: Senin, 1 September 2026 - Shift Pagi (06.00 - 16.00)        |
-| Pencapaian Tugas: 7 / 7 Selesai (100%)                                        |
-| [v] Mengatur lalu lintas dan membantu menyeberangkan karyawan ke kantor       |
-| [v] Mengatur dan mengarahkan parkiran kendaraan roda-4                        |
-| [v] Menyambut dan membukakan pintu kendaraan pimpinan                         |
-| [v] Patroli keamanan gedung dan memeriksa area kantor melalui CCTV            |
-+-------------------------------------------------------------------------------+
-`
-
-### 6.1 Ringkasan Shift Kerja
-Di bagian atas modul terdapat 4 kartu informasi shift untuk bulan aktif:
-* **Total Hari Kerja**: Jumlah hari masuk tugas dalam 1 bulan.
-* **Shift Pagi**: Jumlah jadwal dinas Pagi (06.00 – 16.00).
-* **Shift Sore**: Jumlah jadwal dinas Sore (15.30 – 23.30).
-* **Shift Malam**: Jumlah jadwal dinas Malam (23.00 – 07.30).
-
-### 6.2 Memilih Tanggal & Membaca Legenda Shift
-* Kalender shift menampilkan seluruh tanggal dalam bulan terpilih beserta kode status:
-  * 🔵 **Pagi (P)**: Dinas Pagi.
-  * 🟡 **Sore (S)**: Dinas Sore.
-  * 🟣 **Malam (M)**: Dinas Malam.
-  * ⚪ **Libur (O)**: Hari Bebas Tugas / Lepas Piket.
-* Klik salah satu kotak tanggal untuk membuka daftar checklist tugas pengamanan pada tanggal tersebut.
-
-### 6.3 Mengisi Checklist Tugas Shift
-Daftar tugas yang tampil otomatis menyesuaikan shift dinas pada tanggal yang dipilih:
-1. **Jika Mendapat Shift Pagi (P)**:
-   * Menampilkan tugas: **PAGI (06.00–07.30)** *(penyeberangan, parkir pimpinan, parkir motor)* dan tugas **SELAMA JAM KERJA (07.30–16.00)** *(patroli CCTV tiap 2 jam, pengawasan keluar-masuk barang/tamu)*.
-2. **Jika Mendapat Shift Sore (S) atau Malam (M)**:
-   * Menampilkan tugas: **MALAM** *(patroli keliling gedung, memastikan pintu/jendela/ruangan terkunci rapat, pencegahan bahaya kebakaran/pencurian)*.
-3. **Jika Berstatus Libur (O)**:
-   * Menampilkan keterangan bebas tugas.
-4. **Cara Mencentang**:
-   * Sentuh / klik baris tugas untuk menandai selesai (kotak berubah hijau dan teks dicoret).
-   * Persentase pencapaian shift akan bertambah secara otomatis.
+### 9.4 Monitoring Jadwal Shift Petugas Keamanan (Personal)
+Petugas satpam yang login akan langsung melihat kalender shift pribadinya:
+* Kotak tanggal menampilkan hari, tanggal, dan kode shift (**P**, **S**, **M**, atau **O**).
+* Memilih tanggal piket kerja akan menampilkan daftar checklist tugas siaga shift tersebut (pos jaga, patroli berkala, CCTV, dll.).
 
 ---
 
-## 7. Panduan Modul: Rekapitulasi & Visualisasi
+## 10. Panduan Modul: Profil Akun & Ganti Kredensial
 
-Modul Rekapitulasi menyajikan laporan visual grafis untuk evaluasi bulanan:
+### 10.1 Melihat Detail Informasi Akun & NIP
+Buka menu **Profil Akun** untuk melihat nama lengkap, NIP/ID Petugas, username login, role otorisasi, dan unit kerja yang terdaftar.
 
-### 7.1 Grafik Tren Harian & Pencapaian Ruangan
-1. **Grafik Tren Kepatuhan Checklist Harian (Line Chart)**:
-   * Menggambarkan grafik garis naik/turun jumlah kegiatan yang diselesaikan dari tanggal 1 hingga akhir bulan.
-2. **Grafik Pencapaian Berdasarkan Ruangan (Bar Chart)**:
-   * Menampilkan perbandingan diagram batang hijau (tugas selesai) vs batang abu-abu (total target) untuk setiap ruangan kerja.
-
-### 7.2 Tabel Rekapitulasi Per Ruangan
-Menyajikan rincian data tabular:
-* Nama Ruangan
-* Jumlah Item Kegiatan
-* Total Target Checklist
-* Selesai Dikerjakan
-* Persentase Pencapaian (%)
-* Indikator Status Bar Warna
+### 10.2 Prosedur Mengubah Username & Password Mandiri
+1. Pada halaman Profil Akun, gulir ke formulir **Ganti Username & Password**.
+2. Masukkan **Password Saat Ini** untuk verifikasi keamanan.
+3. Masukkan **Username Baru** (minimal 3 karakter).
+4. *(Opsional)* Masukkan **Password Baru** dan ketik ulang pada kolom konfirmasi password baru (minimal 4 karakter). Jika hanya ingin mengganti username tanpa mengganti password, biarkan kolom password baru kosong.
+5. Klik **Simpan Perubahan Kredensial**.
+6. Perubahan akan langsung disinkronkan ke sheet `Users` pada spreadsheet database SIMPEL-KU.
 
 ---
 
-## 8. Panduan Modul: Profil Akun & Ganti Kredensial
+## 11. Daftar Akun Pengguna & Default Kredensial
 
-Modul Profil memungkinkan pegawai memeriksa identitas akun serta memperbarui username dan password secara mandiri tanpa harus meminta bantuan teknis admin spreadsheet.
+Sistem SIMPEL-KU telah dikonfigurasi dengan akun multi-role berikut:
 
-`
-+-------------------------------------------------------------------------------+
-| [Avatar]  Nama Pegawai (@username)              [Sesi Aktif & Terlindungi]    |
-|-------------------------------------------------------------------------------|
-| [Form Ganti Username & Password]                                              |
-| Password Saat Ini *        : [ •••••••• ]                                     |
-| Username Baru *            : [ slamet ]                                       |
-| Password Baru              : [ •••••••• ] (Minimal 4 karakter)                |
-| Konfirmasi Password Baru   : [ •••••••• ]                                     |
-|                                                                               |
-|                     [ Simpan Perubahan Kredensial ]                           |
-+-------------------------------------------------------------------------------+
-`
-
-### 8.1 Melihat Informasi Akun
-* Menampilkan Nama Lengkap, Username Login, Otorisasi Lembar Kerja Pegawai, serta penjelasan aturan penguncian tanggal lampau.
-
-### 8.2 Prosedur Ganti Username & Password Mandiri
-1. Buka menu **Profil Akun** di sidebar.
-2. Gulir ke bawah menuju kartu **Ganti Username & Password**.
-3. Masukkan **Password Saat Ini** pada kolom verifikasi keamanan.
-4. Ubah **Username Baru** jika ingin mengganti nama pengguna login (minimal 3 karakter).
-5. Masukkan **Password Baru** (minimal 4 karakter) dan ketik ulang pada **Konfirmasi Password Baru**. *(Kosongkan kolom password baru jika Anda hanya ingin mengubah username).*
-6. Klik tombol **Simpan Perubahan Kredensial**.
-7. Sistem akan memverifikasi password lama dan langsung memperbarui data akun ke sheet **Users** pada Google Spreadsheet.
-8. Muncul notifikasi sukses berwarna hijau. Gunakan username dan password baru tersebut untuk login berikutnya.
-
-> ⚠️ **PENTING:** Selalu ingat atau catat username dan password baru Anda di tempat yang aman.
+| No | Nama Pegawai / Jabatan | Unit Kerja | Role | Username Default | NIP / ID |
+| :---: | :--- | :--- | :--- | :--- | :--- |
+| 1 | **Administrator SIMPEL-KU** | Manajemen | Admin | `admin` | 198501012010011001 |
+| 2 | **Supervisor / Kabag Umum** | Manajemen | Supervisor | `supervisor` | 198002022005011002 |
+| 3 | **Tim Umum dan Humas** | Umum | Tim Umum dan Humas | `humas` | 199003032015012003 |
+| 4 | **Koordinator Lapangan** | Umum | Koordinator Lapangan | `korlap` | 199204042017011004 |
+| 5 | **Yuni Juniarti** | Kebersihan | Petugas Kebersihan | `yuni` | PJLP-KB-001 |
+| 6 | **Slamet Riyadi** | Kebersihan | Petugas Kebersihan | `slamet` | PJLP-KB-002 |
+| 7 | **Nurramadhanial (Dede)** | Kebersihan | Petugas Kebersihan | `dede` | PJLP-KB-003 |
+| 8 | **Muhammad Syukri** | Kebersihan | Petugas Kebersihan | `syukri` | PJLP-KB-004 |
+| 9 | **Ramadhan** | Kebersihan | Petugas Kebersihan | `ramadhan` | PJLP-KB-005 |
+| 10 | **Mawardi** | Pelayanan | Petugas Pelayanan | `mawardi` | PJLP-PL-001 |
+| 11 | **Rania Naila Husna** | Pelayanan | Petugas Pelayanan | `rania` | PJLP-PL-002 |
+| 12 | **Alfiana Ayuni** | Pelayanan | Petugas Pelayanan | `alfiana` | PJLP-PL-003 |
+| 13 | **Eddy Suryadi** | Keamanan | Petugas Keamanan | `eddy` | PJLP-KM-001 |
+| 14 | **Syarif Reza Nopriadrian** | Keamanan | Petugas Keamanan | `reza` | PJLP-KM-002 |
+| 15 | **Feri Yustami** | Keamanan | Petugas Keamanan | `feri` | PJLP-KM-003 |
+| 16 | **Eko Prasetyo** | Keamanan | Petugas Keamanan | `eko` | PJLP-KM-004 |
+| 17 | **Agus Tetriansyah** | Keamanan | Petugas Keamanan | `agus` | PJLP-KM-005 |
+| 18 | **Rizki Fadil** | Keamanan | Petugas Keamanan | `rizki` | PJLP-KM-006 |
 
 ---
 
-## 9. Tanya Jawab (FAQ) & Penyelesaian Masalah
+## 12. Tanya Jawab (FAQ) & Penyelesaian Masalah
 
-#### Q1: Mengapa saya tidak bisa membatalkan centang (TRUE) pada tanggal 3 hari yang lalu?
-> **Jawaban:** Demi menjaga integritas dan akuntabilitas data monitoring, sistem SIMPEL-KU secara otomatis mengunci (*lock*) data pada tanggal lampau yang sudah berstatus selesai. Pembatalan centang hanya diizinkan untuk kegiatan pada **Hari Ini**.
+#### Q: Mengapa saya tidak bisa membatalkan checklist tanggal kemarin?
+> **A:** Sesuai dengan aturan integritas data SIMPEL-KU, checklist tanggal lampau yang sudah berstatus selesai (*TRUE*) dikunci secara otomatis. Pembatalan checklist hanya dapat dilakukan pada tanggal berjalan (Hari Ini).
 
-#### Q2: Mengapa pada hari Sabtu dan Minggu checklist saya tidak muncul atau berstatus Libur?
-> **Jawaban:** Hari Sabtu dan Minggu merupakan hari libur kerja resmi di BPS Provinsi Kalimantan Barat, sehingga sistem secara otomatis membebaskan tugas checklist pada hari-hari tersebut.
+#### Q: Bagaimana jika muncul pesan "Gagal memuat data rekapitulasi"?
+> **A:** Klik tombol **Coba Lagi** (*Retry*) pada kotak pesan merah tersebut. Sistem akan mencoba menghubungkan kembali ke Google Sheets. Pastikan juga koneksi internet Anda dalam kondisi stabil.
 
-#### Q3: Bagaimana cara melihat rekap checklist bulan lalu?
-> **Jawaban:** Pada bagian pojok kanan atas layar (Topbar), ubah pilihan dropdown **Bulan** ke bulan yang diinginkan (misal: *Agustus*) dan **Tahun** yang sesuai. Seluruh matriks dan statistik akan otomatis menampilkan data bulan tersebut.
+#### Q: Bagaimana cara Kasubbag Umum menukar shift satpam yang berhalangan hadir?
+> **A:** Buka menu **Jadwal & Shift Security**, lalu klik tombol **Tukar Shift (Swap)**. Pilih tanggal pertukaran, tentukan satpam yang bertukar, dan konfirmasi. Jadwal otomatis diperbarui di database tanpa perlu mengedit spreadsheet manual.
 
-#### Q4: Saya lupa password login saya, apa yang harus saya lakukan?
-> **Jawaban:** Hubungi Administrator SIMPEL-KU BPS Provinsi Kalimantan Barat untuk melakukan reset password akun Anda langsung pada sheet Users di spreadsheet database.
-
-#### Q5: Apakah data checklist yang saya centang di HP otomatis tersimpan ke spreadsheet kantor?
-> **Jawaban:** Ya. Aplikasi SIMPEL-KU terhubung secara real-time (*live sync*) dengan database Google Spreadsheet. Setiap kali Anda mencentang kegiatan atau mengubah kredensial, perubahan tersebut seketika tersimpan di spreadsheet secara permanen.
+#### Q: Ke mana data inspeksi mutu disimpan?
+> **A:** Data hasil penilaian inspeksi mutu langsung disimpan secara permanen ke sheet **`InspeksiMutu`** pada spreadsheet SIMPEL-KU lengkap dengan ID laporan, tanggal, unit, skor, catatan temuan, rekomendasi, dan nama pemeriksa (*inspektor*).
 
 ---
-
-**Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum (SIMPEL-KU)**  
-*Subbagian Umum / Tim TI - BPS Provinsi Kalimantan Barat*  
-*Versi Aplikasi: 2.0 (Modern GAS Web App)*
+*© 2026 Badan Pusat Statistik Provinsi Kalimantan Barat. Seluruh Hak Cipta Dilindungi.*
