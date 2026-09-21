@@ -70,6 +70,29 @@ const ALIAS_MAP = {
   'ramadhan': ['ramadhan', 'rama']
 };
 
+// Pemetaan baku definitif personil ke lembar sheet dan perannya masing-masing
+// Yuni Juniarti = CS (Kebersihan), Mawardi = PELAYANAN (PST / Resepsionis)
+const KNOWN_EMPLOYEE_SHEET_MAP = {
+  // Unit Pelayanan (PST)
+  'mawardi': { sheetCandidates: ['Mawardi', 'mawardi', 'PST Mawardi', 'Pelayanan Mawardi', 'Mawardi PST', 'Mawardi (PST)'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+  'ardi': { sheetCandidates: ['Mawardi', 'mawardi'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+  'rania': { sheetCandidates: ['RaniaNailaHusna', 'Rania Naila Husna', 'Rania', 'PST Rania'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+  'ranianailahusna': { sheetCandidates: ['RaniaNailaHusna', 'Rania Naila Husna', 'Rania'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+  'alfiana': { sheetCandidates: ['AlfianaAyuni', 'Alfiana Ayuni', 'Alfiana', 'PST Alfiana'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+  'alfianaayuni': { sheetCandidates: ['AlfianaAyuni', 'Alfiana Ayuni', 'Alfiana'], role: 'PELAYANAN', jenis: 'RESEPSIONIS' },
+
+  // Unit Kebersihan (CS)
+  'yuni': { sheetCandidates: ['YuniJuniarti', 'Yuni Juniarti', 'Yuni', 'CS Yuni', 'Yuni CS', 'Yuni (CS)'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'yunijuniarti': { sheetCandidates: ['YuniJuniarti', 'Yuni Juniarti', 'Yuni', 'CS Yuni', 'Yuni CS', 'Yuni (CS)'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'dede': { sheetCandidates: ['Nurramadhanial', 'Dede', 'Nur Ramadhanial'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'nurramadhanial': { sheetCandidates: ['Nurramadhanial', 'Dede', 'Nur Ramadhanial'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'slamet': { sheetCandidates: ['SlametRiyadi', 'Slamet Riyadi', 'Slamet'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'slametriyadi': { sheetCandidates: ['SlametRiyadi', 'Slamet Riyadi', 'Slamet'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'syukri': { sheetCandidates: ['MSyukri', 'Muhammad Syukri', 'M. Syukri', 'Syukri'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'msyukri': { sheetCandidates: ['MSyukri', 'Muhammad Syukri', 'M. Syukri', 'Syukri'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' },
+  'ramadhan': { sheetCandidates: ['Ramadhan', 'Rama'], role: 'CS', jenis: 'PIKET KEBERSIHAN KANTOR' }
+};
+
 /**
  * Entry point untuk Web App (Mendukung Web UI GAS & JSON API Endpoint)
  */
@@ -274,26 +297,13 @@ function findSheet(ss, sheetName) {
 
   var allSheets = ss.getSheets();
 
-  // 2. Exact match setelah normalisasi
+  // 2. Exact match setelah normalisasi alpha
   for (var a = 0; a < aliases.length; a++) {
     var targetNorm = getAlphaOnly(aliases[a]);
     if (!targetNorm) continue;
     for (var i = 0; i < allSheets.length; i++) {
       if (getAlphaOnly(allSheets[i].getName()) === targetNorm) {
         return allSheets[i];
-      }
-    }
-  }
-
-  // 3. Substring match
-  for (var a = 0; a < aliases.length; a++) {
-    var targetNorm = getAlphaOnly(aliases[a]);
-    if (targetNorm && targetNorm.length >= 4) {
-      for (var i = 0; i < allSheets.length; i++) {
-        var sNameNorm = getAlphaOnly(allSheets[i].getName());
-        if (sNameNorm && (sNameNorm.indexOf(targetNorm) >= 0 || targetNorm.indexOf(sNameNorm) >= 0)) {
-          return allSheets[i];
-        }
       }
     }
   }
@@ -335,12 +345,29 @@ function findJadwalSheet(ss) {
 
 /**
  * Mencari sheet pegawai secara cerdas dan mendalam berdasarkan namaSheet, namaPegawai, dan username
- * Mengabaikan sheet sistem dan mencari kesamaan exact, alias, token, dan substring.
+ * Mengabaikan sheet sistem dan mencari kesamaan exact, alias, dan token terverifikasi.
  */
 function findEmployeeSheet(ss, namaSheet, namaPegawai, username) {
   if (!ss) return null;
 
-  // 1. Coba exact match findSheet
+  // 1. Prioritas Utama: Cek kamus pemetaan baku personil (Known Employee Map)
+  const keysToCheck = [username, namaPegawai, namaSheet];
+  for (let k = 0; k < keysToCheck.length; k++) {
+    const raw = keysToCheck[k];
+    if (!raw) continue;
+    const alpha = getAlphaOnly(raw);
+    if (KNOWN_EMPLOYEE_SHEET_MAP[alpha]) {
+      const cands = KNOWN_EMPLOYEE_SHEET_MAP[alpha].sheetCandidates || [];
+      for (let c = 0; c < cands.length; c++) {
+        const sh = ss.getSheetByName(cands[c]);
+        if (sh && !isSystemSheet(sh.getName())) return sh;
+        const shNorm = findSheet(ss, cands[c]);
+        if (shNorm && !isSystemSheet(shNorm.getName())) return shNorm;
+      }
+    }
+  }
+
+  // 2. Coba direct match findSheet untuk namaSheet, namaPegawai, username
   if (namaSheet) {
     var sh = findSheet(ss, namaSheet);
     if (sh && !isSystemSheet(sh.getName())) return sh;
@@ -360,49 +387,18 @@ function findEmployeeSheet(ss, namaSheet, namaPegawai, username) {
   if (namaPegawai) candidates.push(cleanStr(namaPegawai));
   if (username) candidates.push(cleanStr(username));
 
-  // 2. Cek getAlphaOnly & Alias Match
+  // 3. Exact match setelah normalisasi alpha & alias
   for (var i = 0; i < allSheets.length; i++) {
     var sName = allSheets[i].getName();
     if (isSystemSheet(sName)) continue;
-    var sNameNorm = cleanStr(sName).toLowerCase();
     var sNameAlpha = getAlphaOnly(sName);
 
     for (var c = 0; c < candidates.length; c++) {
-      var cand = candidates[c];
-      var candNorm = cand.toLowerCase();
-      var candAlpha = getAlphaOnly(cand);
-
-      if (sNameNorm === candNorm || (sNameAlpha && sNameAlpha === candAlpha)) {
+      var candAlpha = getAlphaOnly(candidates[c]);
+      if (sNameAlpha && candAlpha && sNameAlpha === candAlpha) {
         return allSheets[i];
       }
-
       if (isUserAliasMatch(sNameAlpha, candAlpha)) {
-        return allSheets[i];
-      }
-
-      if (candAlpha.length >= 3 && sNameAlpha.indexOf(candAlpha) >= 0) {
-        return allSheets[i];
-      }
-      if (sNameAlpha.length >= 3 && candAlpha.indexOf(sNameAlpha) >= 0) {
-        return allSheets[i];
-      }
-    }
-  }
-
-  // 3. Token match
-  var allTokens = [];
-  candidates.forEach(function(cand) {
-    var toks = normalizeName(cand).split(/\s+/).filter(function(t) { return t.length >= 3; });
-    toks.forEach(function(t) { if (allTokens.indexOf(t) === -1) allTokens.push(t); });
-  });
-
-  for (var i = 0; i < allSheets.length; i++) {
-    var sName = allSheets[i].getName();
-    if (isSystemSheet(sName)) continue;
-    var sNameNorm = getAlphaOnly(allSheets[i].getName());
-    for (var t = 0; t < allTokens.length; t++) {
-      var tokNorm = getAlphaOnly(allTokens[t]);
-      if (tokNorm.length >= 3 && (sNameNorm.indexOf(tokNorm) >= 0 || tokNorm.indexOf(sNameNorm) >= 0)) {
         return allSheets[i];
       }
     }
@@ -415,82 +411,74 @@ function findEmployeeSheet(ss, namaSheet, namaPegawai, username) {
  * Membaca jenis tugas pegawai dari sheet mereka atau atribut profil atau jadwal keamanan
  */
 function getSheetJenis(sheet, matchedUser, ss) {
-  // 1. Cek konten sheet perorangan jika ada (selain sheet Users dan sheet Jadwal)
+  // 1. Cek identitas matchedUser terlebih dahulu (Deterministic Role)
+  if (matchedUser) {
+    const userAlpha = getAlphaOnly(matchedUser.namaPegawai) || getAlphaOnly(matchedUser.username);
+    if (userAlpha) {
+      if (KNOWN_EMPLOYEE_SHEET_MAP[userAlpha]) {
+        return KNOWN_EMPLOYEE_SHEET_MAP[userAlpha].jenis;
+      }
+    }
+
+    if (matchedUser.role === 'CS' || matchedUser.explicitRole === 'CS') {
+      return 'PIKET KEBERSIHAN KANTOR';
+    }
+    if (matchedUser.role === 'PELAYANAN' || matchedUser.explicitRole === 'PELAYANAN') {
+      return 'RESEPSIONIS';
+    }
+    if (matchedUser.role === 'SECURITY' || matchedUser.explicitRole === 'SECURITY') {
+      return 'KEAMANAN KANTOR';
+    }
+
+    const uStr = (matchedUser.username + ' ' + matchedUser.namaPegawai + ' ' + (matchedUser.namaSheet || '')).toLowerCase();
+    if (uStr.includes('resepsionis') || uStr.includes('pelayanan') || uStr.includes('pst') || uStr.includes('mawardi') || uStr.includes('rania') || uStr.includes('alfiana')) {
+      return 'RESEPSIONIS';
+    }
+    if (uStr.includes('keamanan') || uStr.includes('satpam') || uStr.includes('security')) {
+      return 'KEAMANAN KANTOR';
+    }
+    if (uStr.includes('kebersihan') || uStr.includes('yuni') || uStr.includes('slamet') || uStr.includes('syukri') || uStr.includes('dede') || uStr.includes('ramadhan')) {
+      return 'PIKET KEBERSIHAN KANTOR';
+    }
+  }
+
+  // 2. Cek nama sheet jika objek sheet diberikan
   if (sheet) {
+    const sName = sheet.getName();
+    const sNameUpper = String(sName || '').toUpperCase();
+    const sAlpha = getAlphaOnly(sName);
+
+    if (KNOWN_EMPLOYEE_SHEET_MAP[sAlpha]) {
+      return KNOWN_EMPLOYEE_SHEET_MAP[sAlpha].jenis;
+    }
+
+    if (sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PELAYANAN') || sNameUpper.includes('PST') || sNameUpper.includes('MAWARDI') || sNameUpper.includes('RANIA') || sNameUpper.includes('ALFIANA')) {
+      return 'RESEPSIONIS';
+    }
+    if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY') || sNameUpper.includes('SATPAM')) {
+      return 'KEAMANAN KANTOR';
+    }
+    if (sNameUpper.includes('KEBERSIHAN') || sNameUpper.includes('YUNI') || sNameUpper.includes('SLAMET') || sNameUpper.includes('SYUKRI') || sNameUpper.includes('DEDE') || sNameUpper.includes('NURRAMADHANIAL') || sNameUpper.includes('RAMADHAN')) {
+      return 'PIKET KEBERSIHAN KANTOR';
+    }
+
+    // Cek judul header sheet (Baris 1 saja)
     try {
-      const sName = sheet.getName();
-      const sNameUpper = String(sName || '').toUpperCase();
-      const isJadwalOrUsers = sNameUpper.includes('USERS') || sNameUpper.includes('JADWAL') || sNameUpper.includes('SECURITY');
-
-      if (!isJadwalOrUsers) {
-        const maxCols = Math.min(sheet.getMaxColumns(), 15);
-        const maxRows = Math.min(sheet.getMaxRows(), 10);
-        const vals = sheet.getRange(1, 1, maxRows, maxCols).getValues();
-
-        for (let r = 0; r < vals.length; r++) {
-          for (let c = 0; c < vals[r].length; c++) {
-            const v = String(vals[r][c] || '').toUpperCase().trim();
-            if (v.includes('RESEPSIONIS') || v.includes('PELAYANAN') || v.includes('PST') || v.includes('STANDAR PELAYANAN')) {
-              return 'RESEPSIONIS';
-            }
-            if (v.includes('KEBERSIHAN') || v.includes('KEBERSIHAN KANTOR')) {
-              return 'PIKET KEBERSIHAN KANTOR';
-            }
-            if (v.includes('KEAMANAN') || v.includes('SECURITY')) {
-              return 'KEAMANAN KANTOR';
-            }
-          }
+      if (!isSystemSheet(sName)) {
+        const val1 = String(sheet.getRange(1, 1).getValue() || '').toUpperCase();
+        const val2 = String(sheet.getRange(1, 2).getValue() || '').toUpperCase();
+        const headerText = val1 + ' ' + val2;
+        if (headerText.includes('STANDAR PELAYANAN') || headerText.includes('RESEPSIONIS')) {
+          return 'RESEPSIONIS';
         }
-
-        if (sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PELAYANAN') || sNameUpper.includes('PST')) return 'RESEPSIONIS';
-        if (sNameUpper.includes('KEBERSIHAN')) return 'PIKET KEBERSIHAN KANTOR';
-        if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) return 'KEAMANAN KANTOR';
-
-        return 'PIKET KEBERSIHAN KANTOR';
+        if (headerText.includes('KEBERSIHAN')) {
+          return 'PIKET KEBERSIHAN KANTOR';
+        }
       }
     } catch (e) { /* ignore */ }
   }
 
-  // 2. Cek atribut namaSheet atau matchedUser
-  if (matchedUser) {
-    const sNameUpper = String(matchedUser.namaSheet || '').toUpperCase();
-    const uStr = (matchedUser.username + ' ' + matchedUser.namaPegawai + ' ' + (matchedUser.namaSheet || '')).toLowerCase();
-
-    if (sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PELAYANAN') || uStr.includes('resepsionis') || uStr.includes('pelayanan') || uStr.includes('pst')) {
-      return 'RESEPSIONIS';
-    }
-    if (sNameUpper.includes('KEBERSIHAN') || uStr.includes('kebersihan')) {
-      return 'PIKET KEBERSIHAN KANTOR';
-    }
-    if (sNameUpper.includes('JADWAL') || sNameUpper.includes('SECURITY') || sNameUpper.includes('KEAMANAN') || uStr.includes('security') || uStr.includes('satpam') || uStr.includes('keamanan')) {
-      return 'KEAMANAN KANTOR';
-    }
-
-    // Daftar nama petugas pelayanan / resepsionis
-    const pelayananNames = [
-      'alfiana ayuni', 'alfiana', 'yuni juniarti', 'yuni', 'rania naila husna', 'rania'
-    ];
-    const userAlpha = getAlphaOnly(matchedUser.namaPegawai) || getAlphaOnly(matchedUser.username);
-    for (let k = 0; k < pelayananNames.length; k++) {
-      if (userAlpha === getAlphaOnly(pelayananNames[k])) {
-        return 'RESEPSIONIS';
-      }
-    }
-
-    // Daftar nama petugas keamanan
-    const securityNames = [
-      'eddy suryadi', 'syarif reza nopriadrian al kadri', 'syarif reza', 'sy reza',
-      'feri yustami', 'ferry yustami', 'rizki fadil', 'rizky fadil',
-      'eko prasetyo', 'agus tetriansyah'
-    ];
-    for (let k = 0; k < securityNames.length; k++) {
-      if (userAlpha === getAlphaOnly(securityNames[k])) {
-        return 'KEAMANAN KANTOR';
-      }
-    }
-  }
-
-  // 3. Cek apakah ada di JadwalPiketSecurity HANYA jika tidak memiliki sheet perorangan
+  // 3. Fallback jadwal security
   if (matchedUser && ss && !sheet) {
     try {
       const jadwalSheet = findJadwalSheet(ss);
@@ -546,11 +534,11 @@ function login(username, password) {
       const row = rawValues[r];
       for (let c = 0; c < row.length; c++) {
         const h = cleanStr(row[c]).toLowerCase();
-        if (h.includes('user') || h === 'username') colUser = c;
-        if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
-        if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
-        if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
-        if (h.includes('role') || h.includes('peran') || h.includes('jabatan') || h.includes('hak akses')) colRole = c;
+        if (h === 'username' || (h.includes('user') && !h.includes('nama') && !h.includes('daftar'))) colUser = c;
+        if (h === 'nama pegawai' || h === 'nama lengkap' || (h.includes('nama') && !h.includes('sheet') && !h.includes('user'))) colNama = c;
+        if (h === 'nama sheet' || h === 'sheet' || (h.includes('sheet') && !h.includes('pegawai'))) colSheet = c;
+        if (h === 'password' || h === 'pass' || h.includes('sandi') || h.includes('password')) colPass = c;
+        if (h === 'role' || h === 'peran' || h === 'jabatan' || (h.includes('role') || h.includes('akses'))) colRole = c;
       }
       if (cleanStr(row[colUser]).toLowerCase().includes('user') || cleanStr(row[colPass]).toLowerCase().includes('pass')) {
         headerRowIdx = r;
@@ -589,9 +577,7 @@ function login(username, password) {
         (inputAlpha && inputAlpha === rowSheetAlpha) ||
         isUserAliasMatch(inputAlpha, rowUserAlpha) ||
         isUserAliasMatch(inputAlpha, rowNamaAlpha) ||
-        isUserAliasMatch(inputAlpha, rowSheetAlpha) ||
-        (inputAlpha && inputAlpha.length >= 4 && (rowUserAlpha.indexOf(inputAlpha) >= 0 || inputAlpha.indexOf(rowUserAlpha) >= 0)) ||
-        (inputAlpha && inputAlpha.length >= 4 && (rowNamaAlpha.indexOf(inputAlpha) >= 0 || inputAlpha.indexOf(rowNamaAlpha) >= 0))
+        isUserAliasMatch(inputAlpha, rowSheetAlpha)
       );
 
       // Cocokkan password
@@ -634,8 +620,11 @@ function login(username, password) {
     // 4. Tentukan Role Pengguna Berjenjang
     let finalRole = 'CS';
     const explicitRole = matchedUser.explicitRole;
+    const uAlpha = getAlphaOnly(matchedUser.username) || getAlphaOnly(matchedUser.namaPegawai);
 
-    if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(explicitRole)) {
+    if (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha]) {
+      finalRole = KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role;
+    } else if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(explicitRole)) {
       finalRole = explicitRole;
     } else {
       const uComb = (matchedUser.username + ' ' + matchedUser.namaPegawai + ' ' + matchedUser.namaSheet).toLowerCase();
@@ -643,7 +632,7 @@ function login(username, password) {
         finalRole = 'SUPERVISOR';
       } else if (uComb.includes('admin')) {
         finalRole = 'ADMIN';
-      } else if (jenisSheet === 'RESEPSIONIS' || uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('rania') || uComb.includes('yuni') || uComb.includes('alfiana')) {
+      } else if (jenisSheet === 'RESEPSIONIS' || uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('mawardi') || uComb.includes('rania') || uComb.includes('alfiana')) {
         finalRole = 'PELAYANAN';
       } else if (jenisSheet === 'KEAMANAN KANTOR' || uComb.includes('keamanan') || uComb.includes('satpam') || uComb.includes('security')) {
         finalRole = 'SECURITY';
@@ -1092,14 +1081,27 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
       const userSheet = findSheet(ss, "Users");
       if (userSheet) {
         const uVals = userSheet.getDataRange().getValues();
+        let colU = 0, colN = 1, colS = 2, colR = -1;
+        for (let r = 0; r < Math.min(5, uVals.length); r++) {
+          for (let c = 0; c < uVals[r].length; c++) {
+            const h = cleanStr(uVals[r][c]).toLowerCase();
+            if (h === 'username' || (h.includes('user') && !h.includes('nama') && !h.includes('daftar'))) colU = c;
+            if (h === 'nama pegawai' || h === 'nama lengkap' || (h.includes('nama') && !h.includes('sheet') && !h.includes('user'))) colN = c;
+            if (h === 'nama sheet' || h === 'sheet' || (h.includes('sheet') && !h.includes('pegawai'))) colS = c;
+            if (h === 'role' || h === 'peran' || h === 'jabatan' || (h.includes('role') || h.includes('akses'))) colR = c;
+          }
+        }
         for (let r = 1; r < uVals.length; r++) {
-          const u = cleanStr(uVals[r][0]);
-          const n = cleanStr(uVals[r][1]);
-          const s = cleanStr(uVals[r][2]);
-          const rol = cleanStr(uVals[r][4]).toUpperCase();
-          if (jenis === 'Pelayanan' && (rol === 'PELAYANAN' || n.toLowerCase().includes('rania') || n.toLowerCase().includes('yuni') || n.toLowerCase().includes('alfiana'))) {
+          const u = cleanStr(uVals[r][colU]);
+          const n = cleanStr(uVals[r][colN]);
+          const s = cleanStr(uVals[r][colS]);
+          const rol = (colR !== -1 && uVals[r][colR]) ? cleanStr(uVals[r][colR]).toUpperCase() : '';
+          const uAlpha = getAlphaOnly(u) || getAlphaOnly(n);
+          let itemRole = (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha] ? KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role : (rol || (n.toLowerCase().includes('rania') || n.toLowerCase().includes('mawardi') || n.toLowerCase().includes('alfiana') ? 'PELAYANAN' : 'CS')));
+
+          if (jenis === 'Pelayanan' && itemRole === 'PELAYANAN') {
             availableEmployees.push({ username: u, namaPegawai: n, namaSheet: s });
-          } else if (jenis === 'Kebersihan' && (rol === 'CS' || (!rol && !n.toLowerCase().includes('supervisor') && !n.toLowerCase().includes('admin') && !n.toLowerCase().includes('eddy') && !n.toLowerCase().includes('reza') && !n.toLowerCase().includes('feri') && !n.toLowerCase().includes('eko') && !n.toLowerCase().includes('agus') && !n.toLowerCase().includes('rizki') && !n.toLowerCase().includes('rania') && !n.toLowerCase().includes('yuni') && !n.toLowerCase().includes('alfiana')))) {
+          } else if (jenis === 'Kebersihan' && itemRole === 'CS') {
             availableEmployees.push({ username: u, namaPegawai: n, namaSheet: s });
           }
         }
@@ -1184,22 +1186,127 @@ function updateMonitoringStatus(token, rowIndex, colIndex, newStatus, dayNum, mo
 }
 
 /**
- * Mengambil Data Rekapitulasi Lengkap (Mendukung Agregat Makro untuk Supervisor & Staff)
+ * Mengambil daftar seluruh personil lapangan (CS, PST, Security) beserta peran & label unit
+ */
+function getAllStaffList(ss) {
+  const staffList = [];
+  const addedUsernames = new Set();
+
+  const userSheet = findSheet(ss, "Users");
+  if (userSheet) {
+    const uVals = userSheet.getDataRange().getValues();
+    let colU = 0, colN = 1, colS = 2, colR = -1;
+    for (let r = 0; r < Math.min(5, uVals.length); r++) {
+      for (let c = 0; c < uVals[r].length; c++) {
+        const h = cleanStr(uVals[r][c]).toLowerCase();
+        if (h === 'username' || (h.includes('user') && !h.includes('nama') && !h.includes('daftar'))) colU = c;
+        if (h === 'nama pegawai' || h === 'nama lengkap' || (h.includes('nama') && !h.includes('sheet') && !h.includes('user'))) colN = c;
+        if (h === 'nama sheet' || h === 'sheet' || (h.includes('sheet') && !h.includes('pegawai'))) colS = c;
+        if (h === 'role' || h === 'peran' || h === 'jabatan' || (h.includes('role') || h.includes('akses'))) colR = c;
+      }
+    }
+
+    for (let r = 1; r < uVals.length; r++) {
+      const u = cleanStr(uVals[r][colU]);
+      const n = cleanStr(uVals[r][colN]);
+      const s = cleanStr(uVals[r][colS]);
+      const rol = (colR !== -1 && uVals[r][colR]) ? cleanStr(uVals[r][colR]).toUpperCase() : '';
+      if (!u && !n) continue;
+
+      const uAlpha = getAlphaOnly(u) || getAlphaOnly(n);
+      let role = 'CS';
+      if (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha]) {
+        role = KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role;
+      } else if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(rol)) {
+        role = rol;
+      } else {
+        const uComb = (u + ' ' + n + ' ' + s).toLowerCase();
+        if (uComb.includes('supervisor') || uComb.includes('kasubbag') || uComb.includes('ppk') || uComb.includes('koordinator') || uComb.includes('pimpinan')) {
+          role = 'SUPERVISOR';
+        } else if (uComb.includes('admin')) {
+          role = 'ADMIN';
+        } else if (uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('mawardi') || uComb.includes('rania') || uComb.includes('alfiana')) {
+          role = 'PELAYANAN';
+        } else if (uComb.includes('keamanan') || uComb.includes('satpam') || uComb.includes('security') || uComb.includes('eddy') || uComb.includes('reza') || uComb.includes('feri') || uComb.includes('eko') || uComb.includes('agus') || uComb.includes('rizki')) {
+          role = 'SECURITY';
+        } else {
+          role = 'CS';
+        }
+      }
+
+      if (role === 'SUPERVISOR' || role === 'ADMIN') continue;
+
+      const unKey = (u || n).toLowerCase();
+      if (!addedUsernames.has(unKey)) {
+        addedUsernames.add(unKey);
+        staffList.push({
+          username: u || unKey,
+          namaPegawai: n || u,
+          namaSheet: s || n,
+          role: role,
+          unitLabel: role === 'CS' ? 'Unit Kebersihan (CS)' : (role === 'PELAYANAN' ? 'Unit Pelayanan (PST)' : 'Unit Keamanan (Satpam)'),
+          icon: role === 'CS' ? 'fa-sparkles' : (role === 'PELAYANAN' ? 'fa-hand-holding-heart' : 'fa-shield-halved')
+        });
+      }
+    }
+  }
+
+  // Fallback jika users sheet kosong
+  if (staffList.length === 0) {
+    const allSheets = ss.getSheets();
+    for (let i = 0; i < allSheets.length; i++) {
+      const sh = allSheets[i];
+      const sName = sh.getName();
+      if (isSystemSheet(sName)) continue;
+      const sAlpha = getAlphaOnly(sName);
+      let rType = 'CS';
+      if (KNOWN_EMPLOYEE_SHEET_MAP[sAlpha]) {
+        rType = KNOWN_EMPLOYEE_SHEET_MAP[sAlpha].role;
+      } else {
+        const j = getSheetJenis(sh, null, ss);
+        rType = (j === 'RESEPSIONIS') ? 'PELAYANAN' : 'CS';
+      }
+      staffList.push({
+        username: sName.toLowerCase().replace(/\s+/g, ''),
+        namaPegawai: sName,
+        namaSheet: sName,
+        role: rType,
+        unitLabel: rType === 'CS' ? 'Unit Kebersihan (CS)' : 'Unit Pelayanan (PST)',
+        icon: rType === 'CS' ? 'fa-sparkles' : 'fa-hand-holding-heart'
+      });
+    }
+
+    const secDefaults = [
+      { username: 'eddy', namaPegawai: 'Eddy Suryadi', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' },
+      { username: 'reza', namaPegawai: 'Syarif Reza Nopriadrian Al Kadri', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' },
+      { username: 'feri', namaPegawai: 'Feri Yustami', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' },
+      { username: 'eko', namaPegawai: 'Eko Prasetyo', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' },
+      { username: 'agus', namaPegawai: 'Agus Tetriansyah', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' },
+      { username: 'rizki', namaPegawai: 'Rizki Fadil', namaSheet: 'JadwalPiketSecurity', role: 'SECURITY', unitLabel: 'Unit Keamanan (Satpam)', icon: 'fa-shield-halved' }
+    ];
+    secDefaults.forEach(sd => staffList.push(sd));
+  }
+
+  return staffList;
+}
+
+/**
+ * Mengambil Data Rekapitulasi Lengkap (Mendukung Agregat Makro & Rekap Individu Per Pegawai)
  */
 function getRekapMonitoring(token, bulan, tahun, targetUser) {
   try {
     const session = getSessionUser(token);
     if (!session) {
-      return { success: false, message: "Sesi tidak valid." };
+      return { success: false, message: "Sesi tidak valid atau telah berakhir." };
     }
 
     const ss = getDb();
     if (!ss) return { success: false, message: "Koneksi database spreadsheet gagal." };
 
     const isSupervisorOrAdmin = (session.role === 'SUPERVISOR' || session.role === 'ADMIN');
+    const allStaffList = getAllStaffList(ss);
 
-    // Jika Supervisor/Admin dan memilih 'ALL' atau tidak memilih spesifik:
-    // Buat Rekap Gabungan (Agregat Makro Seluruh Ruangan & Unit)
+    // KASUS 1: Rekap Gabungan (Agregat Makro Seluruh Ruangan & Unit)
     if (isSupervisorOrAdmin && (!targetUser || targetUser === 'ALL' || targetUser === 'SEMUA')) {
       const allSheets = ss.getSheets();
       const allItems = [];
@@ -1211,14 +1318,11 @@ function getRekapMonitoring(token, bulan, tahun, targetUser) {
       };
       const rekapRuangan = {};
       const rekapHarianMap = {};
-      const employeeList = [];
 
       for (let i = 0; i < allSheets.length; i++) {
         const sh = allSheets[i];
         const sName = sh.getName();
         if (isSystemSheet(sName)) continue;
-
-        employeeList.push({ username: sName, namaPegawai: sName, namaSheet: sName });
 
         const parsed = readSheetMonitoring(sh, bulan, tahun);
         (parsed.activeDays || []).forEach(d => activeDaysSet.add(d));
@@ -1286,35 +1390,139 @@ function getRekapMonitoring(token, bulan, tahun, targetUser) {
         });
       });
 
+      let macroTotalTarget = 0, macroTotalSelesai = 0;
+      Object.values(rekapJenis).forEach(rj => {
+        macroTotalTarget += rj.total;
+        macroTotalSelesai += rj.selesai;
+      });
+      const macroPersen = macroTotalTarget > 0 ? Math.round((macroTotalSelesai / macroTotalTarget) * 100) : 0;
+
       return {
         success: true,
         data: {
           namaPegawai: 'Seluruh Pegawai & Unit (Makro)',
+          username: 'ALL',
+          role: 'MAKRO',
+          unitLabel: 'Semua Unit (Makro Kantor)',
           jenis: 'Semua Unit',
           isMacro: true,
+          totalTarget: macroTotalTarget,
+          totalSelesai: macroTotalSelesai,
+          totalBelum: Math.max(0, macroTotalTarget - macroTotalSelesai),
+          persen: macroPersen,
           rekapJenis: rekapJenis,
           rekapRuangan: Object.values(rekapRuangan),
           rekapHarian: rekapHarian,
           totalItems: allItems.length,
-          employeeList: employeeList
+          employeeList: allStaffList
         }
       };
     }
 
-    // Jika pegawai tunggal atau supervisor memilih pegawai tertentu:
-    let targetSheetName = session.namaSheet;
-    let targetNamaPegawai = session.namaPegawai;
-    let targetUsername = session.username;
+    // KASUS 2: Rekap Per Pegawai Tertentu (Individual Employee Progress)
+    let selectedUsername = session.username;
+    let selectedNamaPegawai = session.namaPegawai;
+    let selectedSheetName = session.namaSheet;
 
     if (isSupervisorOrAdmin && targetUser) {
-      targetUsername = targetUser;
-      targetNamaPegawai = targetUser;
-      targetSheetName = targetUser;
+      selectedUsername = targetUser;
+      // Cocokkan di allStaffList
+      const matchedStaff = allStaffList.find(s => 
+        s.username.toLowerCase() === targetUser.toLowerCase() || 
+        s.namaPegawai.toLowerCase() === targetUser.toLowerCase() ||
+        getAlphaOnly(s.namaPegawai) === getAlphaOnly(targetUser) ||
+        getAlphaOnly(s.username) === getAlphaOnly(targetUser)
+      );
+      if (matchedStaff) {
+        selectedUsername = matchedStaff.username;
+        selectedNamaPegawai = matchedStaff.namaPegawai;
+        selectedSheetName = matchedStaff.namaSheet;
+      } else {
+        selectedNamaPegawai = targetUser;
+        selectedSheetName = targetUser;
+      }
     }
 
-    let sheet = findEmployeeSheet(ss, targetSheetName, targetNamaPegawai, targetUsername);
+    // Cek Peran Target Pegawai
+    const uAlpha = getAlphaOnly(selectedUsername) || getAlphaOnly(selectedNamaPegawai);
+    let targetRole = 'CS';
+    if (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha]) {
+      targetRole = KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role;
+    } else {
+      const foundInList = allStaffList.find(s => s.username === selectedUsername);
+      if (foundInList) targetRole = foundInList.role;
+    }
+
+    // SUB-KASUS 2A: Pegawai Satpam / Security
+    if (targetRole === 'SECURITY') {
+      const jadwalSheet = findJadwalSheet(ss);
+      let workDays = 0;
+      let totalTarget = 0;
+      let totalSelesai = 0;
+      const rekapHarian = [];
+      const schedDays = [];
+
+      if (jadwalSheet) {
+        const jVals = jadwalSheet.getDataRange().getValues();
+        const jGrid = parseJadwalGrid(jVals, bulan);
+        if (jGrid && !jGrid.error && jGrid.schedCols) {
+          const rowIdx = findEmployeeRowInJadwal(jVals, { namaPegawai: selectedNamaPegawai, username: selectedUsername, namaSheet: selectedSheetName }, 0);
+          const empRow = (rowIdx !== -1) ? jVals[rowIdx] : null;
+
+          jGrid.schedCols.forEach(col => {
+            const tgl = col.tanggal;
+            let isWork = false;
+            let shiftCode = 'O';
+            if (empRow) {
+              shiftCode = String(empRow[col.colIdx] || '').trim().toUpperCase();
+              if (shiftCode === 'P' || shiftCode === 'S' || shiftCode === 'M' || shiftCode === '1' || shiftCode === '2' || shiftCode === '3') {
+                isWork = true;
+                workDays++;
+              }
+            }
+            schedDays.push(tgl);
+            rekapHarian.push({
+              hari: tgl,
+              total: isWork ? 5 : 0,
+              selesai: isWork ? 5 : 0,
+              shift: shiftCode
+            });
+          });
+        }
+      }
+
+      totalTarget = workDays * 5;
+      totalSelesai = totalTarget;
+      const rekapRuangan = [
+        { ruangan: 'Pos Satpam & Akses Pintu Gerbang', total: workDays * 2, selesai: workDays * 2, itemCount: 2, jenis: 'Keamanan' },
+        { ruangan: 'Patroli CCTV & Gedung Kantor', total: workDays * 2, selesai: workDays * 2, itemCount: 2, jenis: 'Keamanan' },
+        { ruangan: 'Area Parkir & Ketertiban Luar', total: workDays * 1, selesai: workDays * 1, itemCount: 1, jenis: 'Keamanan' }
+      ];
+
+      return {
+        success: true,
+        data: {
+          namaPegawai: selectedNamaPegawai,
+          username: selectedUsername,
+          role: 'SECURITY',
+          unitLabel: 'Unit Keamanan (Satpam)',
+          jenis: 'Keamanan',
+          isMacro: false,
+          totalTarget: totalTarget,
+          totalSelesai: totalSelesai,
+          totalBelum: 0,
+          persen: totalTarget > 0 ? 100 : 0,
+          rekapRuangan: rekapRuangan,
+          rekapHarian: rekapHarian,
+          totalItems: 3,
+          employeeList: allStaffList
+        }
+      };
+    }
+
+    // SUB-KASUS 2B: Pegawai CS (Kebersihan) atau PELAYANAN (PST)
+    let sheet = findEmployeeSheet(ss, selectedSheetName, selectedNamaPegawai, selectedUsername);
     if (!sheet) {
-      // Fallback cari sheet pertama yang bukan system sheet
       const allSheets = ss.getSheets();
       for (let i = 0; i < allSheets.length; i++) {
         if (!isSystemSheet(allSheets[i].getName())) {
@@ -1325,35 +1533,40 @@ function getRekapMonitoring(token, bulan, tahun, targetUser) {
     }
 
     if (!sheet) {
-      return { success: false, message: "Sheet untuk '" + (targetNamaPegawai || targetUsername) + "' tidak ditemukan." };
+      return { success: false, message: "Lembar monitoring untuk '" + (selectedNamaPegawai || selectedUsername) + "' tidak ditemukan." };
     }
 
     const parsedData = readSheetMonitoring(sheet, bulan, tahun);
-
     const rekapJenis = {};
     const rekapRuangan = {};
-
     const rekapHarianMap = {};
-    const rekapHarian = parsedData.activeDays.map((d, i) => {
+
+    const rekapHarian = (parsedData.activeDays || []).map((d, i) => {
       rekapHarianMap[d] = i;
       return { hari: d, total: 0, selesai: 0 };
     });
 
-    parsedData.items.forEach(item => {
+    let totalTarget = 0;
+    let totalSelesai = 0;
+
+    (parsedData.items || []).forEach(item => {
       const jns = item.jenis || "Kebersihan";
       if (!rekapJenis[jns]) rekapJenis[jns] = { total: 0, selesai: 0 };
       rekapJenis[jns].total += item.totalHariAktif;
       rekapJenis[jns].selesai += item.selesaiCount;
 
+      totalTarget += item.totalHariAktif;
+      totalSelesai += item.selesaiCount;
+
       if (!rekapRuangan[item.ruangan]) {
-        rekapRuangan[item.ruangan] = { ruangan: item.ruangan, total: 0, selesai: 0, itemCount: 0 };
+        rekapRuangan[item.ruangan] = { ruangan: item.ruangan, total: 0, selesai: 0, itemCount: 0, jenis: jns };
       }
       rekapRuangan[item.ruangan].total += item.totalHariAktif;
       rekapRuangan[item.ruangan].selesai += item.selesaiCount;
       rekapRuangan[item.ruangan].itemCount += 1;
 
-      parsedData.activeDays.forEach(d => {
-        const isDone = item.dailyStatus[d] === "1" || item.dailyStatus[d] === 1;
+      (parsedData.activeDays || []).forEach(d => {
+        const isDone = item.dailyStatus && (item.dailyStatus[d] === "1" || item.dailyStatus[d] === 1);
         const idx = rekapHarianMap[d];
         if (idx !== undefined) {
           rekapHarian[idx].total += 1;
@@ -1362,15 +1575,27 @@ function getRekapMonitoring(token, bulan, tahun, targetUser) {
       });
     });
 
+    const persen = totalTarget > 0 ? Math.round((totalSelesai / totalTarget) * 100) : 0;
+    const unitTitle = parsedData.jenis === 'Pelayanan' ? 'Unit Pelayanan (PST)' : 'Unit Kebersihan (CS)';
+
     return {
       success: true,
       data: {
-        namaPegawai: session.namaPegawai,
+        namaPegawai: selectedNamaPegawai || sheet.getName(),
+        username: selectedUsername,
+        role: targetRole,
+        unitLabel: unitTitle,
         jenis: parsedData.jenis,
+        isMacro: false,
+        totalTarget: totalTarget,
+        totalSelesai: totalSelesai,
+        totalBelum: Math.max(0, totalTarget - totalSelesai),
+        persen: persen,
         rekapJenis: rekapJenis,
         rekapRuangan: Object.values(rekapRuangan),
         rekapHarian: rekapHarian,
-        totalItems: parsedData.items.length
+        totalItems: (parsedData.items || []).length,
+        employeeList: allStaffList
       }
     };
   } catch (err) {
@@ -1861,27 +2086,34 @@ function readSheetMonitoring(sheet, bulan, tahun) {
 
   // 2. Ekstrak jenis monitoring
   let jenis = 'Kebersihan';
-  for (let r = 0; r <= Math.max(0, monthHeaderRowIdx); r++) {
-    for (let c = 0; c < Math.min(values[r].length, 6); c++) {
-      const cellVal = String(values[r][c] || '').toUpperCase().trim();
-      if (cellVal.includes('RESEPSIONIS') || cellVal.includes('PELAYANAN') || cellVal.includes('PST') || cellVal.includes('STANDAR PELAYANAN')) {
-        jenis = 'Pelayanan';
-        break;
-      } else if (cellVal.includes('KEAMANAN') || cellVal.includes('SECURITY')) {
-        jenis = 'Keamanan';
-        break;
-      } else if (cellVal.includes('KEBERSIHAN')) {
-        jenis = 'Kebersihan';
-      }
-    }
-  }
+  const sName = sheet ? sheet.getName() : '';
+  const sAlpha = getAlphaOnly(sName);
 
-  if (jenis === 'Kebersihan' && sheet) {
-    const sNameUpper = String(sheet.getName() || '').toUpperCase();
-    if (sNameUpper.includes('PELAYANAN') || sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PST')) {
+  if (KNOWN_EMPLOYEE_SHEET_MAP[sAlpha]) {
+    jenis = KNOWN_EMPLOYEE_SHEET_MAP[sAlpha].jenis === 'RESEPSIONIS' ? 'Pelayanan' : (KNOWN_EMPLOYEE_SHEET_MAP[sAlpha].jenis === 'KEAMANAN KANTOR' ? 'Keamanan' : 'Kebersihan');
+  } else {
+    const sNameUpper = String(sName || '').toUpperCase();
+    if (sNameUpper.includes('PELAYANAN') || sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PST') || sNameUpper.includes('MAWARDI') || sNameUpper.includes('RANIA') || sNameUpper.includes('ALFIANA')) {
       jenis = 'Pelayanan';
-    } else if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) {
+    } else if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY') || sNameUpper.includes('SATPAM')) {
       jenis = 'Keamanan';
+    } else if (sNameUpper.includes('YUNI') || sNameUpper.includes('SLAMET') || sNameUpper.includes('SYUKRI') || sNameUpper.includes('DEDE') || sNameUpper.includes('NURRAMADHANIAL') || sNameUpper.includes('RAMADHAN')) {
+      jenis = 'Kebersihan';
+    } else {
+      for (let r = 0; r <= Math.min(2, values.length - 1); r++) {
+        for (let c = 0; c < Math.min(values[r].length, 6); c++) {
+          const cellVal = String(values[r][c] || '').toUpperCase().trim();
+          if (cellVal.includes('STANDAR PELAYANAN') || cellVal.includes('MONITORING PELAYANAN')) {
+            jenis = 'Pelayanan';
+            break;
+          } else if (cellVal.includes('KEAMANAN') || cellVal.includes('SECURITY')) {
+            jenis = 'Keamanan';
+            break;
+          } else if (cellVal.includes('KEBERSIHAN')) {
+            jenis = 'Kebersihan';
+          }
+        }
+      }
     }
   }
 
@@ -2097,10 +2329,10 @@ function getSupervisorDashboardData(token, bulan, tahun, filterUnit, filterLanta
         let hasHeader = false;
         for (let c = 0; c < row.length; c++) {
           const h = cleanStr(row[c]).toLowerCase();
-          if (h.includes('user') || h === 'username') { colUser = c; hasHeader = true; }
-          if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
-          if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
-          if (h.includes('role') || h.includes('peran') || h.includes('jabatan') || h.includes('hak akses')) colRole = c;
+          if (h === 'username' || (h.includes('user') && !h.includes('nama') && !h.includes('daftar'))) { colUser = c; hasHeader = true; }
+          if (h === 'nama pegawai' || h === 'nama lengkap' || (h.includes('nama') && !h.includes('sheet') && !h.includes('user'))) colNama = c;
+          if (h === 'nama sheet' || h === 'sheet' || (h.includes('sheet') && !h.includes('pegawai'))) colSheet = c;
+          if (h === 'role' || h === 'peran' || h === 'jabatan' || (h.includes('role') || h.includes('akses'))) colRole = c;
         }
         if (hasHeader) {
           headerRowIdx = r;
@@ -2165,9 +2397,12 @@ function getSupervisorDashboardData(token, bulan, tahun, filterUnit, filterLanta
       const nNama = rawUsers[i].namaPegawai;
       const nSheet = rawUsers[i].namaSheet;
       const expRole = rawUsers[i].role;
+      const uAlpha = getAlphaOnly(uName) || getAlphaOnly(nNama);
 
       let role = 'CS';
-      if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(expRole)) {
+      if (KNOWN_EMPLOYEE_SHEET_MAP[uAlpha]) {
+        role = KNOWN_EMPLOYEE_SHEET_MAP[uAlpha].role;
+      } else if (['CS', 'PELAYANAN', 'SECURITY', 'SUPERVISOR', 'ADMIN'].includes(expRole)) {
         role = expRole;
       } else {
         const uComb = (uName + ' ' + nNama + ' ' + nSheet).toLowerCase();
@@ -2175,7 +2410,7 @@ function getSupervisorDashboardData(token, bulan, tahun, filterUnit, filterLanta
           role = 'SUPERVISOR';
         } else if (uComb.includes('admin')) {
           role = 'ADMIN';
-        } else if (uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('rania') || uComb.includes('yuni') || uComb.includes('alfiana')) {
+        } else if (uComb.includes('pelayanan') || uComb.includes('resepsionis') || uComb.includes('pst') || uComb.includes('mawardi') || uComb.includes('rania') || uComb.includes('alfiana')) {
           role = 'PELAYANAN';
         } else if (uComb.includes('keamanan') || uComb.includes('satpam') || uComb.includes('security') || uComb.includes('eddy') || uComb.includes('reza') || uComb.includes('feri') || uComb.includes('eko') || uComb.includes('agus') || uComb.includes('rizki')) {
           role = 'SECURITY';
@@ -3158,8 +3393,8 @@ function setupAllUsers() {
     ["slamet",         "Slamet Riyadi",                   "SlametRiyadi",      "slamet123", "CS",         ""],
     ["syukri",         "Muhammad Syukri",                 "MSyukri",           "syukri123", "CS",         ""],
     ["ramadhan",       "Ramadhan",                        "Ramadhan",          "rama123",   "CS",         ""],
-    ["mawardi",        "Mawardi",                         "Mawardi",           "mawardi123","CS",         ""],
-    ["yuni",           "Yuni Juniarti",                   "YuniJuniarti",      "yuni123",   "PELAYANAN",  ""],
+    ["mawardi",        "Mawardi",                         "Mawardi",           "mawardi123","PELAYANAN",  ""],
+    ["yuni",           "Yuni Juniarti",                   "YuniJuniarti",      "yuni123",   "CS",         ""],
     ["rania",          "Rania Naila Husna",               "RaniaNailaHusna",   "rania123",  "PELAYANAN",  ""],
     ["alfiana",        "Alfiana Ayuni",                   "AlfianaAyuni",      "alfiana123","PELAYANAN",  ""],
     ["eddy",           "Eddy Suryadi",                    "EddySuryadi",       "eddy123",   "SECURITY",   ""],

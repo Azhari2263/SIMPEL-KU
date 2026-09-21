@@ -1004,18 +1004,32 @@
 
         <!-- ================= VIEW 3: REKAP MONITORING ================= -->
         <section id="view-rekap" class="hidden space-y-6">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div>
               <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
                 <i class="fa-solid fa-chart-simple text-brand-600"></i>
                 <span>Rekapitulasi & Visualisasi Pencapaian</span>
               </h3>
-              <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+              <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan per personil</p>
             </div>
-            <button onclick="loadRekapData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 self-start sm:self-auto">
-              <i class="fa-solid fa-arrows-rotate text-xs"></i>
-              <span>Segarkan Data</span>
-            </button>
+            
+            <div class="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+              <!-- Selector Pegawai Khusus Supervisor & Admin -->
+              <div id="rekapPegawaiSelectorWrapper" class="hidden flex items-center space-x-2 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
+                <label for="rekapFilterPegawai" class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                  <i class="fa-solid fa-user-gear text-brand-600"></i>
+                  <span>Pegawai:</span>
+                </label>
+                <select id="rekapFilterPegawai" onchange="loadRekapData()" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <option value="ALL">🌟 Seluruh Pegawai & Unit (Makro)</option>
+                </select>
+              </div>
+
+              <button onclick="loadRekapData()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-arrows-rotate text-xs"></i>
+                <span>Segarkan Data</span>
+              </button>
+            </div>
           </div>
 
           <!-- Error Alert State Container (Tampil Jika Rekapitulasi Gagal) -->
@@ -1039,6 +1053,44 @@
 
           <!-- Rekap Visual & Table Content Container -->
           <div id="rekapContentContainer" class="space-y-6">
+            <!-- Banner Status Cakupan Rekapitulasi Aktif -->
+            <div id="rekapActiveScopeCard" class="bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-800">
+              <div class="flex items-center space-x-3.5">
+                <div id="rekapScopeAvatar" class="w-11 h-11 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center text-lg text-amber-300 flex-shrink-0 font-black">
+                  <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h4 id="rekapScopeTitle" class="text-sm sm:text-base font-black text-white">Seluruh Pegawai & Unit (Makro)</h4>
+                    <span id="rekapScopeBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-white/15 text-blue-100 border border-white/10">Semua Unit</span>
+                  </div>
+                  <p id="rekapScopeSubtitle" class="text-xs text-blue-100/70 mt-0.5">Ringkasan agregat seluruh ruangan, unit kebersihan, pelayanan PST & pos keamanan.</p>
+                </div>
+              </div>
+
+              <!-- Metrik Ringkas Kepatuhan -->
+              <div class="flex items-center gap-3.5 sm:gap-4 bg-white/10 backdrop-blur-xs px-4 py-2 rounded-xl border border-white/10 self-start md:self-auto text-xs">
+                <div class="text-center">
+                  <p class="text-[10px] text-blue-200/80 uppercase font-semibold">Target</p>
+                  <p id="rekapStatTarget" class="text-sm font-black text-white">0</p>
+                </div>
+                <div class="w-px h-7 bg-white/20"></div>
+                <div class="text-center">
+                  <p class="text-[10px] text-blue-200/80 uppercase font-semibold">Selesai</p>
+                  <p id="rekapStatSelesai" class="text-sm font-black text-emerald-300">0</p>
+                </div>
+                <div class="w-px h-7 bg-white/20"></div>
+                <div class="text-center">
+                  <p class="text-[10px] text-blue-200/80 uppercase font-semibold">Belum</p>
+                  <p id="rekapStatBelum" class="text-sm font-black text-rose-300">0</p>
+                </div>
+                <div class="w-px h-7 bg-white/20"></div>
+                <div class="text-center">
+                  <p class="text-[10px] text-blue-200/80 uppercase font-semibold">Kepatuhan</p>
+                  <p id="rekapStatPersen" class="text-sm font-black text-amber-300">0%</p>
+                </div>
+              </div>
+            </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                 <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
@@ -1476,6 +1528,86 @@
     </div>
   </div>
 
+  <!-- ================= MODAL DETAIL PROGRES & REKAP PEGAWAI ================= -->
+  <div id="modalEmployeeProgressDetail" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden transform transition-all">
+      <!-- Header Modal -->
+      <div class="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-brand-950 to-slate-900 text-white flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center space-x-3.5">
+          <div id="empModalAvatar" class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 text-white font-black text-xl flex items-center justify-center shadow-inner">
+            U
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="empModalNama" class="text-base sm:text-lg font-black text-white">Nama Pegawai</h3>
+              <span id="empModalRoleBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-white/20 text-white border border-white/20">CS</span>
+            </div>
+            <p id="empModalUsername" class="text-xs text-slate-300 mt-0.5">@username</p>
+          </div>
+        </div>
+        <button onclick="closeEmployeeProgressModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg transition-colors">
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+      </div>
+
+      <!-- Body Modal -->
+      <div class="p-5 sm:p-6 space-y-6 overflow-y-auto flex-1">
+        <!-- Metrik Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-slate-50 border border-slate-200/80 p-3.5 rounded-2xl text-center">
+            <p class="text-[10px] uppercase font-bold text-slate-400">Total Target</p>
+            <p id="empModalTarget" class="text-lg font-black text-slate-800 mt-0.5">0</p>
+          </div>
+          <div class="bg-emerald-50/70 border border-emerald-200/80 p-3.5 rounded-2xl text-center">
+            <p class="text-[10px] uppercase font-bold text-emerald-600">Selesai</p>
+            <p id="empModalSelesai" class="text-lg font-black text-emerald-700 mt-0.5">0</p>
+          </div>
+          <div class="bg-rose-50/70 border border-rose-200/80 p-3.5 rounded-2xl text-center">
+            <p class="text-[10px] uppercase font-bold text-rose-600">Belum</p>
+            <p id="empModalBelum" class="text-lg font-black text-rose-700 mt-0.5">0</p>
+          </div>
+          <div class="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl text-center">
+            <p class="text-[10px] uppercase font-bold text-amber-700">Kepatuhan</p>
+            <p id="empModalPersen" class="text-lg font-black text-amber-800 mt-0.5">0%</p>
+          </div>
+        </div>
+
+        <!-- Progress Bar Kepatuhan & Status -->
+        <div class="bg-slate-50 border border-slate-200/80 p-4 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span class="text-slate-700">Tingkat Capaian Kinerja</span>
+            <span id="empModalStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 border border-blue-200">Baik</span>
+          </div>
+          <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+            <div id="empModalProgressBar" class="h-full bg-brand-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Daftar Ruangan / Pos Penugasan -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+            <span>Ruangan / Pos Penugasan</span>
+            <i class="fa-solid fa-layer-group text-brand-600"></i>
+          </h4>
+          <div id="empModalRoomsList" class="space-y-2">
+            <!-- Diisi secara dinamis -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Modal -->
+      <div class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0">
+        <button id="empModalBtnFullRekap" onclick="openFullRekapForEmp()" class="w-full sm:w-auto px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md shadow-brand-600/20 transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Buka Rekapitulasi Lengkap</span>
+        </button>
+        <button onclick="closeEmployeeProgressModal()" class="w-full sm:w-auto px-5 py-2.5 bg-white hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= JAVASCRIPT LOGIC ================= -->
   <script>
     /**
@@ -1504,6 +1636,7 @@
     let selectedKeamananDay      = 1;
     let chartTrenInstance        = null;
     let chartRuanganInstance     = null;
+    let modalSelectedEmployeeUsername = null;
 
     const HARI_SHORT = ['Mi', 'Sen', 'Sel', 'Ra', 'Ka', 'Ju', 'Sa'];
 
@@ -2286,6 +2419,11 @@
                 </td>
                 <td class="p-3 text-center">
                   <div class="inline-flex items-center gap-1.5">
+                    <button onclick="openEmployeeProgressModal('${escapeHtml(emp.username)}')" title="Lihat Detail Progres & Rekap Pegawai"
+                      class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-bold rounded-lg border border-brand-200 transition-colors inline-flex items-center gap-1">
+                      <i class="fa-solid fa-chart-pie text-[10px] text-brand-600"></i>
+                      <span>Progres</span>
+                    </button>
                     <button onclick="quickAuditForRoom('${escapeHtml(emp.roomsSummary && emp.roomsSummary[0] ? emp.roomsSummary[0] : 'Lobby Utama')}', '${uDef.key}')" title="Beri Sidak Mutu"
                       class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-200 transition-colors inline-flex items-center gap-1">
                       <i class="fa-solid fa-star text-[10px] text-amber-500"></i>
@@ -2374,6 +2512,100 @@
     function filterSupervisorEmployees() {
       if (cachedSupervisorData && cachedSupervisorData.employees) {
         renderSupervisorEmployeeTable(cachedSupervisorData.employees);
+      }
+    }
+
+    /**
+     * MODAL DETAIL PROGRES & REKAP PER PEGAWAI
+     */
+    function openEmployeeProgressModal(username) {
+      if (!cachedSupervisorData || !cachedSupervisorData.employees) {
+        showToast("Data supervisor belum dimuat. Silakan muat ulang.", "error");
+        return;
+      }
+      const emp = cachedSupervisorData.employees.find(e => e.username === username);
+      if (!emp) {
+        showToast("Data pegawai tidak ditemukan.", "error");
+        return;
+      }
+
+      modalSelectedEmployeeUsername = emp.username;
+
+      const modal = document.getElementById('modalEmployeeProgressDetail');
+      if (!modal) return;
+
+      const initial = emp.namaPegawai ? emp.namaPegawai.charAt(0).toUpperCase() : 'U';
+      document.getElementById('empModalAvatar').innerText = initial;
+      document.getElementById('empModalNama').innerText = emp.namaPegawai;
+      document.getElementById('empModalUsername').innerText = '@' + emp.username;
+
+      const roleBadge = document.getElementById('empModalRoleBadge');
+      if (roleBadge) {
+        roleBadge.innerText = emp.roleLabel || emp.role;
+        roleBadge.className = emp.role === 'CS' 
+          ? 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-500/30 text-orange-200 border border-orange-400/30'
+          : (emp.role === 'PELAYANAN' 
+            ? 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/30 text-blue-200 border border-blue-400/30' 
+            : 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30');
+      }
+
+      document.getElementById('empModalTarget').innerText = emp.totalTarget || 0;
+      document.getElementById('empModalSelesai').innerText = emp.totalSelesai || 0;
+      document.getElementById('empModalBelum').innerText = emp.totalBelum || 0;
+      document.getElementById('empModalPersen').innerText = (emp.persen || 0) + '%';
+
+      const statBadge = document.getElementById('empModalStatusBadge');
+      if (statBadge) {
+        statBadge.innerText = emp.statusKinerja ? emp.statusKinerja.label : 'Baik';
+        statBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ' + (emp.statusKinerja ? emp.statusKinerja.badge : 'bg-blue-100 text-blue-800 border border-blue-200');
+      }
+
+      const pBar = document.getElementById('empModalProgressBar');
+      if (pBar) {
+        pBar.style.width = (emp.persen || 0) + '%';
+        pBar.className = 'h-full rounded-full transition-all duration-300 ' + (emp.persen >= 90 ? 'bg-emerald-500' : (emp.persen >= 75 ? 'bg-blue-500' : (emp.persen >= 60 ? 'bg-amber-500' : 'bg-rose-500')));
+      }
+
+      const roomsContainer = document.getElementById('empModalRoomsList');
+      if (roomsContainer) {
+        const rooms = emp.roomsSummary || [];
+        if (rooms.length === 0) {
+          roomsContainer.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-100/50 rounded-xl">Tidak ada daftar ruangan spesifik.</div>';
+        } else {
+          let rHtml = '';
+          rooms.forEach((rName, idx) => {
+            rHtml += `
+              <div class="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between shadow-xs">
+                <div class="flex items-center space-x-2.5">
+                  <div class="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 font-bold text-[10px] flex items-center justify-center">
+                    ${idx + 1}
+                  </div>
+                  <span class="text-xs font-bold text-slate-800">${escapeHtml(rName)}</span>
+                </div>
+                <span class="text-[11px] font-bold text-emerald-600 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-md">
+                  Aktif
+                </span>
+              </div>
+            `;
+          });
+          roomsContainer.innerHTML = rHtml;
+        }
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeEmployeeProgressModal() {
+      const modal = document.getElementById('modalEmployeeProgressDetail');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function openFullRekapForEmp() {
+      const target = modalSelectedEmployeeUsername;
+      closeEmployeeProgressModal();
+      navigateTo('rekap');
+      if (target) {
+        loadRekapData(target);
       }
     }
 
@@ -3885,12 +4117,72 @@
       container.innerHTML = html;
     }
 
-    async function loadRekapData() {
+    function populateRekapEmployeeDropdown(employeeList, selectedUsername) {
+      const wrapper = document.getElementById('rekapPegawaiSelectorWrapper');
+      const select = document.getElementById('rekapFilterPegawai');
+      if (!wrapper || !select) return;
+
+      const isSupervisorOrAdmin = (userRole === 'SUPERVISOR' || userRole === 'ADMIN');
+      if (!isSupervisorOrAdmin) {
+        wrapper.classList.add('hidden');
+        return;
+      }
+
+      wrapper.classList.remove('hidden');
+
+      if (!employeeList || employeeList.length === 0) return;
+
+      let optionsHtml = '<option value="ALL">🌟 Seluruh Pegawai & Unit (Makro)</option>';
+
+      const csList = employeeList.filter(e => e.role === 'CS');
+      const pstList = employeeList.filter(e => e.role === 'PELAYANAN');
+      const secList = employeeList.filter(e => e.role === 'SECURITY');
+
+      if (csList.length > 0) {
+        optionsHtml += '<optgroup label="🧹 Unit Kebersihan (CS)">';
+        csList.forEach(e => {
+          optionsHtml += `<option value="${escapeHtml(e.username)}">[Kebersihan] ${escapeHtml(e.namaPegawai)}</option>`;
+        });
+        optionsHtml += '</optgroup>';
+      }
+
+      if (pstList.length > 0) {
+        optionsHtml += '<optgroup label="🤝 Unit Pelayanan (PST)">';
+        pstList.forEach(e => {
+          optionsHtml += `<option value="${escapeHtml(e.username)}">[Pelayanan] ${escapeHtml(e.namaPegawai)}</option>`;
+        });
+        optionsHtml += '</optgroup>';
+      }
+
+      if (secList.length > 0) {
+        optionsHtml += '<optgroup label="🛡️ Unit Keamanan (Satpam)">';
+        secList.forEach(e => {
+          optionsHtml += `<option value="${escapeHtml(e.username)}">[Keamanan] ${escapeHtml(e.namaPegawai)}</option>`;
+        });
+        optionsHtml += '</optgroup>';
+      }
+
+      select.innerHTML = optionsHtml;
+      if (selectedUsername) {
+        select.value = selectedUsername;
+      }
+    }
+
+    async function loadRekapData(targetUserOverride) {
       const bulan = document.getElementById('globalMonthSelect').value;
       const tahun = document.getElementById('globalYearSelect').value;
       const errorContainer = document.getElementById('rekapErrorContainer');
       const errorDesc = document.getElementById('rekapErrorDesc');
       const contentContainer = document.getElementById('rekapContentContainer');
+      const selectPegawai = document.getElementById('rekapFilterPegawai');
+
+      let targetUser = 'ALL';
+      if (targetUserOverride !== undefined && targetUserOverride !== null) {
+        targetUser = targetUserOverride;
+        if (selectPegawai) selectPegawai.value = targetUserOverride;
+      } else if (selectPegawai && (userRole === 'SUPERVISOR' || userRole === 'ADMIN')) {
+        targetUser = selectPegawai.value || 'ALL';
+      }
 
       showLoader(true);
 
@@ -3898,12 +4190,54 @@
         const res = await callBackend('getRekapMonitoring', {
           token: sessionToken,
           bulan: bulan,
-          tahun: tahun
+          tahun: tahun,
+          targetUser: targetUser
         });
         showLoader(false);
         if (res && res.success) {
           if (errorContainer) errorContainer.classList.add('hidden');
           if (contentContainer) contentContainer.classList.remove('hidden');
+
+          // Update Active Scope Banner
+          const d = res.data;
+          const scopeTitle = document.getElementById('rekapScopeTitle');
+          const scopeBadge = document.getElementById('rekapScopeBadge');
+          const scopeSubtitle = document.getElementById('rekapScopeSubtitle');
+          const scopeAvatar = document.getElementById('rekapScopeAvatar');
+
+          if (scopeTitle) scopeTitle.innerText = d.namaPegawai || 'Seluruh Pegawai & Unit (Makro)';
+          if (scopeBadge) {
+            scopeBadge.innerText = d.unitLabel || (d.isMacro ? 'Semua Unit' : (d.role === 'CS' ? 'Unit Kebersihan' : (d.role === 'PELAYANAN' ? 'Unit Pelayanan' : 'Unit Keamanan')));
+            scopeBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ' + (
+              d.role === 'CS' ? 'bg-orange-500/20 text-orange-200 border-orange-400/30' :
+              (d.role === 'PELAYANAN' ? 'bg-blue-500/20 text-blue-200 border-blue-400/30' :
+              (d.role === 'SECURITY' ? 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30' :
+              'bg-white/15 text-blue-100 border-white/10'))
+            );
+          }
+          if (scopeSubtitle) {
+            scopeSubtitle.innerText = d.isMacro 
+              ? 'Ringkasan agregat seluruh ruangan, unit kebersihan, pelayanan PST & pos keamanan.'
+              : `Laporan pencapaian & kepatuhan personil ${d.namaPegawai} (${d.unitLabel || d.jenis}) periode aktif.`;
+          }
+          if (scopeAvatar) {
+            if (d.isMacro) {
+              scopeAvatar.innerHTML = '<i class="fa-solid fa-chart-pie"></i>';
+            } else {
+              const init = d.namaPegawai ? d.namaPegawai.charAt(0).toUpperCase() : 'U';
+              scopeAvatar.innerText = init;
+            }
+          }
+
+          if (document.getElementById('rekapStatTarget')) document.getElementById('rekapStatTarget').innerText = d.totalTarget || 0;
+          if (document.getElementById('rekapStatSelesai')) document.getElementById('rekapStatSelesai').innerText = d.totalSelesai || 0;
+          if (document.getElementById('rekapStatBelum')) document.getElementById('rekapStatBelum').innerText = d.totalBelum || 0;
+          if (document.getElementById('rekapStatPersen')) document.getElementById('rekapStatPersen').innerText = (d.persen || 0) + '%';
+
+          if (d.employeeList) {
+            populateRekapEmployeeDropdown(d.employeeList, targetUser);
+          }
+
           renderRekapCharts(res.data);
           renderRekapTable(res.data.rekapRuangan);
         } else {
