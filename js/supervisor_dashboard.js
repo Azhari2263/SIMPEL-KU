@@ -48,7 +48,7 @@ function renderSupervisorDashboardUI(data) {
       const belum = Number(data.totalBelum !== undefined ? data.totalBelum : Math.max(0, total - done));
       const safePct = (total > 0 && !isNaN(total)) ? Math.round((done / total) * 100) : (Number(data.persenSelesai || data.persen) || 0);
 
-      // 1. KPI Card 1: Total Checklist Terpadu
+      // 1. KPI Card 1: Total Tugas Terpadu
       const kpiTotalEl = document.getElementById('supKpiTotalChecklist');
       if (kpiTotalEl) kpiTotalEl.innerText = `${safePct}%`;
 
@@ -81,7 +81,7 @@ function renderSupervisorDashboardUI(data) {
         kpiStarsEl.innerHTML = starHtml;
       }
 
-      // 3. KPI Card 3: Kesiapan Satpam Hari Ini
+      // 3. KPI Card 3: Satpam Bertugas Hari Ini
       const shiftSec = data.shiftSecurity || {};
       const satpamList = shiftSec.satpamTodayList || [];
       const satpamCount = satpamList.length;

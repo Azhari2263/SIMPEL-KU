@@ -681,7 +681,7 @@
                   <i class="fa-solid fa-user-shield text-amber-300"></i> Mode Pengawasan Manajerial
                 </span>
                 <h2 id="supWelcomeName" class="text-xl md:text-2xl font-bold tracking-tight">Halo, Kasubbag Umum!</h2>
-                <p class="text-xs md:text-sm text-blue-100 mt-1">Monitoring kesiapan operasional, inspeksi standar mutu, & rekapitulasi kinerja terpadu BPS Prov. Kalbar</p>
+                <p class="text-xs md:text-sm text-blue-100 mt-1">Monitoring Kebersiahan, Pelayanan, dan Keamanan BPS Provinsi Kalimantan Barat</p>
               </div>
               <div class="flex items-center gap-2">
                 <button onclick="loadSupervisorDashboardData(true)" class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-blue-100">
@@ -698,7 +698,7 @@
             <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-xs font-medium text-slate-500">Total Checklist Terpadu</p>
+                  <p class="text-xs font-medium text-slate-500">Total Tugas Terpadu</p>
                   <h3 id="supKpiTotalChecklist" class="text-2xl font-bold text-slate-800 mt-1">0%</h3>
                   <p id="supKpiDetailChecklist" class="text-xs text-slate-400 mt-0.5">0 / 0 Checklist Selesai</p>
                 </div>
@@ -732,7 +732,7 @@
             <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="text-xs font-medium text-slate-500">Kesiapan Satpam Hari Ini</p>
+                  <p class="text-xs font-medium text-slate-500">Satpam Bertugas Hari Ini</p>
                   <h3 id="supKpiKesiapanSatpam" class="text-2xl font-bold text-emerald-600 mt-1">0 Petugas</h3>
                   <p id="supKpiDetailSatpam" class="text-xs text-slate-400 mt-0.5">Shift Aktif Pagi/Siang/Malam</p>
                 </div>
@@ -770,7 +770,7 @@
               <div class="flex items-center justify-between mb-4">
                 <div>
                   <h3 class="text-base font-bold text-slate-800">Progres Unit Operasional</h3>
-                  <p class="text-xs text-slate-400">Tingkat penyelesaian checklist per unit kerja</p>
+                  <p class="text-xs text-slate-400">Tingkat penyelesaian tugas per unit kerja</p>
                 </div>
               </div>
               <div class="space-y-4" id="supUnitProgressContainer">
@@ -3950,7 +3950,7 @@ function renderSupervisorDashboardUI(data) {
       const belum = Number(data.totalBelum !== undefined ? data.totalBelum : Math.max(0, total - done));
       const safePct = (total > 0 && !isNaN(total)) ? Math.round((done / total) * 100) : (Number(data.persenSelesai || data.persen) || 0);
 
-      // 1. KPI Card 1: Total Checklist Terpadu
+      // 1. KPI Card 1: Total Tugas Terpadu
       const kpiTotalEl = document.getElementById('supKpiTotalChecklist');
       if (kpiTotalEl) kpiTotalEl.innerText = `${safePct}%`;
 
@@ -3983,7 +3983,7 @@ function renderSupervisorDashboardUI(data) {
         kpiStarsEl.innerHTML = starHtml;
       }
 
-      // 3. KPI Card 3: Kesiapan Satpam Hari Ini
+      // 3. KPI Card 3: Satpam Bertugas Hari Ini
       const shiftSec = data.shiftSecurity || {};
       const satpamList = shiftSec.satpamTodayList || [];
       const satpamCount = satpamList.length;
