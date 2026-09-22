@@ -1,0 +1,111 @@
+/* ========================================================
+   SIMPEL-KU - MAIN THEME & LAYOUT CSS
+   ======================================================== */
+
+.bg-brand-50 { background-color: #eff6ff !important; }
+.bg-brand-100 { background-color: #dbeafe !important; }
+.bg-brand-500 { background-color: #3b82f6 !important; }
+.bg-brand-600 { background-color: #2563eb !important; }
+.bg-brand-700 { background-color: #1d4ed8 !important; }
+.bg-brand-800 { background-color: #1e40af !important; }
+.text-brand-100 { color: #dbeafe !important; }
+.text-brand-500 { color: #3b82f6 !important; }
+.text-brand-600 { color: #2563eb !important; }
+.text-brand-700 { color: #1d4ed8 !important; }
+.text-brand-800 { color: #1e40af !important; }
+.border-brand-100 { border-color: #dbeafe !important; }
+.border-brand-200 { border-color: #bfdbfe !important; }
+.border-brand-500 { border-color: #3b82f6 !important; }
+.border-brand-600 { border-color: #2563eb !important; }
+
+/* Keyframes & Spinner Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite !important;
+}
+
+.simpelku-spinner {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 9999px;
+  border: 4px solid #dbeafe;
+  border-top: 4px solid #2563eb !important;
+  animation: spin 0.8s linear infinite !important;
+}
+
+/* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Navigation Item Styling */
+    .nav-item {
+      color: #475569;
+      transition: all 0.2s ease;
+    }
+    .nav-item:hover {
+      background-color: #f8fafc;
+      color: #1e40af;
+    }
+    .nav-item.active {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+    }
+
+    /* Period Tab Switcher */
+    .period-tab {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .period-tab.active {
+      background-color: #ffffff;
+      color: #1e40af;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      font-weight: 700;
+    }
+
+    /* Checkbox & Cell Interactive Styling */
+    .check-cell {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    .check-cell:not(.locked):not(.disabled):hover {
+      transform: scale(1.1);
+    }
+    .check-cell:not(.locked):not(.disabled):active {
+      transform: scale(0.92);
+    }
+
+    .badge-ruang {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+    }
+
+    /* Hide scrollbars for clean slider elements */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }

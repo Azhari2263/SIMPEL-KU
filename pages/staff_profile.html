@@ -1,0 +1,169 @@
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: staff_profile.html
+     ============================================================== -->
+<section id="view-profil" class="hidden space-y-6 max-w-2xl mx-auto">
+          <!-- Card Profil Utama -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+            <div class="flex items-center space-x-4 border-b border-slate-100 pb-6">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-700 to-accent-500 text-white font-extrabold text-2xl flex items-center justify-center shadow-lg shadow-brand-600/20" id="profilBigAvatar">
+                U
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-900" id="profilNamaPegawai">Nama Pegawai</h3>
+                <p class="text-xs text-slate-500" id="profilUsername">@username</p>
+                <span class="inline-flex items-center px-2 py-0.5 mt-1.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                  <i class="fa-solid fa-circle-check mr-1 text-[9px]"></i> Sesi Aktif & Terlindungi
+                </span>
+              </div>
+            </div>
+
+            <div class="py-6 space-y-4">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Informasi Akun & Hak Akses</h4>
+              
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2.5 text-xs">
+                <div class="flex justify-between py-1 border-b border-slate-200/60">
+                  <span class="text-slate-500">Nama Lengkap</span>
+                  <span class="font-bold text-slate-800" id="infoNamaLengkap">-</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-200/60">
+                  <span class="text-slate-500">Username Login</span>
+                  <span class="font-bold text-slate-800" id="infoUsername">-</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-200/60">
+                  <span class="text-slate-500">Otorisasi Data</span>
+                  <span class="font-semibold text-emerald-600">Isolasi Sheet Pegawai Mandiri</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-slate-500">Database Engine</span>
+                  <span class="font-medium text-slate-700">Google Apps Script & Spreadsheet</span>
+                </div>
+              </div>
+
+              <div class="bg-blue-50/70 border border-blue-200 p-4 rounded-xl text-xs text-blue-800 space-y-1">
+                <p class="font-bold flex items-center gap-1.5">
+                  <i class="fa-solid fa-lock text-brand-600"></i>
+                  Aturan Pengisian Berdasarkan Tanggal
+                </p>
+                <p class="text-blue-700/90 leading-relaxed text-[11px]">
+                  - <strong>Hari Ini</strong>: Pengguna dapat dicentang (TRUE) dan dapat dibatalkan (FALSE) jika ada salah klik.<br>
+                  - <strong>Tanggal Lampau</strong>: Data yang sudah terisi (TRUE) dikunci otomatis.<br>
+                  - <strong>Sabtu & Minggu</strong>: Hari Libur (bebas tugas).
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end">
+              <button onclick="handleLogout()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/20 transition-all flex items-center gap-2">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Keluar Dari Aplikasi</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card Ganti Username & Password -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+              <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <i class="fa-solid fa-user-gear text-brand-600"></i>
+                  <span>Ganti Username & Password</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Perbarui kredensial akun login Anda secara mandiri</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200/80">
+                <i class="fa-solid fa-arrows-rotate mr-1"></i> Sinkron Spreadsheet
+              </span>
+            </div>
+
+            <!-- Banner Info Sinkronisasi Spreadsheet -->
+            <div class="bg-blue-50 border border-blue-200 p-3.5 rounded-xl text-xs text-blue-800 mb-5 flex items-start space-x-2.5">
+              <i class="fa-solid fa-circle-info text-blue-600 mt-0.5 flex-shrink-0"></i>
+              <div class="leading-relaxed text-[11px]">
+                <strong>Sinkronisasi Langsung:</strong> Perubahan username dan/atau password akan langsung disimpan ke sheet <strong>Users</strong> pada spreadsheet database SIMPELKU.
+              </div>
+            </div>
+
+            <form id="formChangeCred" onsubmit="handleChangeCredentials(event)" class="space-y-4">
+              <!-- Password Saat Ini -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Password Saat Ini <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-key text-xs"></i>
+                  </span>
+                  <input type="password" id="editOldPassword" required placeholder="Masukkan password saat ini untuk verifikasi" 
+                    class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-800 font-medium">
+                  <button type="button" onclick="toggleCredPassword('editOldPassword', 'eyeOldIcon')" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                    <i id="eyeOldIcon" class="fa-solid fa-eye text-xs"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Username Baru -->
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Username Baru <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-user text-xs"></i>
+                  </span>
+                  <input type="text" id="editNewUsername" required placeholder="Minimal 3 karakter, contoh: slamet" 
+                    class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-800 font-medium">
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">Username digunakan untuk login ke sistem.</p>
+              </div>
+
+              <!-- Password Baru -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Password Baru
+                  </label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-lock text-xs"></i>
+                    </span>
+                    <input type="password" id="editNewPassword" placeholder="Kosongkan jika tak diubah" 
+                      class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-800 font-medium">
+                    <button type="button" onclick="toggleCredPassword('editNewPassword', 'eyeNewIcon')" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                      <i id="eyeNewIcon" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1">Minimal 4 karakter.</p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Konfirmasi Password Baru
+                  </label>
+                  <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <i class="fa-solid fa-shield text-xs"></i>
+                    </span>
+                    <input type="password" id="editConfirmPassword" placeholder="Ulangi password baru" 
+                      class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-800 font-medium">
+                    <button type="button" onclick="toggleCredPassword('editConfirmPassword', 'eyeConfirmIcon')" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                      <i id="eyeConfirmIcon" class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Pesan Notifikasi / Error -->
+              <div id="changeCredMsg" class="hidden"></div>
+
+              <div class="pt-3 border-t border-slate-100 flex justify-end">
+                <button type="submit" id="btnSubmitCred"
+                  class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl shadow-md shadow-brand-600/20 transition-all flex items-center justify-center space-x-2 active:scale-98">
+                  <i class="fa-solid fa-floppy-disk text-xs"></i>
+                  <span>Simpan Perubahan Kredensial</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- ================= VIEW 5: MONITORING KEAMANAN ================= -->

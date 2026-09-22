@@ -1,0 +1,56 @@
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: supervisor_inspeksi.html
+     ============================================================== -->
+<section id="view-inspeksi-mutu" class="space-y-6 hidden">
+          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-star-half-stroke text-purple-500"></i> Audit & Inspeksi Standar Mutu Layanan
+                </h3>
+                <p class="text-xs text-slate-400">Evaluasi kepatuhan SOP berkala untuk Unit Kebersihan, Pelayanan, dan Keamanan</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openInspeksiMutuModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2">
+                  <i class="fa-solid fa-plus"></i> Tambah Inspeksi Baru
+                </button>
+                <button onclick="loadInspeksiMutuData()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+                  <i class="fa-solid fa-rotate"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Unit Inspeksi -->
+            <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <button onclick="filterInspeksiUnit('SEMUA')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white" data-unit="SEMUA">Semua Unit</button>
+              <button onclick="filterInspeksiUnit('Kebersihan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Kebersihan">Kebersihan</button>
+              <button onclick="filterInspeksiUnit('Pelayanan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Pelayanan">Pelayanan</button>
+              <button onclick="filterInspeksiUnit('Keamanan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Keamanan">Keamanan</button>
+            </div>
+
+            <!-- Inspeksi Table -->
+            <div class="overflow-x-auto mt-4">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th class="py-3 px-4 rounded-l-xl">Tanggal</th>
+                    <th class="py-3 px-4">Unit</th>
+                    <th class="py-3 px-4">Area / Ruangan</th>
+                    <th class="py-3 px-4">Auditor</th>
+                    <th class="py-3 px-4">Skor Mutu</th>
+                    <th class="py-3 px-4">Catatan Temuan</th>
+                    <th class="py-3 px-4 rounded-r-xl">Tindak Lanjut</th>
+                  </tr>
+                </thead>
+                <tbody id="inspeksiTableBody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat data inspeksi mutu...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= VIEW 1: DASHBOARD ================= -->

@@ -1,0 +1,97 @@
+<!-- ==============================================================
+     SIMPEL-KU - SIDEBAR COMPONENT
+     ============================================================== -->
+<div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 md:hidden hidden transition-opacity"></div>
+
+    <!-- Sidebar Navigation Drawer (Navigasi Mobile & Desktop) -->
+    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out overflow-hidden">
+      <div>
+        <!-- Header Sidebar: Logo & Tombol Toggle Rapi -->
+        <div class="h-16 flex items-center px-3.5 border-b border-slate-100 justify-between overflow-hidden">
+          <div class="flex items-center space-x-3 overflow-hidden min-w-0">
+            <!-- App Logo Badge Icon -->
+            <button onclick="toggleSidebarCollapse()" title="Klik untuk Ciutkan / Perluas Navigasi" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-700 via-brand-600 to-accent-500 hover:from-brand-800 hover:to-accent-600 flex items-center justify-center text-white shadow-md shadow-brand-600/20 flex-shrink-0 transition-all active:scale-95 mx-auto">
+              <i id="sidebarHeaderLogoIcon" class="fa-solid fa-clipboard-check text-sm"></i>
+            </button>
+            <div class="sidebar-label transition-opacity duration-200 overflow-hidden">
+              <h1 class="text-sm font-bold text-slate-900 tracking-tight truncate">SIMPELKU</h1>
+              <p class="text-[10px] text-slate-400 font-medium truncate">Monitoring Terpadu</p>
+            </div>
+          </div>
+          <!-- Tombol Collapse Sidebar Desktop (Chevron Kiri) -->
+          <button onclick="toggleSidebarCollapse()" id="sidebarCollapseBtn" title="Ciutkan Navigasi" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 hidden md:flex items-center justify-center transition-all flex-shrink-0">
+            <i id="sidebarInnerToggleIcon" class="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          <!-- Tombol Tutup Sidebar Mobile -->
+          <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-600 p-1 flex-shrink-0">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Profil Singkat Sidebar -->
+        <div id="sidebarProfileBox" class="p-3 mx-2 my-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center space-x-3 overflow-hidden">
+          <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mx-auto" id="sidebarAvatar">
+            U
+          </div>
+          <div class="sidebar-label flex-1 min-w-0 transition-opacity duration-200">
+            <p class="text-xs font-semibold text-slate-900 truncate" id="sidebarUserName">Nama Pegawai</p>
+            <p class="text-[10px] text-slate-500 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+              <span class="truncate">Terverifikasi</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Menu Navigasi -->
+        <nav class="px-2 space-y-1" id="sidebarNav">
+          <!-- Managerial Nav Items (Admin & Supervisor) -->
+          <button onclick="navigateTo('dashboard-supervisor')" id="nav-dashboard-supervisor" title="Dashboard Supervisor" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-gauge-high w-5 text-center text-brand-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard Supervisor</span>
+          </button>
+          <button onclick="navigateTo('monitoring-admin')" id="nav-monitoring-admin" title="Monitoring Terpadu" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-list-check w-5 text-center text-teal-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Terpadu</span>
+          </button>
+          <button onclick="navigateTo('shift-security')" id="nav-shift-security" title="Jadwal & Shift Satpam" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-calendar-days w-5 text-center text-amber-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Shift Security</span>
+          </button>
+          <button onclick="navigateTo('inspeksi-mutu')" id="nav-inspeksi-mutu" title="Inspeksi Mutu" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-star-half-stroke w-5 text-center text-purple-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Inspeksi Mutu</span>
+          </button>
+          <button onclick="navigateTo('dashboard')" id="nav-dashboard" title="Dashboard" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold active overflow-hidden">
+            <i class="fa-solid fa-chart-pie w-5 text-center flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard</span>
+          </button>
+          <button onclick="navigateTo('kebersihan')" id="nav-kebersihan" title="Monitoring Kebersihan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
+            <i class="fa-solid fa-sparkles w-5 text-center text-accent-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Kebersihan</span>
+          </button>
+          <button onclick="navigateTo('pelayanan')" id="nav-pelayanan" title="Monitoring Pelayanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
+            <i class="fa-solid fa-hand-holding-heart w-5 text-center text-brand-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Pelayanan</span>
+          </button>
+          <button onclick="navigateTo('keamanan')" id="nav-keamanan" title="Monitoring Keamanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
+            <i class="fa-solid fa-shield-halved w-5 text-center text-indigo-500 flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Keamanan</span>
+          </button>
+          <button onclick="navigateTo('rekap')" id="nav-rekap" title="Rekap Monitoring" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
+            <i class="fa-solid fa-chart-simple w-5 text-center flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Rekap Monitoring</span>
+          </button>
+          <button onclick="navigateTo('profil')" id="nav-profil" title="Profil Akun" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
+            <i class="fa-solid fa-id-card w-5 text-center flex-shrink-0"></i>
+            <span class="sidebar-label transition-opacity duration-200 truncate">Profil Akun</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="p-2 border-t border-slate-100 overflow-hidden">
+        <button onclick="handleLogout()" id="sidebarLogoutBtn" title="Keluar (Logout)" class="w-full flex items-center justify-center space-x-3 px-3 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-xl text-xs font-semibold transition-colors duration-200 overflow-hidden">
+          <i class="fa-solid fa-arrow-right-from-bracket flex-shrink-0 w-5 text-center"></i>
+          <span class="sidebar-label transition-opacity duration-200 truncate">Keluar</span>
+        </button>
+      </div>
+    </aside>

@@ -1,0 +1,71 @@
+<!-- ==============================================================
+     SIMPEL-KU - LOGIN PAGE
+     ============================================================== -->
+<section id="loginPage" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-orange-50">
+    <div class="absolute -top-32 -left-32 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-accent-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md relative z-10">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/25 mb-4">
+          <i class="fa-solid fa-clipboard-check text-2xl text-white"></i>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">SIMPELKU</h1>
+        <p class="text-xs sm:text-sm font-medium text-slate-500 mt-1">Sistem Monitoring Pelayanan, Keamanan, dan Kebersihan Umum</p>
+      </div>
+
+      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8">
+        <div class="mb-6">
+          <h2 class="text-lg font-bold text-slate-800">Masuk ke Akun</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Gunakan kredensial yang terdaftar pada sistem</p>
+        </div>
+
+        <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-user text-sm"></i>
+              </span>
+              <input type="text" id="loginUsername" required placeholder="Contoh: slamet, rania, atau eddy" 
+                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 font-medium">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-solid fa-lock text-sm"></i>
+              </span>
+              <input type="password" id="loginPassword" required placeholder="••••••••" 
+                class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 font-medium">
+              <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                <i id="eyeIcon" class="fa-solid fa-eye text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="loginErrorMessage" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center space-x-2">
+            <i class="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+            <span id="loginErrorText">Kredensial tidak valid.</span>
+          </div>
+
+          <button type="submit" id="btnLoginSubmit"
+            class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 transform active:scale-98 cursor-pointer">
+            <span class="text-white font-bold">Masuk ke Dashboard</span>
+            <i class="fa-solid fa-arrow-right text-xs text-white"></i>
+          </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
+          <p class="flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+            <span>Sesi aman per akun pegawai</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= APLIKASI UTAMA ================= -->

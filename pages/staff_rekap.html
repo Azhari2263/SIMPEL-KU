@@ -1,0 +1,63 @@
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: staff_rekap.html
+     ============================================================== -->
+<section id="view-rekap" class="hidden space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-chart-simple text-brand-600"></i>
+              <span>Rekapitulasi & Visualisasi Pencapaian</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                <span>Tren Kepatuhan Checklist Harian</span>
+                <i class="fa-solid fa-chart-line text-brand-500"></i>
+              </h4>
+              <div class="relative h-64">
+                <canvas id="chartTrenHarian"></canvas>
+              </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+                <span>Pencapaian Berdasarkan Ruangan</span>
+                <i class="fa-solid fa-chart-bar text-accent-500"></i>
+              </h4>
+              <div class="relative h-64">
+                <canvas id="chartRuangan"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Rekapitulasi Detail -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h4 class="text-sm font-bold text-slate-800">Tabel Ringkasan Per Ruangan</h4>
+              <span class="text-xs text-slate-400 font-medium">Bulan Aktif</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] border-b border-slate-200">
+                  <tr>
+                    <th class="p-3.5">Nama Ruangan</th>
+                    <th class="p-3.5 text-center">Jumlah Kegiatan</th>
+                    <th class="p-3.5 text-center">Total Target Checklist</th>
+                    <th class="p-3.5 text-center">Selesai Dikerjakan</th>
+                    <th class="p-3.5 text-center">Persentase</th>
+                    <th class="p-3.5 min-w-[160px]">Status Bar</th>
+                  </tr>
+                </thead>
+                <tbody id="rekapTableBody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="6" class="p-6 text-center text-slate-400">Memuat rekapitulasi...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= VIEW 4: PROFIL AKUN ================= -->

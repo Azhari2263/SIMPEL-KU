@@ -1,0 +1,224 @@
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: supervisor_dashboard.html
+     ============================================================== -->
+<section id="view-dashboard-supervisor" class="space-y-6 hidden">
+          <!-- Hero Greeting -->
+          <div class="glass-card rounded-2xl p-6 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white relative overflow-hidden shadow-lg">
+            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-2">
+                  <i class="fa-solid fa-user-shield text-amber-300"></i> Mode Pengawasan Manajerial
+                </span>
+                <h2 id="supWelcomeName" class="text-xl md:text-2xl font-bold tracking-tight">Halo, Kasubbag Umum!</h2>
+                <p class="text-xs md:text-sm text-blue-100 mt-1">Monitoring kesiapan operasional, inspeksi standar mutu, & rekapitulasi kinerja terpadu BPS Prov. Kalbar</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="loadSupervisorDashboardData(true)" class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-blue-100">
+                  <i class="fa-solid fa-arrows-rotate text-blue-700"></i>
+                  <span class="text-blue-700 font-bold">Muat Ulang Data</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 KPI Metrics -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- KPI 1: Checklist Terpadu -->
+            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-slate-500">Total Checklist Terpadu</p>
+                  <h3 id="supKpiTotalChecklist" class="text-2xl font-bold text-slate-800 mt-1">0%</h3>
+                  <p id="supKpiDetailChecklist" class="text-xs text-slate-400 mt-0.5">0 / 0 Checklist Selesai</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
+                  <i class="fa-solid fa-list-check"></i>
+                </div>
+              </div>
+              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
+                <div id="supKpiProgressChecklist" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- KPI 2: Skor Mutu Layanan -->
+            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-slate-500">Rata-rata Skor Mutu</p>
+                  <h3 id="supKpiSkorMutu" class="text-2xl font-bold text-amber-500 mt-1">0.0 / 5.0</h3>
+                  <p id="supKpiDetailMutu" class="text-xs text-slate-400 mt-0.5">Audit Standar Mutu</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center text-xl">
+                  <i class="fa-solid fa-star"></i>
+                </div>
+              </div>
+              <div id="supKpiStars" class="flex items-center gap-1 text-xs text-amber-400 mt-3">
+                <i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i>
+              </div>
+            </div>
+
+            <!-- KPI 3: Kesiapsiagaan Satpam -->
+            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-slate-500">Kesiapan Satpam Hari Ini</p>
+                  <h3 id="supKpiKesiapanSatpam" class="text-2xl font-bold text-emerald-600 mt-1">0 Petugas</h3>
+                  <p id="supKpiDetailSatpam" class="text-xs text-slate-400 mt-0.5">Shift Aktif Pagi/Siang/Malam</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 mt-3 text-xs">
+                <span class="inline-flex items-center gap-1 text-emerald-600 font-semibold"><i class="fa-solid fa-circle text-[8px]"></i> 100% Siap</span>
+              </div>
+            </div>
+
+            <!-- KPI 4: Unit Perlu Perhatian -->
+            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs font-medium text-slate-500">Perhatian Khusus</p>
+                  <h3 id="supKpiPerhatian" class="text-xl font-bold text-rose-600 mt-1">Nihil</h3>
+                  <p id="supKpiDetailPerhatian" class="text-xs text-slate-400 mt-0.5">Semua Unit Memenuhi Target</p>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl">
+                  <i class="fa-solid fa-bell"></i>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-slate-500">
+                <span>Monitoring Realtime</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overview Status & Unit Progress -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Progres Per Unit Kerja -->
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-bold text-slate-800">Progres Unit Operasional</h3>
+                  <p class="text-xs text-slate-400">Tingkat penyelesaian checklist per unit kerja</p>
+                </div>
+              </div>
+              <div class="space-y-4" id="supUnitProgressContainer">
+                <!-- Kebersihan -->
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-sparkles"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-bold text-slate-800">Piket Kebersihan Kantor</h4>
+                        <p class="text-[11px] text-slate-400" id="supUnitKebersihanRatio">0 / 0 Selesai</p>
+                      </div>
+                    </div>
+                    <span id="supUnitKebersihanPct" class="text-xs font-bold text-emerald-600">0%</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="supUnitKebersihanBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Pelayanan -->
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-hand-holding-heart"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-bold text-slate-800">Standar Pelayanan / Resepsionis</h4>
+                        <p class="text-[11px] text-slate-400" id="supUnitPelayananRatio">0 / 0 Selesai</p>
+                      </div>
+                    </div>
+                    <span id="supUnitPelayananPct" class="text-xs font-bold text-blue-600">0%</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="supUnitPelayananBar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                  </div>
+                </div>
+
+                <!-- Keamanan -->
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                        <i class="fa-solid fa-shield-halved"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-bold text-slate-800">Keamanan & Piket Satpam</h4>
+                        <p class="text-[11px] text-slate-400" id="supUnitKeamananRatio">0 / 0 Selesai</p>
+                      </div>
+                    </div>
+                    <span id="supUnitKeamananPct" class="text-xs font-bold text-indigo-600">0%</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div id="supUnitKeamananBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Satpam Bertugas Hari Ini -->
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-bold text-slate-800">Piket Satpam Hari Ini</h3>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold" id="supTodayDateBadge">Hari Ini</span>
+              </div>
+              <div class="space-y-3" id="supTodaySatpamList">
+                <div class="text-center py-6 text-xs text-slate-400">Memuat data jadwal piket...</div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+                <button onclick="navigateTo('shift-security')" class="text-xs text-brand-600 hover:text-brand-700 font-semibold flex items-center justify-center gap-1.5 w-full">
+                  <span>Lihat Matriks Shift Lengkap</span>
+                  <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Kinerja & Progres Pegawai -->
+          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-slate-800">Rekapitulasi Kinerja Pegawai</h3>
+                <p class="text-xs text-slate-400">Daftar seluruh petugas teknis beserta persentase kepatuhan & rincian tugas</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <input type="text" id="searchSupPegawai" oninput="filterSupervisorPegawaiTable(this.value)" placeholder="Cari nama pegawai..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                  <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th class="py-3 px-4 rounded-l-xl">No</th>
+                    <th class="py-3 px-4">Nama Pegawai</th>
+                    <th class="py-3 px-4">Unit Kerja</th>
+                    <th class="py-3 px-4">Checklist Selesai</th>
+                    <th class="py-3 px-4">Persentase</th>
+                    <th class="py-3 px-4">Status</th>
+                    <th class="py-3 px-4 text-center rounded-r-xl">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="supPegawaiTableBody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat rekap pegawai...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- VIEW: MONITORING TERPADU (ADMIN / SUPERVISOR)                  -->
+        <!-- ============================================================== -->

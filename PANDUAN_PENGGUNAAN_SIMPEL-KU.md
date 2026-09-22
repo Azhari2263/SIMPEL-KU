@@ -303,4 +303,71 @@ Sistem SIMPEL-KU telah dikonfigurasi dengan akun multi-role berikut:
 > **A:** Data hasil penilaian inspeksi mutu langsung disimpan secara permanen ke sheet **`InspeksiMutu`** pada spreadsheet SIMPEL-KU lengkap dengan ID laporan, tanggal, unit, skor, catatan temuan, rekomendasi, dan nama pemeriksa (*inspektor*).
 
 ---
+
+## 13. Struktur Kode Modular & Panduan Pengembang (Developer Guide)
+
+Untuk memudahkan pemeliharaan dan pengembangan lanjutan, basis kode SIMPEL-KU telah direfaktor menjadi arsitektur modular yang terstruktur rapi berdasarkan layer dan fitur:
+
+```
+[4] SIMPEL-KU/
+├── config/
+│   ├── Config.gs             # Konfigurasi konstanta backend GAS, Spreadsheet ID, Role Permissions
+│   └── config.js             # Konfigurasi frontend JS, daftar role, dan pemetaan bulan
+├── utils/
+│   ├── Utils.gs              # Utility string, normalisasi nama, alias matching, match score (backend)
+│   └── utils.js              # Utility helper frontend (escapeHtml, safePercent, debounce, format tanggal)
+├── backend/
+│   ├── Database.gs           # Akses Google Spreadsheet, multi-level caching, pencarian sheet pegawai
+│   ├── Auth.gs               # Login, autentikasi session token, pergantian username/password
+│   ├── StaffMonitoring.gs    # Logika pembacaan & update checklist kebersihan/pelayanan teknis
+│   ├── Security.gs           # Parsing jadwal piket matrix satpam, update shift, swap shift
+│   ├── Supervisor.gs         # Logika pengawasan manajerial, rekapitulasi terpadu, rincian progres pegawai
+│   ├── InspeksiMutu.gs       # Manajemen rekam audit mutu layanan, skor bintang, dan tindak lanjut
+│   └── ApiRouter.gs          # Entry point doGet, doPost, dan dispatcher aksi API backend
+├── components/
+│   ├── header.html           # Komponen Topbar header & date selector
+│   ├── sidebar.html          # Komponen Sidebar navigasi dinamis berbasis peran pengguna
+│   └── modals.html           # Komponen Modal (detail pegawai, edit shift, swap shift, inspeksi mutu, toast, loader)
+├── pages/
+│   ├── login.html            # Tampilan halaman login
+│   ├── supervisor_dashboard.html   # Halaman Dashboard Supervisor / Kasubbag Umum
+│   ├── supervisor_monitoring.html  # Halaman Monitoring Terpadu lintas unit
+│   ├── supervisor_shift.html       # Halaman Kelola & Matriks Shift Petugas Satpam
+│   ├── supervisor_inspeksi.html    # Halaman Audit Standar Mutu Layanan
+│   ├── staff_dashboard.html        # Halaman Dashboard Staf Teknis
+│   ├── staff_monitoring.html       # Halaman Monitoring Checklist Kebersihan & Pelayanan
+│   ├── staff_rekap.html            # Halaman Rekapitulasi & Grafik Kinerja Staf
+│   ├── staff_security.html         # Halaman Jadwal & Checklist Harian Satpam (Personal)
+│   └── staff_profile.html          # Halaman Profil Pegawai & Ganti Kredensial
+├── js/
+│   ├── app.js                # Core controller, inisialisasi state, bridge callBackend, navigasi, toast, loader
+│   ├── auth.js               # Handler login, logout, sesi, ganti kredensial mandiri
+│   ├── staff_monitoring.js   # Handler checklist, filter ruangan, mode harian/mingguan/bulanan
+│   ├── staff_security.js     # Handler checklist tugas satpam & navigasi harian
+│   ├── staff_rekap.js        # Handler grafik Chart.js dan tabel rekap staf
+│   ├── supervisor_dashboard.js   # Controller dashboard pengawasan, pencarian real-time, modal detail pegawai
+│   ├── supervisor_monitoring.js  # Controller monitoring terpadu, filter unit/petugas/status real-time
+│   ├── supervisor_shift.js       # Controller kelola jadwal shift satpam, ubah shift langsung, dan swap
+│   └── supervisor_inspeksi.js    # Controller inspeksi mutu, rating bintang, audit dan pencarian rekam audit
+├── css/
+│   ├── main.css              # Styling tema utama, scrollbar, navigasi
+│   └── components.css        # Styling komponen modal, badge varian, tabel responsif
+├── build.py                  # Skrip otomatisasi build & validator sintaks (GAS & JS)
+├── code.gs                   # Master compiled backend Google Apps Script (siap deploy)
+└── index.html                # Master compiled frontend HTML/CSS/JS (siap deploy)
+```
+
+### 🔨 Cara Melakukan Build / Kompilasi Otomatis
+Jika Anda melakukan perubahan pada salah satu file di dalam folder `config/`, `utils/`, `backend/`, `components/`, `pages/`, `js/`, atau `css/`, jalankan perintah berikut di terminal:
+
+```bash
+python build.py
+```
+
+Skrip `build.py` akan:
+1. Menggabungkan seluruh modul backend menjadi `code.gs`.
+2. Menggabungkan seluruh komponen UI, view halaman, styling CSS, dan modul JS menjadi `index.html`.
+3. Menjalankan validasi sintaks otomatis di Node.js VM untuk memastikan kode bebas dari error sintaks sebelum diunggah ke Google Apps Script.
+
+---
 *© 2026 Badan Pusat Statistik Provinsi Kalimantan Barat. Seluruh Hak Cipta Dilindungi.*

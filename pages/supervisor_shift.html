@@ -1,0 +1,157 @@
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: supervisor_shift.html
+     ============================================================== -->
+<section id="view-shift-security" class="space-y-6 hidden">
+          <!-- Top Card: Header & Pilih Petugas Satpam -->
+          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-calendar-check text-amber-500"></i> Pengaturan & Jadwal Shift Security
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">Pantau jadwal piket satpam bulanan dan ubah jadwal shift harian secara langsung</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="loadJadwalPiketSecurityMatrix()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-rotate"></i> Muat Ulang
+                </button>
+              </div>
+            </div>
+
+            <!-- Pilih Petugas Satpam -->
+            <div class="space-y-3">
+              <label class="block text-xs font-bold text-slate-700">Pilih Petugas Satpam untuk Melihat & Mengubah Jadwal:</label>
+              <div id="secOfficerTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-1">
+                <!-- Dinamis diisi tab nama-nama satpam -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Jadwal Shift Harian Petugas Terpilih -->
+          <div id="secDailyViewContainer" class="space-y-6">
+            <!-- 4 Kartu Summary Shift Petugas Terpilih -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="secOfficerSummaryCards">
+              <div class="glass-card rounded-2xl p-4 border border-blue-100 bg-blue-50/50">
+                <p class="text-[11px] font-bold text-blue-600">Shift Pagi</p>
+                <h4 class="text-xl font-extrabold text-blue-700 mt-1" id="secCardPagi">0 Hari</h4>
+                <p class="text-[10px] text-blue-500 mt-0.5">06.00 – 16.00 WIB</p>
+              </div>
+              <div class="glass-card rounded-2xl p-4 border border-amber-100 bg-amber-50/50">
+                <p class="text-[11px] font-bold text-amber-600">Shift Sore / Jam Kerja</p>
+                <h4 class="text-xl font-extrabold text-amber-700 mt-1" id="secCardSore">0 Hari</h4>
+                <p class="text-[10px] text-amber-500 mt-0.5">15.30 – 23.30 WIB</p>
+              </div>
+              <div class="glass-card rounded-2xl p-4 border border-purple-100 bg-purple-50/50">
+                <p class="text-[11px] font-bold text-purple-600">Shift Malam</p>
+                <h4 class="text-xl font-extrabold text-purple-700 mt-1" id="secCardMalam">0 Hari</h4>
+                <p class="text-[10px] text-purple-500 mt-0.5">23.00 – 07.30 WIB</p>
+              </div>
+              <div class="glass-card rounded-2xl p-4 border border-slate-200 bg-slate-50/50">
+                <p class="text-[11px] font-bold text-slate-500">Libur (Bebas Tugas)</p>
+                <h4 class="text-xl font-extrabold text-slate-700 mt-1" id="secCardLibur">0 Hari</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Off Duty</p>
+              </div>
+            </div>
+
+            <!-- Kalender / Day Selector Strip (1..31) -->
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-day text-brand-500"></i>
+                  <span>Pilih Tanggal Piket (<span id="secSelectedOfficerLabel">-</span>):</span>
+                </h4>
+                <span class="text-[11px] text-slate-400 italic">* Klik tanggal untuk mengubah shift</span>
+              </div>
+              <div id="secDayPillsContainer" class="flex items-center gap-2 overflow-x-auto pb-2 pt-1">
+                <!-- Dinamis diisi deretan hari 1..31 -->
+              </div>
+            </div>
+
+            <!-- Panel Detail & Form Ubah Shift Langsung -->
+            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                  <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Perubahan Jadwal Shift Harian</span>
+                  <h4 class="text-base font-bold text-slate-800 mt-0.5" id="secEditPanelTitle">Tanggal Terpilih</h4>
+                  <p class="text-xs text-slate-500" id="secEditPanelSubtitle">Pilih salah satu shift di bawah ini untuk memperbarui jadwal petugas</p>
+                </div>
+                <div id="secCurrentShiftBadgeContainer">
+                  <!-- Badge shift saat ini -->
+                </div>
+              </div>
+
+              <!-- 4 Pilihan Shift Cepat -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- Option P -->
+                <button type="button" onclick="selectQuickShiftChoice('P')" id="btnChoiceP" class="shift-choice-btn text-left p-4 rounded-xl border-2 transition-all border-slate-200 hover:border-blue-400 bg-white">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2.5 py-0.5 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">P - PAGI</span>
+                    <span class="w-4 h-4 rounded-full border border-slate-300 choice-radio flex items-center justify-center text-[10px]"></span>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800 mt-2">Shift Pagi</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">06.00 – 16.00 WIB</p>
+                  <p class="text-[10px] text-slate-400 mt-2">Tugas: Pagi & Selama Jam Kerja</p>
+                </button>
+
+                <!-- Option S -->
+                <button type="button" onclick="selectQuickShiftChoice('S')" id="btnChoiceS" class="shift-choice-btn text-left p-4 rounded-xl border-2 transition-all border-slate-200 hover:border-amber-400 bg-white">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold text-xs">S - SORE</span>
+                    <span class="w-4 h-4 rounded-full border border-slate-300 choice-radio flex items-center justify-center text-[10px]"></span>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800 mt-2">Shift Sore / Jam Kerja</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">15.30 – 23.30 WIB</p>
+                  <p class="text-[10px] text-slate-400 mt-2">Tugas: Jam Kerja & Malam</p>
+                </button>
+
+                <!-- Option M -->
+                <button type="button" onclick="selectQuickShiftChoice('M')" id="btnChoiceM" class="shift-choice-btn text-left p-4 rounded-xl border-2 transition-all border-slate-200 hover:border-purple-400 bg-white">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2.5 py-0.5 rounded-md bg-purple-100 text-purple-700 font-bold text-xs">M - MALAM</span>
+                    <span class="w-4 h-4 rounded-full border border-slate-300 choice-radio flex items-center justify-center text-[10px]"></span>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800 mt-2">Shift Malam</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">23.00 – 07.30 WIB</p>
+                  <p class="text-[10px] text-slate-400 mt-2">Tugas: Patroli & Penguncian</p>
+                </button>
+
+                <!-- Option O -->
+                <button type="button" onclick="selectQuickShiftChoice('O')" id="btnChoiceO" class="shift-choice-btn text-left p-4 rounded-xl border-2 transition-all border-slate-200 hover:border-slate-400 bg-white">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-xs">O - LIBUR</span>
+                    <span class="w-4 h-4 rounded-full border border-slate-300 choice-radio flex items-center justify-center text-[10px]"></span>
+                  </div>
+                  <p class="text-xs font-bold text-slate-800 mt-2">Libur / Bebas Tugas</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Off Duty</p>
+                  <p class="text-[10px] text-slate-400 mt-2">Tidak ada checklist tugas</p>
+                </button>
+              </div>
+
+              <!-- Action Footer -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                <span class="text-xs text-slate-400" id="secSaveStatusHint">Perubahan akan langsung disimpan ke sheet JadwalPiketSecurity.</span>
+                <button type="button" onclick="submitDirectShiftChange()" id="btnSaveDirectShift" class="px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 self-end sm:self-auto">
+                  <i class="fa-solid fa-floppy-disk"></i>
+                  <span>Simpan Perubahan Jadwal</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Matriks Bulanan Semua Satpam -->
+          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-sm font-bold text-slate-800">Matriks Penjadwalan Bulanan Seluruh Satpam</h4>
+                <p class="text-xs text-slate-400">Tampilan rekapitulasi seluruh jadwal satpam (klik sel untuk memilih & ubah shift)</p>
+              </div>
+            </div>
+            <div id="securityMatrixContainer" class="overflow-x-auto">
+              <div class="py-12 text-center text-slate-400 text-xs">Memuat matriks jadwal piket security...</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- VIEW: INSPEKSI MUTU (ADMIN / SUPERVISOR)                       -->
+        <!-- ============================================================== -->
