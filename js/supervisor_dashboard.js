@@ -97,11 +97,11 @@ function renderSupervisorDashboardUI(data) {
         kpiSatpamDetail.innerText = `Pagi: ${pCount} | Sore: ${sCount} | Malam: ${mCount}`;
       }
 
-      // 4. KPI Card 4: Perhatian Khusus
+      // 4. KPI Card 4: Tugas Yang Harus Dikerjakan
       const kpiPerhatianEl = document.getElementById('supKpiPerhatian');
       const kpiPerhatianDetail = document.getElementById('supKpiDetailPerhatian');
       if (belum > 0) {
-        if (kpiPerhatianEl) kpiPerhatianEl.innerText = `${belum} Checklist`;
+        if (kpiPerhatianEl) kpiPerhatianEl.innerText = `${belum} Tugas`;
         if (kpiPerhatianDetail) kpiPerhatianDetail.innerText = `${belum} tugas belum selesai bulan ini`;
       } else {
         if (kpiPerhatianEl) kpiPerhatianEl.innerText = 'Nihil';
