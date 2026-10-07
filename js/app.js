@@ -71,9 +71,16 @@
           } else if (action === 'getJadwalPiketSecurityMatrix') {
             runner.getJadwalPiketSecurityMatrix(params.token, params.bulan, params.tahun);
           } else if (action === 'updateSecurityShift') {
-            runner.updateSecurityShift(params.token, params.nama, params.tanggal, params.shiftBaru, params.alasan, params.bulan, params.tahun);
+            const nama = params.namaPegawai || params.nama;
+            const tgl = params.tanggal || params.dayNum;
+            const shift = params.shiftBaru || params.newShift;
+            runner.updateSecurityShift(params.token, nama, tgl, shift, params.bulan, params.tahun);
           } else if (action === 'swapSecurityShift') {
-            runner.swapSecurityShift(params.token, params.nama1, params.tanggal1, params.nama2, params.tanggal2, params.alasan, params.bulan, params.tahun);
+            const p1 = params.petugas1 ? (params.petugas1.namaPegawai || params.petugas1.nama) : (params.pegawai1 || params.nama1);
+            const t1 = params.petugas1 ? params.petugas1.tanggal : (params.tanggal1 || params.tanggal || params.dayNum);
+            const p2 = params.petugas2 ? (params.petugas2.namaPegawai || params.petugas2.nama) : (params.pegawai2 || params.nama2);
+            const t2 = params.petugas2 ? params.petugas2.tanggal : (params.tanggal2 || params.tanggal || params.dayNum);
+            runner.swapSecurityShift(params.token, p1, p2, t1, t2, params.bulan, params.tahun);
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
           } else if (typeof runner.handleApiRequest === 'function') {

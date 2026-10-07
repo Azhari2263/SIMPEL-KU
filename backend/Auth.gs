@@ -158,13 +158,13 @@ function login(username, password) {
       const row = rawValues[r];
       for (let c = 0; c < row.length; c++) {
         const h = cleanStr(row[c]).toLowerCase();
-        if (h.includes('user') || h === 'username') colUser = c;
-        if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
-        if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
-        if (h.includes('pass') || h === 'password') colPass = c;
-        if (h.includes('role') || h.includes('jabatan')) colRole = c;
-        if (h.includes('unit') || h.includes('kategori')) colUnit = c;
-        if (h.includes('nip') || h.includes('id')) colNip = c;
+        if (h.includes('sheet')) colSheet = c;
+        else if (h.includes('user')) colUser = c;
+        else if (h.includes('nama') || h.includes('pegawai')) colNama = c;
+        else if (h.includes('pass') || h === 'password' || h.includes('sandi')) colPass = c;
+        else if (h.includes('role') || h.includes('jabatan')) colRole = c;
+        else if (h.includes('unit') || h.includes('kategori')) colUnit = c;
+        else if (h.includes('nip') || h.includes('id')) colNip = c;
       }
       if (colUser !== -1 && colPass !== -1) {
         headerRowIdx = r;
@@ -337,10 +337,10 @@ function changeCredentials(token, oldPassword, newUsername, newPassword) {
       const row = rawValues[r];
       for (let c = 0; c < row.length; c++) {
         const h = cleanStr(row[c]).toLowerCase();
-        if (h.includes('user') || h === 'username') colUser = c;
-        if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
-        if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
-        if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
+        if (h.includes('sheet')) colSheet = c;
+        else if (h.includes('user')) colUser = c;
+        else if (h.includes('nama') || h.includes('pegawai')) colNama = c;
+        else if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
       }
       if (cleanStr(row[colUser]).toLowerCase().includes('user') || cleanStr(row[colPass]).toLowerCase().includes('pass')) {
         headerRowIdx = r;
@@ -495,14 +495,19 @@ function getAllUsersList(ss) {
 
   for (let r = 0; r < Math.min(5, rawValues.length); r++) {
     const row = rawValues[r];
+    let headerKeywords = 0;
     for (let c = 0; c < row.length; c++) {
       const h = cleanStr(row[c]).toLowerCase();
-      if (h.includes('user') || h === 'username') colUser = c;
-      if (h.includes('nama pegawai') || h.includes('nama lengkap') || h.includes('nama')) colNama = c;
-      if (h.includes('nama sheet') || h === 'sheet') colSheet = c;
-      if (h.includes('role') || h.includes('jabatan')) colRole = c;
-      if (h.includes('unit') || h.includes('kategori')) colUnit = c;
-      if (h.includes('nip') || h.includes('id')) colNip = c;
+      if (h.includes('sheet')) { colSheet = c; headerKeywords++; }
+      else if (h.includes('user')) { colUser = c; headerKeywords++; }
+      else if (h.includes('nama') || h.includes('pegawai')) { colNama = c; headerKeywords++; }
+      else if (h.includes('role') || h.includes('jabatan')) { colRole = c; headerKeywords++; }
+      else if (h.includes('unit') || h.includes('kategori')) { colUnit = c; headerKeywords++; }
+      else if (h.includes('nip') || h.includes('id')) { colNip = c; headerKeywords++; }
+    }
+    if (headerKeywords >= 2) {
+      headerRowIdx = r;
+      break;
     }
   }
 

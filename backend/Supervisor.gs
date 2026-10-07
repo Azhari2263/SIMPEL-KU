@@ -821,7 +821,8 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
       "Juli", "Agustus", "September", "Oktober", "November", "Desember"
     ];
     const namaBulanStr = NAMA_BULAN[selectedMonth] || ("Bulan " + selectedMonth);
-    const isManager = (session.role === 'Admin' || session.role === 'Supervisor' || session.role === 'Tim Umum dan Humas' || session.role === 'Koordinator Lapangan');
+    const userRoleLower = (session.role || '').toLowerCase();
+    const isManager = userRoleLower.includes('admin') || userRoleLower.includes('supervisor') || userRoleLower.includes('kabag') || userRoleLower.includes('humas') || userRoleLower.includes('koordinator') || userRoleLower.includes('korlap');
 
     // JIKA TIPE 'semua' (Hanya untuk Admin / Supervisor)
     if (tipe === 'semua' && isManager) {
@@ -929,8 +930,14 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
       let targetUser = null;
       const allUsers = getAllUsersList(ss);
       const queryUsername = (isManager && targetUsername) ? targetUsername : session.username;
+      const queryAlpha = getAlphaOnly(queryUsername);
 
-      targetUser = allUsers.find(u => u.username === queryUsername || u.namaPegawai === queryUsername);
+      targetUser = allUsers.find(u =>
+        u.username === queryUsername ||
+        u.namaPegawai === queryUsername ||
+        (queryAlpha && getAlphaOnly(u.username) === queryAlpha) ||
+        (queryAlpha && getAlphaOnly(u.namaPegawai) === queryAlpha)
+      );
       if (!targetUser) {
         targetUser = session;
       }

@@ -4,8 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SIMPEL-KU | BPS Provinsi Kalimantan Barat</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Tailwind CSS CDN & Config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#2563eb', 600: '#1d4ed8', 700: '#1e40af', 800: '#1e3a8a', 900: '#172554' },
+            accent: { 50: '#fff7ed', 100: '#ffedd5', 200: '#fed7aa', 300: '#fdba74', 400: '#fb923c', 500: '#f97316', 600: '#ea580c', 700: '#c2410c', 800: '#9a3412', 900: '#7c2d12' }
+          },
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
   <!-- FontAwesome CDN -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- Chart.js CDN -->
@@ -127,6 +140,48 @@
       scrollbar-width: none;
     }
 
+    /* Guaranteed App Logo Gradient & Glow */
+    .app-logo-gradient {
+      background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #f97316 100%) !important;
+    }
+
+    .app-logo-glow {
+      box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3), 0 8px 10px -6px rgba(249, 115, 22, 0.2);
+    }
+
+    /* Modern Card & Glassmorphism Utilities */
+    .modern-card {
+      background: #ffffff;
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .modern-card:hover {
+      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -2px rgba(0, 0, 0, 0.04);
+    }
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Clean Table Styling */
+    .table-modern thead th {
+      letter-spacing: 0.05em;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.6875rem;
+      color: #64748b;
+    }
+    .table-modern tbody tr {
+      transition: background-color 0.15s ease;
+    }
+    .table-modern tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
 /* ========================================================
    SIMPEL-KU - COMPONENT & UTILITY CSS
    ======================================================== */
@@ -240,7 +295,7 @@
         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-pen-to-square text-amber-500"></i> Ubah Shift Satpam
         </h3>
-        <button onclick="closeModal('modalEditShift')" class="w-8 h-8 rounded-lg hover:bg-slate-100:bg-slate-700 flex items-center justify-center text-slate-400">
+        <button onclick="closeModal('modalEditShift')" class="w-8 h-8 rounded-lg hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center text-slate-400">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -283,7 +338,7 @@
         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-right-left text-indigo-500"></i> Tukar Shift (Swap) Antar Satpam
         </h3>
-        <button onclick="closeModal('modalSwapShift')" class="w-8 h-8 rounded-lg hover:bg-slate-100:bg-slate-700 flex items-center justify-center text-slate-400">
+        <button onclick="closeModal('modalSwapShift')" class="w-8 h-8 rounded-lg hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center text-slate-400">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -441,74 +496,91 @@
 <!-- ==============================================================
      SIMPEL-KU - LOGIN PAGE
      ============================================================== -->
-<section id="loginPage" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-orange-50">
-    <div class="absolute -top-32 -left-32 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-accent-500/10 rounded-full blur-3xl pointer-events-none"></div>
+<section id="loginPage" class="min-h-screen flex items-center justify-center p-4 sm:p-6 relative overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40">
+  <!-- Ambient background glow elements -->
+  <div class="absolute -top-32 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="w-full max-w-md relative z-10">
-      <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/25 mb-4">
-          <i class="fa-solid fa-clipboard-check text-2xl text-white"></i>
+  <div class="w-full max-w-md relative z-10 my-auto">
+    <!-- Header: Logo & Branding -->
+    <div class="text-center mb-6">
+      <div class="flex items-center justify-center gap-3.5 mb-3.5">
+        <!-- Logo BPS Resmi -->
+        <img src="data:image/png;base64,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" alt="Logo BPS" class="h-12 sm:h-14 w-auto object-contain drop-shadow-sm transition-transform hover:scale-105 duration-200">
+        <!-- Divider Tipis -->
+        <div class="h-9 w-px bg-slate-200"></div>
+        <!-- Logo Badge SIMPEL-KU -->
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl app-logo-gradient app-logo-glow flex items-center justify-center text-white shadow-lg shadow-blue-700/25 transition-transform hover:scale-105 duration-200">
+          <i class="fa-solid fa-clipboard-check text-xl sm:text-2xl text-white"></i>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">SIMPELKU</h1>
-        <p class="text-xs sm:text-sm font-medium text-slate-500 mt-1">Sistem Monitoring Pelayanan, Keamanan, dan Kebersihan Umum</p>
       </div>
 
-      <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8">
-        <div class="mb-6">
-          <h2 class="text-lg font-bold text-slate-800">Masuk ke Akun</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Gunakan kredensial yang terdaftar pada sistem</p>
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-[10px] font-bold text-blue-700 tracking-wider uppercase mb-1.5 shadow-2xs">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+        <span>BPS Provinsi Kalimantan Barat</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">SIMPEL-KU</h1>
+      <p class="text-xs sm:text-sm font-medium text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+        Sistem Monitoring Pelayanan, Keamanan, dan Kebersihan Umum
+      </p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-6 sm:p-8 transition-all">
+      <div class="mb-5">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Masuk ke Akun</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Gunakan kredensial yang terdaftar pada sistem</p>
+      </div>
+
+      <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Username</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-user text-xs"></i>
+            </span>
+            <input type="text" id="loginUsername" required placeholder="Contoh: slamet, rania, atau eddy" 
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 focus:bg-white transition-all text-slate-800 font-medium placeholder-slate-400">
+          </div>
         </div>
 
-        <form id="formLogin" onsubmit="handleLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Username</label>
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <i class="fa-solid fa-user text-sm"></i>
-              </span>
-              <input type="text" id="loginUsername" required placeholder="Contoh: slamet, rania, atau eddy" 
-                class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 font-medium">
-            </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fa-solid fa-lock text-xs"></i>
+            </span>
+            <input type="password" id="loginPassword" required placeholder="••••••••" 
+              class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 focus:bg-white transition-all text-slate-800 font-medium placeholder-slate-400">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer">
+              <i id="eyeIcon" class="fa-solid fa-eye text-xs"></i>
+            </button>
           </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Password</label>
-            <div class="relative">
-              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                <i class="fa-solid fa-lock text-sm"></i>
-              </span>
-              <input type="password" id="loginPassword" required placeholder="••••••••" 
-                class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-slate-800 font-medium">
-              <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
-                <i id="eyeIcon" class="fa-solid fa-eye text-sm"></i>
-              </button>
-            </div>
-          </div>
-
-          <div id="loginErrorMessage" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center space-x-2">
-            <i class="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
-            <span id="loginErrorText">Kredensial tidak valid.</span>
-          </div>
-
-          <button type="submit" id="btnLoginSubmit"
-            class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 transform active:scale-98 cursor-pointer">
-            <span class="text-white font-bold">Masuk ke Dashboard</span>
-            <i class="fa-solid fa-arrow-right text-xs text-white"></i>
-          </button>
-        </form>
-
-        <div class="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
-          <p class="flex items-center justify-center gap-1.5">
-            <i class="fa-solid fa-shield-halved text-emerald-600"></i>
-            <span>Sesi aman per akun pegawai</span>
-          </p>
         </div>
+
+        <div id="loginErrorMessage" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center space-x-2">
+          <i class="fa-solid fa-triangle-exclamation flex-shrink-0"></i>
+          <span id="loginErrorText">Kredensial tidak valid.</span>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit"
+          class="w-full py-3 px-4 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 hover:from-blue-800 hover:to-indigo-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg shadow-blue-600/25 transition-all duration-200 flex items-center justify-center gap-2 transform active:scale-98 cursor-pointer">
+          <span class="text-white font-bold">Masuk ke Dashboard</span>
+          <i class="fa-solid fa-arrow-right text-xs text-white"></i>
+        </button>
+      </form>
+
+      <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+          <span>Sesi terenkripsi</span>
+        </span>
+        <span class="font-semibold text-slate-400">SIMPEL-KU v3.0</span>
       </div>
     </div>
-  </section>
-
-  <!-- ================= APLIKASI UTAMA ================= -->
+  </div>
+</section>
 
   <!-- Aplikasi Utama -->
   <div id="mainApp" class="hidden min-h-screen flex">
@@ -518,94 +590,98 @@
      ============================================================== -->
 <div id="sidebarBackdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 md:hidden hidden transition-opacity"></div>
 
-    <!-- Sidebar Navigation Drawer (Navigasi Mobile & Desktop) -->
-    <aside id="appSidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out overflow-hidden">
-      <div>
-        <!-- Header Sidebar: Logo & Tombol Toggle Rapi -->
-        <div class="h-16 flex items-center px-3.5 border-b border-slate-100 justify-between overflow-hidden">
-          <div class="flex items-center space-x-3 overflow-hidden min-w-0">
-            <!-- App Logo Badge Icon -->
-            <button onclick="toggleSidebarCollapse()" title="Klik untuk Ciutkan / Perluas Navigasi" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-700 via-brand-600 to-accent-500 hover:from-brand-800 hover:to-accent-600 flex items-center justify-center text-white shadow-md shadow-brand-600/20 flex-shrink-0 transition-all active:scale-95 mx-auto">
-              <i id="sidebarHeaderLogoIcon" class="fa-solid fa-clipboard-check text-sm"></i>
-            </button>
-            <div class="sidebar-label transition-opacity duration-200 overflow-hidden">
-              <h1 class="text-sm font-bold text-slate-900 tracking-tight truncate">SIMPELKU</h1>
-              <p class="text-[10px] text-slate-400 font-medium truncate">Monitoring Terpadu</p>
-            </div>
-          </div>
-          <!-- Tombol Collapse Sidebar Desktop (Chevron Kiri) -->
-          <button onclick="toggleSidebarCollapse()" id="sidebarCollapseBtn" title="Ciutkan Navigasi" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 hidden md:flex items-center justify-center transition-all flex-shrink-0">
-            <i id="sidebarInnerToggleIcon" class="fa-solid fa-chevron-left text-xs"></i>
-          </button>
-          <!-- Tombol Tutup Sidebar Mobile -->
-          <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-600 p-1 flex-shrink-0">
-            <i class="fa-solid fa-xmark text-lg"></i>
-          </button>
-        </div>
-
-        <!-- Profil Singkat Sidebar -->
-        <div id="sidebarProfileBox" class="p-3 mx-2 my-3 bg-slate-50 rounded-xl border border-slate-200/70 flex items-center space-x-3 overflow-hidden">
-          <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs flex-shrink-0 mx-auto" id="sidebarAvatar">
-            U
-          </div>
-          <div class="sidebar-label flex-1 min-w-0 transition-opacity duration-200">
-            <p class="text-xs font-semibold text-slate-900 truncate" id="sidebarUserName">Nama Pegawai</p>
-            <p class="text-[10px] text-slate-500 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-              <span class="truncate">Terverifikasi</span>
-            </p>
-          </div>
-        </div>
-
-        <!-- Menu Navigasi -->
-        <nav class="px-2 space-y-1" id="sidebarNav">
-          <!-- Managerial Nav Items (Admin & Supervisor) -->
-          <button onclick="navigateTo('dashboard-supervisor')" id="nav-dashboard-supervisor" title="Dashboard Supervisor" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
-            <i class="fa-solid fa-gauge-high w-5 text-center text-brand-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard Supervisor</span>
-          </button>
-          <button onclick="navigateTo('monitoring-admin')" id="nav-monitoring-admin" title="Monitoring Terpadu" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
-            <i class="fa-solid fa-list-check w-5 text-center text-teal-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Terpadu</span>
-          </button>
-          <button onclick="navigateTo('shift-security')" id="nav-shift-security" title="Jadwal & Shift Satpam" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
-            <i class="fa-solid fa-calendar-days w-5 text-center text-amber-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Shift Security</span>
-          </button>
-          <button onclick="navigateTo('dashboard')" id="nav-dashboard" title="Dashboard" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold active overflow-hidden">
-            <i class="fa-solid fa-chart-pie w-5 text-center flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard</span>
-          </button>
-          <button onclick="navigateTo('kebersihan')" id="nav-kebersihan" title="Monitoring Kebersihan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
-            <i class="fa-solid fa-sparkles w-5 text-center text-accent-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Kebersihan</span>
-          </button>
-          <button onclick="navigateTo('pelayanan')" id="nav-pelayanan" title="Monitoring Pelayanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
-            <i class="fa-solid fa-hand-holding-heart w-5 text-center text-brand-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Pelayanan</span>
-          </button>
-          <button onclick="navigateTo('keamanan')" id="nav-keamanan" title="Monitoring Keamanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden">
-            <i class="fa-solid fa-shield-halved w-5 text-center text-indigo-500 flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Keamanan</span>
-          </button>
-          <button onclick="navigateTo('rekap')" id="nav-rekap" title="Rekap Monitoring" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
-            <i class="fa-solid fa-chart-simple w-5 text-center flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Rekap Monitoring</span>
-          </button>
-          <button onclick="navigateTo('profil')" id="nav-profil" title="Profil Akun" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden">
-            <i class="fa-solid fa-id-card w-5 text-center flex-shrink-0"></i>
-            <span class="sidebar-label transition-opacity duration-200 truncate">Profil Akun</span>
-          </button>
-        </nav>
-      </div>
-
-      <div class="p-2 border-t border-slate-100 overflow-hidden">
-        <button onclick="handleLogout()" id="sidebarLogoutBtn" title="Keluar (Logout)" class="w-full flex items-center justify-center space-x-3 px-3 py-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-xl text-xs font-semibold transition-colors duration-200 overflow-hidden">
-          <i class="fa-solid fa-arrow-right-from-bracket flex-shrink-0 w-5 text-center"></i>
-          <span class="sidebar-label transition-opacity duration-200 truncate">Keluar</span>
+<!-- Sidebar Navigation Drawer (Navigasi Mobile & Desktop) -->
+<aside id="appSidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out overflow-hidden shadow-xs">
+  <div>
+    <!-- Header Sidebar: Logo & Tombol Toggle Rapi -->
+    <div class="h-16 flex items-center px-3.5 border-b border-slate-100 justify-between overflow-hidden bg-white">
+      <div class="flex items-center space-x-3 overflow-hidden min-w-0">
+        <!-- App Logo Badge Icon -->
+        <button onclick="toggleSidebarCollapse()" title="Klik untuk Ciutkan / Perluas Navigasi" class="w-10 h-10 rounded-xl app-logo-gradient app-logo-glow flex items-center justify-center text-white shadow-md shadow-blue-700/20 flex-shrink-0 transition-transform active:scale-95 mx-auto cursor-pointer">
+          <i id="sidebarHeaderLogoIcon" class="fa-solid fa-clipboard-check text-base text-white"></i>
         </button>
+        <div class="sidebar-label transition-opacity duration-200 overflow-hidden">
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-sm font-extrabold text-slate-900 tracking-tight truncate">SIMPEL-KU</h1>
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80">v3.0</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-semibold truncate">BPS Prov. Kalbar</p>
+        </div>
       </div>
-    </aside>
+      <!-- Tombol Collapse Sidebar Desktop (Chevron Kiri) -->
+      <button onclick="toggleSidebarCollapse()" id="sidebarCollapseBtn" title="Ciutkan Navigasi" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 hidden md:flex items-center justify-center transition-all flex-shrink-0 cursor-pointer">
+        <i id="sidebarInnerToggleIcon" class="fa-solid fa-chevron-left text-xs"></i>
+      </button>
+      <!-- Tombol Tutup Sidebar Mobile -->
+      <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-600 p-1 flex-shrink-0 cursor-pointer">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <!-- Profil Singkat Sidebar -->
+    <div id="sidebarProfileBox" class="p-3 mx-2.5 my-3 bg-slate-50/90 rounded-2xl border border-slate-200/80 flex items-center space-x-3 overflow-hidden shadow-2xs">
+      <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-700 ring-2 ring-white flex items-center justify-center font-bold text-xs flex-shrink-0 mx-auto shadow-xs" id="sidebarAvatar">
+        U
+      </div>
+      <div class="sidebar-label flex-1 min-w-0 transition-opacity duration-200">
+        <p class="text-xs font-bold text-slate-900 truncate" id="sidebarUserName">Nama Pegawai</p>
+        <p class="text-[10px] text-slate-500 flex items-center gap-1.5 font-medium">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+          <span class="truncate">Sesi Aktif</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Menu Navigasi -->
+    <nav class="px-2.5 space-y-1" id="sidebarNav">
+      <!-- Managerial Nav Items (Admin & Supervisor) -->
+      <button onclick="navigateTo('dashboard-supervisor')" id="nav-dashboard-supervisor" title="Dashboard Supervisor" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-gauge-high w-5 text-center text-brand-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard Supervisor</span>
+      </button>
+      <button onclick="navigateTo('monitoring-admin')" id="nav-monitoring-admin" title="Monitoring Terpadu" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-list-check w-5 text-center text-teal-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Terpadu</span>
+      </button>
+      <button onclick="navigateTo('shift-security')" id="nav-shift-security" title="Jadwal & Shift Satpam" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-calendar-days w-5 text-center text-amber-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Shift Security</span>
+      </button>
+      <!-- Staff Nav Items -->
+      <button onclick="navigateTo('dashboard')" id="nav-dashboard" title="Dashboard" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold active overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-chart-pie w-5 text-center flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Dashboard</span>
+      </button>
+      <button onclick="navigateTo('kebersihan')" id="nav-kebersihan" title="Monitoring Kebersihan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-sparkles w-5 text-center text-amber-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Kebersihan</span>
+      </button>
+      <button onclick="navigateTo('pelayanan')" id="nav-pelayanan" title="Monitoring Pelayanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-hand-holding-heart w-5 text-center text-blue-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Pelayanan</span>
+      </button>
+      <button onclick="navigateTo('keamanan')" id="nav-keamanan" title="Monitoring Keamanan" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold hidden overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-shield-halved w-5 text-center text-indigo-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Monitoring Keamanan</span>
+      </button>
+      <button onclick="navigateTo('rekap')" id="nav-rekap" title="Rekap Monitoring" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-chart-simple w-5 text-center text-emerald-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Rekap Monitoring</span>
+      </button>
+      <button onclick="navigateTo('profil')" id="nav-profil" title="Profil Akun" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold overflow-hidden cursor-pointer">
+        <i class="fa-solid fa-id-card w-5 text-center text-slate-500 flex-shrink-0"></i>
+        <span class="sidebar-label transition-opacity duration-200 truncate">Profil Akun</span>
+      </button>
+    </nav>
+  </div>
+
+  <div class="p-2.5 border-t border-slate-100 overflow-hidden bg-slate-50/50">
+    <button onclick="handleLogout()" id="sidebarLogoutBtn" title="Keluar (Logout)" class="w-full flex items-center justify-center space-x-3 px-3 py-2.5 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-xl text-xs font-semibold transition-all duration-200 border border-slate-200/80 hover:border-rose-200 overflow-hidden cursor-pointer shadow-2xs">
+      <i class="fa-solid fa-arrow-right-from-bracket flex-shrink-0 w-5 text-center"></i>
+      <span class="sidebar-label transition-opacity duration-200 truncate">Keluar</span>
+    </button>
+  </div>
+</aside>
 
     <!-- Content Area Wrapper -->
     <div id="contentWrapper" class="flex-1 flex flex-col min-w-0 transition-all duration-300 md:ml-64">
@@ -613,46 +689,57 @@
 <!-- ==============================================================
      SIMPEL-KU - HEADER COMPONENT
      ============================================================== -->
-<header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
-        <div class="flex items-center space-x-3">
-          <!-- Tombol Hamburger Mobile -->
-          <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100">
-            <i class="fa-solid fa-bars text-lg"></i>
-          </button>
-          <div>
-            <h2 class="text-sm sm:text-base font-bold text-slate-800" id="topbarTitle">Dashboard Ringkasan</h2>
-            <p class="text-[11px] text-slate-400 font-medium hidden sm:block" id="topbarSubtitle">Ringkasan data checklist aktif</p>
-          </div>
-        </div>
+<header class="h-16 glass-header border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+  <div class="flex items-center space-x-3 min-w-0">
+    <!-- Tombol Hamburger Mobile -->
+    <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:scale-95 transition cursor-pointer">
+      <i class="fa-solid fa-bars text-lg"></i>
+    </button>
+    <!-- Brand on Mobile -->
+    <div class="md:hidden flex items-center gap-1.5 flex-shrink-0">
+      <div class="w-7 h-7 rounded-lg app-logo-gradient flex items-center justify-center text-white text-xs shadow-xs">
+        <i class="fa-solid fa-clipboard-check"></i>
+      </div>
+    </div>
+    <!-- Title on Desktop & Mobile -->
+    <div class="min-w-0 truncate">
+      <h2 class="text-xs sm:text-sm md:text-base font-bold text-slate-900 tracking-tight truncate" id="topbarTitle">Dashboard Ringkasan</h2>
+      <p class="hidden sm:block text-[11px] text-slate-500 font-medium truncate" id="topbarSubtitle">Ringkasan data checklist aktif</p>
+    </div>
+  </div>
 
-        <div class="flex items-center space-x-2 sm:space-x-3">
-          <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200 text-xs">
-            <select id="globalMonthSelect" onchange="onGlobalDateChange()" class="bg-transparent font-semibold text-slate-700 focus:outline-none px-2 py-1 cursor-pointer">
-              <option value="1">Januari</option>
-              <option value="2">Februari</option>
-              <option value="3">Maret</option>
-              <option value="4">April</option>
-              <option value="5">Mei</option>
-              <option value="6">Juni</option>
-              <option value="7">Juli</option>
-              <option value="8">Agustus</option>
-              <option value="9">September</option>
-              <option value="10">Oktober</option>
-              <option value="11">November</option>
-              <option value="12">Desember</option>
-            </select>
-            <select id="globalYearSelect" onchange="onGlobalDateChange()" class="bg-transparent font-semibold text-slate-700 focus:outline-none px-2 py-1 border-l border-slate-200 cursor-pointer">
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
-            </select>
-          </div>
+  <div class="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+    <!-- Month/Year Pill Selector -->
+    <div class="flex items-center bg-slate-100/90 hover:bg-slate-100 rounded-xl px-2.5 py-1 border border-slate-200/80 shadow-2xs text-xs transition">
+      <i class="fa-solid fa-calendar-days text-blue-600 text-[11px] mr-1.5 flex-shrink-0"></i>
+      <select id="globalMonthSelect" onchange="onGlobalDateChange()" class="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer pr-1 text-xs">
+        <option value="1">Januari</option>
+        <option value="2">Februari</option>
+        <option value="3">Maret</option>
+        <option value="4">April</option>
+        <option value="5">Mei</option>
+        <option value="6">Juni</option>
+        <option value="7">Juli</option>
+        <option value="8">Agustus</option>
+        <option value="9">September</option>
+        <option value="10">Oktober</option>
+        <option value="11">November</option>
+        <option value="12">Desember</option>
+      </select>
+      <span class="text-slate-300 mx-1">/</span>
+      <select id="globalYearSelect" onchange="onGlobalDateChange()" class="bg-transparent font-bold text-slate-700 focus:outline-none cursor-pointer text-xs">
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+        <option value="2027">2027</option>
+      </select>
+    </div>
 
-          <button onclick="refreshCurrentPage()" title="Segarkan Data" class="p-2 rounded-xl bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-600 text-xs font-semibold transition-colors">
-            <i class="fa-solid fa-arrows-rotate"></i>
-          </button>
-        </div>
-      </header>
+    <!-- Refresh Button -->
+    <button onclick="refreshCurrentPage()" title="Segarkan Data Realtime" class="w-9 h-9 rounded-xl bg-slate-100/90 hover:bg-blue-50 text-slate-600 hover:text-blue-600 border border-slate-200/80 transition-all flex items-center justify-center cursor-pointer shadow-2xs active:rotate-180 duration-300">
+      <i class="fa-solid fa-arrows-rotate text-xs"></i>
+    </button>
+  </div>
+</header>
 
       <!-- Main Content Pages -->
       <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto space-y-6">
@@ -660,355 +747,356 @@
      SIMPEL-KU - PAGE: supervisor_dashboard.html
      ============================================================== -->
 <section id="view-dashboard-supervisor" class="space-y-6 hidden">
-          <!-- Hero Greeting -->
-          <div class="glass-card rounded-2xl p-6 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 text-white relative overflow-hidden shadow-lg">
-            <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-            <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <!-- Hero Greeting -->
+  <div class="rounded-3xl p-6 sm:p-7 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white relative overflow-hidden shadow-xl shadow-blue-950/20 border border-blue-800/40">
+    <div class="absolute -right-10 -bottom-10 w-56 h-56 bg-blue-500/15 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute top-0 right-1/4 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/15 text-white backdrop-blur-md mb-2.5 border border-white/20 shadow-2xs">
+          <i class="fa-solid fa-user-shield text-amber-300"></i> Mode Pengawasan Manajerial
+        </span>
+        <h2 id="supWelcomeName" class="text-xl sm:text-2xl font-black tracking-tight">Halo, Kasubbag Umum!</h2>
+        <p class="text-xs sm:text-sm text-blue-100/90 mt-1">Monitoring Kebersihan, Pelayanan, dan Keamanan BPS Provinsi Kalimantan Barat</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-700/25 transition-all flex items-center gap-2 cursor-pointer border border-emerald-400/40 active:scale-95">
+          <i class="fa-solid fa-file-export text-white text-xs"></i>
+          <span>Export Laporan</span>
+        </button>
+        <button onclick="loadSupervisorDashboardData(true)" class="px-4 py-2 bg-white/95 text-slate-800 hover:bg-white font-bold text-xs rounded-xl shadow-md shadow-slate-900/10 transition-all flex items-center gap-2 cursor-pointer border border-white active:scale-95">
+          <i class="fa-solid fa-arrows-rotate text-blue-600 text-xs"></i>
+          <span>Muat Ulang Data</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 KPI Metrics -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- KPI 1: Checklist Terpadu -->
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Tugas Terpadu</p>
+          <h3 id="supKpiTotalChecklist" class="text-2xl font-black text-slate-900 mt-1.5 tracking-tight">0%</h3>
+          <p id="supKpiDetailChecklist" class="text-xs font-medium text-slate-400 mt-0.5">0 / 0 Tugas Selesai</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-2xs border border-blue-100/80">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+      </div>
+      <div class="w-full bg-slate-100 h-2 rounded-full mt-3.5 overflow-hidden">
+        <div id="supKpiProgressChecklist" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- KPI 2: Tugas Selesai -->
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Tugas Selesai</p>
+          <h3 id="supKpiSkorMutu" class="text-2xl font-black text-emerald-600 mt-1.5 tracking-tight">0 Tugas</h3>
+          <p id="supKpiDetailMutu" class="text-xs font-medium text-slate-400 mt-0.5">0% dari total tugas</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-2xs border border-emerald-100/80">
+          <i class="fa-solid fa-clipboard-check"></i>
+        </div>
+      </div>
+      <div id="supKpiStars" class="flex items-center gap-1.5 text-xs text-emerald-600 font-bold mt-3.5">
+        <i class="fa-solid fa-circle-check text-xs"></i>
+        <span id="supKpiBadgeSelesai">0% Terlaksana</span>
+      </div>
+    </div>
+
+    <!-- KPI 3: Kesiapsiagaan Satpam -->
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-indigo-700 uppercase tracking-wider">Satpam Hari Ini</p>
+          <h3 id="supKpiKesiapanSatpam" class="text-2xl font-black text-slate-900 mt-1.5 tracking-tight">0 Petugas</h3>
+          <p id="supKpiDetailSatpam" class="text-xs font-medium text-slate-400 mt-0.5">Shift Pagi/Sore/Malam</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl shadow-2xs border border-indigo-100/80">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mt-3.5 text-xs font-bold text-indigo-600">
+        <span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-circle text-[7px] text-emerald-500"></i> Siap Bertugas</span>
+      </div>
+    </div>
+
+    <!-- KPI 4: Unit Perlu Perhatian -->
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Target Yang Harus Selesai</p>
+          <h3 id="supKpiPerhatian" class="text-xl font-black text-rose-600 mt-1.5 tracking-tight">Nihil</h3>
+          <p id="supKpiDetailPerhatian" class="text-xs font-medium text-slate-400 mt-0.5">Semua Unit Memenuhi Target</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl shadow-2xs border border-rose-100/80">
+          <i class="fa-solid fa-bell"></i>
+        </div>
+      </div>
+      <div class="mt-3.5 text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+        <i class="fa-solid fa-satellite-dish text-blue-500 text-[11px]"></i>
+        <span>Monitoring Realtime</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Status & Unit Progress -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Progres Per Unit Kerja -->
+    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs lg:col-span-2">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 tracking-tight">Progres Unit Operasional</h3>
+          <p class="text-xs text-slate-500">Tingkat penyelesaian tugas per unit kerja kantor</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wider">Bulan Berjalan</span>
+      </div>
+      <div class="space-y-4" id="supUnitProgressContainer">
+        <!-- Kebersihan -->
+        <div class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-slate-50">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold shadow-2xs">
+                <i class="fa-solid fa-sparkles"></i>
+              </div>
               <div>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white backdrop-blur-sm mb-2">
-                  <i class="fa-solid fa-user-shield text-amber-300"></i> Mode Pengawasan Manajerial
-                </span>
-                <h2 id="supWelcomeName" class="text-xl md:text-2xl font-bold tracking-tight">Halo, Kasubbag Umum!</h2>
-                <p class="text-xs md:text-sm text-blue-100 mt-1">Monitoring Kebersiahan, Pelayanan, dan Keamanan BPS Provinsi Kalimantan Barat</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-emerald-400">
-                  <i class="fa-solid fa-file-export text-white"></i>
-                  <span>Export Laporan</span>
-                </button>
-                <button onclick="loadSupervisorDashboardData(true)" class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-blue-100">
-                  <i class="fa-solid fa-arrows-rotate text-blue-700"></i>
-                  <span class="text-blue-700 font-bold">Muat Ulang Data</span>
-                </button>
+                <h4 class="text-xs font-bold text-slate-800">Piket Kebersihan Kantor</h4>
+                <p class="text-[11px] text-slate-400 font-medium" id="supUnitKebersihanRatio">0 / 0 Selesai</p>
               </div>
             </div>
+            <span id="supUnitKebersihanPct" class="text-xs font-black text-emerald-600">0%</span>
           </div>
-
-          <!-- 4 KPI Metrics -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- KPI 1: Checklist Terpadu -->
-            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-medium text-slate-500">Total Tugas Terpadu</p>
-                  <h3 id="supKpiTotalChecklist" class="text-2xl font-bold text-slate-800 mt-1">0%</h3>
-                  <p id="supKpiDetailChecklist" class="text-xs text-slate-400 mt-0.5">0 / 0 Tugas Selesai</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
-                  <i class="fa-solid fa-list-check"></i>
-                </div>
-              </div>
-              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                <div id="supKpiProgressChecklist" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-            </div>
-
-            <!-- KPI 2: Tugas Selesai -->
-            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-medium text-slate-500">Tugas Selesai</p>
-                  <h3 id="supKpiSkorMutu" class="text-2xl font-bold text-emerald-600 mt-1">0 Tugas</h3>
-                  <p id="supKpiDetailMutu" class="text-xs text-slate-400 mt-0.5">0% dari total tugas</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                  <i class="fa-solid fa-clipboard-check"></i>
-                </div>
-              </div>
-              <div id="supKpiStars" class="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold mt-3">
-                <i class="fa-solid fa-circle-check text-[11px]"></i>
-                <span id="supKpiBadgeSelesai">0% Terlaksana</span>
-              </div>
-            </div>
-
-            <!-- KPI 3: Kesiapsiagaan Satpam -->
-            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-medium text-slate-500">Satpam Bertugas Hari Ini</p>
-                  <h3 id="supKpiKesiapanSatpam" class="text-2xl font-bold text-emerald-600 mt-1">0 Petugas</h3>
-                  <p id="supKpiDetailSatpam" class="text-xs text-slate-400 mt-0.5">Shift Aktif Pagi/Siang/Malam</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                  <i class="fa-solid fa-shield-halved"></i>
-                </div>
-              </div>
-              <div class="flex items-center gap-2 mt-3 text-xs">
-                <span class="inline-flex items-center gap-1 text-emerald-600 font-semibold"><i class="fa-solid fa-circle text-[8px]"></i> 100% Siap</span>
-              </div>
-            </div>
-
-            <!-- KPI 4: Unit Perlu Perhatian -->
-            <div class="glass-card rounded-2xl p-5 border border-slate-200/80 bg-white/80">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs font-medium text-slate-500">Tugas Yang Harus Dikerjakan</p>
-                  <h3 id="supKpiPerhatian" class="text-xl font-bold text-rose-600 mt-1">Nihil</h3>
-                  <p id="supKpiDetailPerhatian" class="text-xs text-slate-400 mt-0.5">Semua Unit Memenuhi Target</p>
-                </div>
-                <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl">
-                  <i class="fa-solid fa-bell"></i>
-                </div>
-              </div>
-              <div class="mt-3 text-xs text-slate-500">
-                <span>Monitoring Realtime</span>
-              </div>
-            </div>
+          <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+            <div id="supUnitKebersihanBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
           </div>
+        </div>
 
-          <!-- Overview Status & Unit Progress -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Progres Per Unit Kerja -->
-            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm lg:col-span-2">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="text-base font-bold text-slate-800">Progres Unit Operasional</h3>
-                  <p class="text-xs text-slate-400">Tingkat penyelesaian tugas per unit kerja</p>
-                </div>
+        <!-- Pelayanan -->
+        <div class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-slate-50">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold shadow-2xs">
+                <i class="fa-solid fa-hand-holding-heart"></i>
               </div>
-              <div class="space-y-4" id="supUnitProgressContainer">
-                <!-- Kebersihan -->
-                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold">
-                        <i class="fa-solid fa-sparkles"></i>
-                      </div>
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-800">Piket Kebersihan Kantor</h4>
-                        <p class="text-[11px] text-slate-400" id="supUnitKebersihanRatio">0 / 0 Selesai</p>
-                      </div>
-                    </div>
-                    <span id="supUnitKebersihanPct" class="text-xs font-bold text-emerald-600">0%</span>
-                  </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div id="supUnitKebersihanBar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-                  </div>
-                </div>
-
-                <!-- Pelayanan -->
-                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
-                        <i class="fa-solid fa-hand-holding-heart"></i>
-                      </div>
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-800">Standar Pelayanan / Resepsionis</h4>
-                        <p class="text-[11px] text-slate-400" id="supUnitPelayananRatio">0 / 0 Selesai</p>
-                      </div>
-                    </div>
-                    <span id="supUnitPelayananPct" class="text-xs font-bold text-blue-600">0%</span>
-                  </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div id="supUnitPelayananBar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-                  </div>
-                </div>
-
-                <!-- Keamanan -->
-                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
-                        <i class="fa-solid fa-shield-halved"></i>
-                      </div>
-                      <div>
-                        <h4 class="text-xs font-bold text-slate-800">Keamanan & Piket Satpam</h4>
-                        <p class="text-[11px] text-slate-400" id="supUnitKeamananRatio">0 / 0 Selesai</p>
-                      </div>
-                    </div>
-                    <span id="supUnitKeamananPct" class="text-xs font-bold text-indigo-600">0%</span>
-                  </div>
-                  <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                    <div id="supUnitKeamananBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Satpam Bertugas Hari Ini -->
-            <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-bold text-slate-800">Piket Satpam Hari Ini</h3>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 font-semibold" id="supTodayDateBadge">Hari Ini</span>
-              </div>
-              <div class="space-y-3" id="supTodaySatpamList">
-                <div class="text-center py-6 text-xs text-slate-400">Memuat data jadwal piket...</div>
-              </div>
-              <div class="mt-4 pt-3 border-t border-slate-100 text-center">
-                <button onclick="navigateTo('shift-security')" class="text-xs text-brand-600 hover:text-brand-700 font-semibold flex items-center justify-center gap-1.5 w-full">
-                  <span>Lihat Matriks Shift Lengkap</span>
-                  <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tabel Kinerja & Progres Pegawai -->
-          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
               <div>
-                <h3 class="text-base font-bold text-slate-800">Rekapitulasi Kinerja Pegawai</h3>
-                <p class="text-xs text-slate-400">Daftar seluruh petugas teknis beserta persentase kepatuhan & rincian tugas</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button onclick="openExportModal()" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-file-export text-emerald-600"></i> Export Rekap
-                </button>
-                <div class="relative">
-                  <input type="text" id="searchSupPegawai" oninput="filterSupervisorPegawaiTable(this.value)" placeholder="Cari nama pegawai..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
-                  <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
-                </div>
+                <h4 class="text-xs font-bold text-slate-800">Standar Pelayanan / Resepsionis</h4>
+                <p class="text-[11px] text-slate-400 font-medium" id="supUnitPelayananRatio">0 / 0 Selesai</p>
               </div>
             </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-600">
-                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th class="py-3 px-4 rounded-l-xl">No</th>
-                    <th class="py-3 px-4">Nama Pegawai</th>
-                    <th class="py-3 px-4">Unit Kerja</th>
-                    <th class="py-3 px-4">Tugas Selesai</th>
-                    <th class="py-3 px-4">Persentase</th>
-                    <th class="py-3 px-4">Status</th>
-                    <th class="py-3 px-4 text-center rounded-r-xl">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="supPegawaiTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat rekap pegawai...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <span id="supUnitPelayananPct" class="text-xs font-black text-blue-600">0%</span>
           </div>
-        </section>
+          <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+            <div id="supUnitPelayananBar" class="bg-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
 
-        <!-- ============================================================== -->
-        <!-- VIEW: MONITORING TERPADU (ADMIN / SUPERVISOR)                  -->
-        <!-- ============================================================== -->
+        <!-- Keamanan -->
+        <div class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 transition-all hover:bg-slate-50">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold shadow-2xs">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-slate-800">Keamanan & Piket Satpam</h4>
+                <p class="text-[11px] text-slate-400 font-medium" id="supUnitKeamananRatio">0 / 0 Selesai</p>
+              </div>
+            </div>
+            <span id="supUnitKeamananPct" class="text-xs font-black text-indigo-600">0%</span>
+          </div>
+          <div class="w-full bg-slate-200/80 h-2 rounded-full overflow-hidden">
+            <div id="supUnitKeamananBar" class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Satpam Bertugas Hari Ini -->
+    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-base font-bold text-slate-900 tracking-tight">Piket Satpam Hari Ini</h3>
+          <span class="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold" id="supTodayDateBadge">Hari Ini</span>
+        </div>
+        <div class="space-y-3" id="supTodaySatpamList">
+          <div class="text-center py-6 text-xs text-slate-400 font-medium">Memuat data jadwal piket...</div>
+        </div>
+      </div>
+      <div class="mt-4 pt-3.5 border-t border-slate-100 text-center">
+        <button onclick="navigateTo('shift-security')" class="text-xs text-brand-600 hover:text-brand-700 font-bold flex items-center justify-center gap-1.5 w-full cursor-pointer py-1">
+          <span>Lihat Matriks Shift Lengkap</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabel Kinerja & Progres Pegawai -->
+  <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+      <div>
+        <h3 class="text-base font-bold text-slate-900 tracking-tight">Rekapitulasi Kinerja Pegawai</h3>
+        <p class="text-xs text-slate-500">Daftar seluruh petugas teknis beserta persentase kepatuhan & rincian tugas</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="openExportModal()" class="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300/80 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+          <i class="fa-solid fa-file-export text-emerald-600 text-xs"></i>
+          <span>Export Rekap</span>
+        </button>
+        <div class="relative">
+          <input type="text" id="searchSupPegawai" oninput="filterSupervisorPegawaiTable(this.value)" placeholder="Cari nama pegawai..." class="pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 focus:bg-white transition-all font-medium placeholder-slate-400">
+          <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-slate-100">
+      <table class="w-full text-left text-xs text-slate-600 border-collapse table-modern">
+        <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
+          <tr>
+            <th class="py-3 px-4">No</th>
+            <th class="py-3 px-4">Nama Pegawai</th>
+            <th class="py-3 px-4">Unit Kerja</th>
+            <th class="py-3 px-4">Tugas Selesai</th>
+            <th class="py-3 px-4">Persentase</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="supPegawaiTableBody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400 font-medium">Memuat rekap pegawai...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <!-- ==============================================================
      SIMPEL-KU - PAGE: supervisor_monitoring.html
      ============================================================== -->
 <section id="view-monitoring-admin" class="space-y-6 hidden">
-          <!-- Filter Panel -->
-          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div>
-                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <i class="fa-solid fa-filter text-teal-500"></i> Filter Monitoring Terpadu
-                </h3>
-                <p class="text-xs text-slate-400 mt-0.5">Saring checklist operasional berdasarkan unit, pegawai, ruangan, & status</p>
-              </div>
-              <div class="flex items-center gap-2 self-start sm:self-auto">
-                <button onclick="openExportModal()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-file-export"></i> Export Laporan
-                </button>
-                <button onclick="loadIntegratedMonitoringData()" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
-                  <i class="fa-solid fa-rotate"></i> Terapkan Filter
-                </button>
-              </div>
-            </div>
+  <!-- Filter Panel -->
+  <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2 tracking-tight">
+          <i class="fa-solid fa-filter text-teal-600"></i>
+          <span>Filter Monitoring Terpadu</span>
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">Saring checklist operasional berdasarkan unit, pegawai, ruangan, & status</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+        <button onclick="openExportModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-file-export text-xs"></i>
+          <span>Export Laporan</span>
+        </button>
+        <button onclick="loadIntegratedMonitoringData()" class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-rotate text-xs"></i>
+          <span>Terapkan Filter</span>
+        </button>
+      </div>
+    </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <!-- Filter Unit -->
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Unit Kerja</label>
-                <select id="adminFilterUnit" onchange="onAdminFilterUnitChange()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option value="SEMUA">Semua Unit</option>
-                  <option value="Kebersihan">Kebersihan</option>
-                  <option value="Pelayanan">Pelayanan</option>
-                  <option value="Keamanan">Keamanan</option>
-                </select>
-              </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <!-- Filter Unit -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Unit Kerja</label>
+        <select id="adminFilterUnit" onchange="onAdminFilterUnitChange()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
+          <option value="SEMUA">Semua Unit</option>
+          <option value="Kebersihan">Kebersihan</option>
+          <option value="Pelayanan">Pelayanan</option>
+          <option value="Keamanan">Keamanan</option>
+        </select>
+      </div>
 
-              <!-- Filter Pegawai -->
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Petugas / Pegawai</label>
-                <select id="adminFilterPegawai" onchange="onAdminFilterPegawaiChange()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option value="SEMUA">Semua Pegawai</option>
-                </select>
-              </div>
+      <!-- Filter Pegawai -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Petugas / Pegawai</label>
+        <select id="adminFilterPegawai" onchange="onAdminFilterPegawaiChange()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
+          <option value="SEMUA">Semua Pegawai</option>
+        </select>
+      </div>
 
-              <!-- Filter Ruangan -->
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Area / Ruangan</label>
-                <select id="adminFilterRuangan" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option value="SEMUA">Semua Ruangan</option>
-                </select>
-              </div>
+      <!-- Filter Ruangan -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Area / Ruangan</label>
+        <select id="adminFilterRuangan" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
+          <option value="SEMUA">Semua Ruangan</option>
+        </select>
+      </div>
 
-              <!-- Filter Status -->
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Status Pengerjaan</label>
-                <select id="adminFilterStatus" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option value="SEMUA">Semua Status</option>
-                  <option value="SELESAI">Sudah Selesai</option>
-                  <option value="BELUM">Belum Selesai</option>
-                </select>
-              </div>
+      <!-- Filter Status -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Status Pengerjaan</label>
+        <select id="adminFilterStatus" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
+          <option value="SEMUA">Semua Status</option>
+          <option value="SELESAI">Sudah Selesai</option>
+          <option value="BELUM">Belum Selesai</option>
+        </select>
+      </div>
 
-              <!-- Filter Periode -->
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Periode Checklist</label>
-                <select id="adminFilterPeriode" onchange="changeAdminMonitoringPeriod(this.value)" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <option value="harian">Harian</option>
-                  <option value="mingguan">Mingguan</option>
-                  <option value="bulanan">Bulanan</option>
-                </select>
-              </div>
-            </div>
+      <!-- Filter Periode -->
+      <div>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Periode Checklist</label>
+        <select id="adminFilterPeriode" onchange="changeAdminMonitoringPeriod(this.value)" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
+          <option value="harian">Harian</option>
+          <option value="mingguan">Mingguan</option>
+          <option value="bulanan">Bulanan</option>
+        </select>
+      </div>
+    </div>
 
-            <!-- Pencarian Real-Time Monitoring -->
-            <div class="relative">
-              <input type="text" id="searchAdminMonitoring" oninput="filterAdminMonitoringRealtime()" placeholder="Pencarian realtime: ketik nama tugas, pegawai, atau ruangan..." class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-            </div>
+    <!-- Pencarian Real-Time Monitoring -->
+    <div class="relative">
+      <input type="text" id="searchAdminMonitoring" oninput="filterAdminMonitoringRealtime()" placeholder="Pencarian realtime: ketik nama tugas, pegawai, atau ruangan..." class="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium placeholder-slate-400 transition">
+      <i class="fa-solid fa-search absolute left-3 top-3.5 text-slate-400 text-xs"></i>
+    </div>
 
-            <!-- Sub Nav Hari / Minggu untuk Admin -->
-            <div id="adminPeriodSubNavContainer" class="pt-2 border-t border-slate-100">
-              <!-- Dinamis dirender -->
-            </div>
-          </div>
+    <!-- Sub Nav Hari / Minggu untuk Admin -->
+    <div id="adminPeriodSubNavContainer" class="pt-2 border-t border-slate-100">
+      <!-- Dinamis dirender -->
+    </div>
+  </div>
 
-          <!-- Monitoring Table Content -->
-          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-base font-bold text-slate-800" id="adminMonitoringTitle">Data Checklist Terpadu</h3>
-                <p class="text-xs text-slate-400" id="adminMonitoringSubtitle">Menampilkan seluruh data checklist sesuai kriteria filter</p>
-              </div>
-              <span id="adminMonitoringCountBadge" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 font-semibold">0 Item</span>
-            </div>
+  <!-- Monitoring Table Content -->
+  <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="text-base font-bold text-slate-900 tracking-tight" id="adminMonitoringTitle">Data Checklist Terpadu</h3>
+        <p class="text-xs text-slate-500" id="adminMonitoringSubtitle">Menampilkan seluruh data checklist sesuai kriteria filter</p>
+      </div>
+      <span id="adminMonitoringCountBadge" class="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200/80">0 Item</span>
+    </div>
 
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-slate-600">
-                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th class="py-3 px-4 rounded-l-xl">No</th>
-                    <th class="py-3 px-4">Unit</th>
-                    <th class="py-3 px-4">Pegawai</th>
-                    <th class="py-3 px-4">Area / Ruangan</th>
-                    <th class="py-3 px-4">Tugas / Item Monitoring</th>
-                    <th class="py-3 px-4">Status</th>
-                    <th class="py-3 px-4 text-right rounded-r-xl">Terakhir Update</th>
-                  </tr>
-                </thead>
-                <tbody id="adminMonitoringTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="7" class="py-8 text-center text-slate-400">Klik 'Terapkan Filter' untuk memuat data.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ============================================================== -->
-        <!-- VIEW: PENGATURAN SHIFT SECURITY (ADMIN / SUPERVISOR)          -->
-        <!-- ============================================================== -->
+    <div class="overflow-x-auto rounded-2xl border border-slate-100">
+      <table class="w-full text-left text-xs text-slate-600 border-collapse table-modern">
+        <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
+          <tr>
+            <th class="py-3 px-4">No</th>
+            <th class="py-3 px-4">Unit</th>
+            <th class="py-3 px-4">Pegawai</th>
+            <th class="py-3 px-4">Area / Ruangan</th>
+            <th class="py-3 px-4">Tugas / Item Monitoring</th>
+            <th class="py-3 px-4">Status</th>
+            <th class="py-3 px-4 text-right">Terakhir Update</th>
+          </tr>
+        </thead>
+        <tbody id="adminMonitoringTableBody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400 font-medium">Klik 'Terapkan Filter' untuk memuat data.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <!-- ==============================================================
      SIMPEL-KU - PAGE: supervisor_shift.html
@@ -1172,107 +1260,108 @@
      SIMPEL-KU - PAGE: staff_dashboard.html
      ============================================================== -->
 <section id="view-dashboard" class="space-y-6">
-          <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-brand-800 via-brand-700 to-accent-600 text-white p-6 sm:p-8 shadow-xl shadow-brand-700/15">
-            <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8">
-              <i class="fa-solid fa-clipboard-check text-9xl"></i>
-            </div>
-            <div class="relative z-10 max-w-2xl">
-              <span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[11px] font-semibold tracking-wider uppercase">Sistem Terintegrasi</span>
-              <h2 class="text-xl sm:text-2xl font-black mt-2" id="dashWelcomeName">Halo, Pegawai!</h2>
-              <p class="text-xs sm:text-sm text-blue-100 mt-1 leading-relaxed">
-                Pantau seluruh checklist kebersihan dan keamanan harian, serta standar pelayanan operasional kantor dalam satu tampilan terpadu.
-              </p>
-            </div>
-          </div>
+  <!-- Hero Greeting Staff -->
+  <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 sm:p-8 shadow-xl shadow-blue-950/20 border border-blue-800/40">
+    <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-8 translate-y-8 pointer-events-none">
+      <i class="fa-solid fa-clipboard-check text-9xl"></i>
+    </div>
+    <div class="relative z-10 max-w-2xl">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold tracking-wider uppercase border border-white/20 shadow-2xs">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i> Sistem Terintegrasi
+      </span>
+      <h2 class="text-xl sm:text-2xl font-black mt-2.5 tracking-tight" id="dashWelcomeName">Halo, Pegawai!</h2>
+      <p class="text-xs sm:text-sm text-blue-100/90 mt-1 leading-relaxed">
+        Pantau seluruh checklist kebersihan dan keamanan harian, serta standar pelayanan operasional kantor dalam satu tampilan terpadu.
+      </p>
+    </div>
+  </div>
 
-          <!-- Cards Statistik -->
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Target</span>
-                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-xs">
-                  <i class="fa-solid fa-list-check"></i>
-                </div>
-              </div>
-              <p class="text-2xl sm:text-3xl font-black text-slate-900 mt-3" id="dashTotalCount">0</p>
-              <p class="text-[11px] text-slate-400 mt-1">Kegiatan checklist aktif</p>
-            </div>
+  <!-- Cards Statistik -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Target</span>
+        <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xs shadow-2xs">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+      </div>
+      <p class="text-2xl sm:text-3xl font-black text-slate-900 mt-2.5 tracking-tight" id="dashTotalCount">0</p>
+      <p class="text-[11px] text-slate-400 mt-0.5 font-medium">Kegiatan checklist aktif</p>
+    </div>
 
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Selesai</span>
-                <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
-                  <i class="fa-solid fa-circle-check"></i>
-                </div>
-              </div>
-              <p class="text-2xl sm:text-3xl font-black text-emerald-600 mt-3" id="dashSelesaiCount">0</p>
-              <p class="text-[11px] text-emerald-600/80 mt-1 font-medium">Telah terlaksana</p>
-            </div>
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Selesai</span>
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shadow-2xs">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+      </div>
+      <p class="text-2xl sm:text-3xl font-black text-emerald-600 mt-2.5 tracking-tight" id="dashSelesaiCount">0</p>
+      <p class="text-[11px] text-emerald-600/90 mt-0.5 font-medium">Telah terlaksana</p>
+    </div>
 
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-rose-600 uppercase tracking-wider">Belum Selesai</span>
-                <div class="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
-                  <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
-              </div>
-              <p class="text-2xl sm:text-3xl font-black text-rose-600 mt-3" id="dashBelumCount">0</p>
-              <p class="text-[11px] text-rose-600/80 mt-1 font-medium">Kotak merah aktif</p>
-            </div>
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-rose-700 uppercase tracking-wider">Belum Selesai</span>
+        <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xs shadow-2xs">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+      </div>
+      <p class="text-2xl sm:text-3xl font-black text-rose-600 mt-2.5 tracking-tight" id="dashBelumCount">0</p>
+      <p class="text-[11px] text-rose-600/90 mt-0.5 font-medium">Kotak merah aktif</p>
+    </div>
 
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-brand-600 uppercase tracking-wider">Pencapaian</span>
-                <div class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-xs">
-                  <i class="fa-solid fa-percent"></i>
-                </div>
-              </div>
-              <p class="text-2xl sm:text-3xl font-black text-brand-600 mt-3" id="dashPersenCount">0%</p>
-              <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
-                <div id="dashProgressBar" class="bg-brand-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
+    <div class="modern-card p-5">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-blue-700 uppercase tracking-wider">Pencapaian</span>
+        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xs shadow-2xs">
+          <i class="fa-solid fa-percent"></i>
+        </div>
+      </div>
+      <p class="text-2xl sm:text-3xl font-black text-blue-600 mt-2.5 tracking-tight" id="dashPersenCount">0%</p>
+      <div class="w-full bg-slate-100 h-2 rounded-full mt-2.5 overflow-hidden">
+        <div id="dashProgressBar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
 
-          <!-- Progress Ruangan List & Aksi Cepat Kontekstual -->
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h3 class="font-bold text-slate-800 text-sm sm:text-base">Progress Berdasarkan Ruangan</h3>
-                  <p class="text-xs text-slate-400 mt-0.5">Tingkat kepatuhan checklist pada tiap area</p>
-                </div>
-                <span class="text-xs font-semibold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-lg">Realtime</span>
-              </div>
-              <div id="dashRuanganContainer" class="space-y-3.5 mt-4">
-                <div class="text-center py-8 text-xs text-slate-400">Memuat progress ruangan...</div>
-              </div>
-            </div>
+  <!-- Progress Ruangan List & Aksi Cepat Kontekstual -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm sm:text-base tracking-tight">Progress Berdasarkan Ruangan</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Tingkat kepatuhan checklist pada tiap area tugas</p>
+        </div>
+        <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200/70">Realtime</span>
+      </div>
+      <div id="dashRuanganContainer" class="space-y-3.5 mt-4">
+        <div class="text-center py-8 text-xs text-slate-400 font-medium">Memuat progress ruangan...</div>
+      </div>
+    </div>
 
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-              <div>
-                <h3 class="font-bold text-slate-800 text-sm sm:text-base mb-1">Aksi Cepat Monitoring</h3>
-                <p class="text-xs text-slate-400 mb-4">Akses langsung formulir checklist sesuai peran Anda</p>
+    <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+      <div>
+        <h3 class="font-bold text-slate-900 text-sm sm:text-base tracking-tight mb-1">Aksi Cepat Monitoring</h3>
+        <p class="text-xs text-slate-500 mb-4">Akses langsung formulir checklist sesuai peran Anda</p>
 
-                <div class="space-y-2.5" id="dashQuickActionsContainer">
-                  <!-- Diisi via renderQuickActions() -->
-                </div>
-              </div>
+        <div class="space-y-2.5" id="dashQuickActionsContainer">
+          <!-- Diisi via renderQuickActions() -->
+        </div>
+      </div>
 
-              <div class="mt-6 pt-4 border-t border-slate-100">
-                <div class="flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Status Database:</span>
-                  <span class="font-bold text-emerald-600 flex items-center gap-1">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    Terkoneksi
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ================= VIEW 2: MONITORING KEBERSIHAN / PELAYANAN ================= -->
+      <div class="mt-6 pt-4 border-t border-slate-100">
+        <div class="flex items-center justify-between text-[11px] text-slate-500">
+          <span>Status Database:</span>
+          <span class="font-bold text-emerald-600 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Terkoneksi Realtime
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- ==============================================================
      SIMPEL-KU - PAGE: staff_monitoring.html
@@ -1351,71 +1440,69 @@
      SIMPEL-KU - PAGE: staff_rekap.html
      ============================================================== -->
 <section id="view-rekap" class="hidden space-y-6">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                <i class="fa-solid fa-chart-simple text-brand-600"></i>
-                <span>Rekapitulasi & Visualisasi Pencapaian</span>
-              </h3>
-              <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
-            </div>
-            <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2 cursor-pointer self-start sm:self-auto">
-              <i class="fa-solid fa-file-export"></i>
-              <span>Export / Cetak Laporan</span>
-            </button>
-          </div>
+  <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h3 class="text-base font-bold text-slate-900 flex items-center gap-2 tracking-tight">
+        <i class="fa-solid fa-chart-simple text-blue-600"></i>
+        <span>Rekapitulasi & Visualisasi Pencapaian</span>
+      </h3>
+      <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+    </div>
+    <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer self-start sm:self-auto active:scale-95">
+      <i class="fa-solid fa-file-export text-xs"></i>
+      <span>Export / Cetak Laporan</span>
+    </button>
+  </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Tren Kepatuhan Checklist Harian</span>
-                <i class="fa-solid fa-chart-line text-brand-500"></i>
-              </h4>
-              <div class="relative h-64">
-                <canvas id="chartTrenHarian"></canvas>
-              </div>
-            </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+      <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+        <span>Tren Kepatuhan Checklist Harian</span>
+        <i class="fa-solid fa-chart-line text-blue-500"></i>
+      </h4>
+      <div class="relative h-64">
+        <canvas id="chartTrenHarian"></canvas>
+      </div>
+    </div>
 
-            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Pencapaian Berdasarkan Ruangan</span>
-                <i class="fa-solid fa-chart-bar text-accent-500"></i>
-              </h4>
-              <div class="relative h-64">
-                <canvas id="chartRuangan"></canvas>
-              </div>
-            </div>
-          </div>
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+      <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+        <span>Pencapaian Berdasarkan Ruangan</span>
+        <i class="fa-solid fa-chart-bar text-amber-500"></i>
+      </h4>
+      <div class="relative h-64">
+        <canvas id="chartRuangan"></canvas>
+      </div>
+    </div>
+  </div>
 
-          <!-- Tabel Rekapitulasi Detail -->
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h4 class="text-sm font-bold text-slate-800">Tabel Ringkasan Per Ruangan</h4>
-              <span class="text-xs text-slate-400 font-medium">Bulan Aktif</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase text-[11px] border-b border-slate-200">
-                  <tr>
-                    <th class="p-3.5">Nama Ruangan</th>
-                    <th class="p-3.5 text-center">Jumlah Kegiatan</th>
-                    <th class="p-3.5 text-center">Total Target Checklist</th>
-                    <th class="p-3.5 text-center">Selesai Dikerjakan</th>
-                    <th class="p-3.5 text-center">Persentase</th>
-                    <th class="p-3.5 min-w-[160px]">Status Bar</th>
-                  </tr>
-                </thead>
-                <tbody id="rekapTableBody" class="divide-y divide-slate-100">
-                  <tr>
-                    <td colspan="6" class="p-6 text-center text-slate-400">Memuat rekapitulasi...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ================= VIEW 4: PROFIL AKUN ================= -->
+  <!-- Tabel Rekapitulasi Detail -->
+  <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+      <h4 class="text-sm font-bold text-slate-900 tracking-tight">Tabel Ringkasan Per Ruangan</h4>
+      <span class="text-xs text-slate-500 font-semibold px-2.5 py-0.5 rounded-full bg-slate-100">Bulan Aktif</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs border-collapse table-modern">
+        <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
+          <tr>
+            <th class="p-3.5">Nama Ruangan</th>
+            <th class="p-3.5 text-center">Jumlah Kegiatan</th>
+            <th class="p-3.5 text-center">Total Target Checklist</th>
+            <th class="p-3.5 text-center">Selesai Dikerjakan</th>
+            <th class="p-3.5 text-center">Persentase</th>
+            <th class="p-3.5 min-w-[160px]">Status Bar</th>
+          </tr>
+        </thead>
+        <tbody id="rekapTableBody" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="6" class="p-6 text-center text-slate-400 font-medium">Memuat rekapitulasi...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
 <!-- ==============================================================
      SIMPEL-KU - PAGE: staff_profile.html
@@ -1817,9 +1904,16 @@ function formatDateIndo(day, month, year) {
           } else if (action === 'getJadwalPiketSecurityMatrix') {
             runner.getJadwalPiketSecurityMatrix(params.token, params.bulan, params.tahun);
           } else if (action === 'updateSecurityShift') {
-            runner.updateSecurityShift(params.token, params.nama, params.tanggal, params.shiftBaru, params.alasan, params.bulan, params.tahun);
+            const nama = params.namaPegawai || params.nama;
+            const tgl = params.tanggal || params.dayNum;
+            const shift = params.shiftBaru || params.newShift;
+            runner.updateSecurityShift(params.token, nama, tgl, shift, params.bulan, params.tahun);
           } else if (action === 'swapSecurityShift') {
-            runner.swapSecurityShift(params.token, params.nama1, params.tanggal1, params.nama2, params.tanggal2, params.alasan, params.bulan, params.tahun);
+            const p1 = params.petugas1 ? (params.petugas1.namaPegawai || params.petugas1.nama) : (params.pegawai1 || params.nama1);
+            const t1 = params.petugas1 ? params.petugas1.tanggal : (params.tanggal1 || params.tanggal || params.dayNum);
+            const p2 = params.petugas2 ? (params.petugas2.namaPegawai || params.petugas2.nama) : (params.pegawai2 || params.nama2);
+            const t2 = params.petugas2 ? params.petugas2.tanggal : (params.tanggal2 || params.tanggal || params.dayNum);
+            runner.swapSecurityShift(params.token, p1, p2, t1, t2, params.bulan, params.tahun);
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
           } else if (typeof runner.handleApiRequest === 'function') {
@@ -4825,8 +4919,8 @@ function renderIntegratedMonitoringUI() {
       }
 
       const excelTemplate = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
+        \x3Chtml xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        \x3Chead>
           <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
           <!--[if gte mso 9]>
           <xml>
@@ -4857,8 +4951,8 @@ function renderIntegratedMonitoringUI() {
             .badge-cukup { background-color: #fef3c7; color: #92400e; font-weight: bold; text-align: center; }
             .badge-kurang { background-color: #ffe4e6; color: #9f1239; font-weight: bold; text-align: center; }
           </style>
-        </head>
-        <body>
+        \x3C/head\x3E
+        \x3Cbody>
           <table style="border: none; margin-bottom: 8px;">
             <tr>
               <td colspan="6" style="border: none; font-size: 14pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
@@ -4883,8 +4977,8 @@ function renderIntegratedMonitoringUI() {
             </tr>
           </table>
           ${tableHtml}
-        </body>
-        </html>
+        \x3C/body\x3E
+        \x3C/html\x3E
       `;
 
       const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
@@ -5012,9 +5106,9 @@ function renderIntegratedMonitoringUI() {
       const jabatanKanan = isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`;
 
       const printHtml = `
-        <!DOCTYPE html>
-        <html lang="id">
-        <head>
+        \x3C!DOCTYPE html>
+        \x3Chtml lang="id">
+        \x3Chead>
           <meta charset="UTF-8">
           <title>${isSemua ? 'Rekapitulasi Kinerja Pegawai' : `Laporan Tugas - ${escapeHtml(d.pegawai?.namaPegawai || '')}`} | BPS Kalbar</title>
           <style>
@@ -5192,8 +5286,8 @@ function renderIntegratedMonitoringUI() {
               print-color-adjust: exact;
             }
           </style>
-        </head>
-        <body>
+        \x3C/head\x3E
+        \x3Cbody>
           <div class="no-print">
             <div style="font-weight: 600; color: #334155;">
               <span>Dokumen Siap Dicetak</span> &bull; 
@@ -5266,16 +5360,8 @@ function renderIntegratedMonitoringUI() {
             </div>
           </div>
 
-          \x3Cscript\x3E
-            window.addEventListener('load', function() {
-              setTimeout(function() {
-                window.focus();
-                window.print();
-              }, 450);
-            });
-          \x3C/script\x3E
-        </body>
-        </html>
+        \x3C/body\x3E
+        \x3C/html\x3E
       `;
 
       printWindow.document.open();
@@ -5285,9 +5371,10 @@ function renderIntegratedMonitoringUI() {
         try {
           if (printWindow && !printWindow.closed) {
             printWindow.focus();
+            printWindow.print();
           }
         } catch (e) {}
-      }, 700);
+      }, 500);
     }
 
 // <<<<<<<<<< END MODUL JS: js/supervisor_monitoring.js <<<<<<<<<<

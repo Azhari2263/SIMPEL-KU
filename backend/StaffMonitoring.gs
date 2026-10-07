@@ -350,10 +350,31 @@ function readSheetMonitoring(sheet, bulan, tahun) {
     return { items: [], daysInMonth: 30, activeDays: [], daftarRuangan: [], headers: [], jenis: 'Kebersihan' };
   }
 
+  function isDayValue(v) {
+    if (typeof v === 'number' && v >= 1 && v <= 31) return true;
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (/^\d{1,2}$/.test(s)) {
+        const n = Number(s);
+        return n >= 1 && n <= 31;
+      }
+    }
+    return false;
+  }
+
+  function parseDayNum(v) {
+    if (typeof v === 'number') return v;
+    if (typeof v === 'string') {
+      const s = v.trim();
+      if (/^\d{1,2}$/.test(s)) return Number(s);
+    }
+    return null;
+  }
+
   // 1. Temukan baris tanggal
   let dateRowIdx = -1;
   for (let r = 0; r < Math.min(8, values.length); r++) {
-    const numCount = values[r].filter(v => typeof v === 'number' && v >= 1 && v <= 31).length;
+    const numCount = values[r].filter(v => isDayValue(v)).length;
     if (numCount >= 15) {
       dateRowIdx = r;
       break;
@@ -363,7 +384,7 @@ function readSheetMonitoring(sheet, bulan, tahun) {
   if (dateRowIdx === -1) {
     let maxCount = 0;
     for (let r = 0; r < Math.min(8, values.length); r++) {
-      const numCount = values[r].filter(v => typeof v === 'number' && v >= 1 && v <= 31).length;
+      const numCount = values[r].filter(v => isDayValue(v)).length;
       if (numCount > maxCount) { maxCount = numCount; dateRowIdx = r; }
     }
     if (maxCount < 5) {
@@ -418,7 +439,7 @@ function readSheetMonitoring(sheet, bulan, tahun) {
   const dateRow = values[dateRowIdx];
   let firstDateColIdx = -1;
   for (let c = 0; c < dateRow.length; c++) {
-    if (typeof dateRow[c] === 'number' && dateRow[c] >= 1 && dateRow[c] <= 31) {
+    if (isDayValue(dateRow[c])) {
       firstDateColIdx = c;
       break;
     }
@@ -453,8 +474,8 @@ function readSheetMonitoring(sheet, bulan, tahun) {
   const activeDays = [];
 
   for (let c = monthStartCol; c <= monthEndCol; c++) {
-    const dayNum = dateRow[c];
-    if (typeof dayNum === 'number' && dayNum >= 1 && dayNum <= 31) {
+    const dayNum = parseDayNum(dateRow[c]);
+    if (dayNum !== null && dayNum >= 1 && dayNum <= 31) {
       dayColMap[dayNum] = c + 1;
       activeDays.push(dayNum);
     }
@@ -464,7 +485,19 @@ function readSheetMonitoring(sheet, bulan, tahun) {
   const daysInMonth = activeDays.length > 0 ? Math.max.apply(null, activeDays) : 30;
 
   // 7. Parse baris kegiatan
-  const dataStartRow = dateRowIdx + 2;
+  let dataStartRow = dateRowIdx + 1;
+  if (dataStartRow < values.length) {
+    const nextRow = values[dataStartRow];
+    const HARI_REGEX = /^(sen|sel|rab|kam|jum|sab|min|senin|selasa|rabu|kamis|jumat|sabtu|minggu|s|r|k|j|m|ju|sa|mi|ra|ka)$/i;
+    let hariCount = 0;
+    for (let c = 0; c < nextRow.length; c++) {
+      const cell = String(nextRow[c] || '').trim();
+      if (cell && HARI_REGEX.test(cell)) hariCount++;
+    }
+    if (hariCount >= 4) {
+      dataStartRow = dateRowIdx + 2;
+    }
+  }
   let currentRuangan = 'Umum';
   const items = [];
   const ruanganSet = new Set();
@@ -490,7 +523,8 @@ function readSheetMonitoring(sheet, bulan, tahun) {
     for (let di = 0; di < activeDays.length; di++) {
       const d = activeDays[di];
       const val = row[dayColMap[d] - 1];
-      if (val === true || val === false) {
+      const valStr = String(val || '').trim().toUpperCase();
+      if (val === true || val === false || val === 1 || val === 0 || val === '1' || val === '0' || val === '✓' || valStr === 'TRUE' || valStr === 'FALSE' || valStr === 'V') {
         hasCheckboxData = true;
         break;
       }

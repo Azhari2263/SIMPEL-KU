@@ -627,8 +627,8 @@ function renderIntegratedMonitoringUI() {
       }
 
       const excelTemplate = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
+        \x3Chtml xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        \x3Chead>
           <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
           <!--[if gte mso 9]>
           <xml>
@@ -659,8 +659,8 @@ function renderIntegratedMonitoringUI() {
             .badge-cukup { background-color: #fef3c7; color: #92400e; font-weight: bold; text-align: center; }
             .badge-kurang { background-color: #ffe4e6; color: #9f1239; font-weight: bold; text-align: center; }
           </style>
-        </head>
-        <body>
+        \x3C/head\x3E
+        \x3Cbody>
           <table style="border: none; margin-bottom: 8px;">
             <tr>
               <td colspan="6" style="border: none; font-size: 14pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
@@ -685,8 +685,8 @@ function renderIntegratedMonitoringUI() {
             </tr>
           </table>
           ${tableHtml}
-        </body>
-        </html>
+        \x3C/body\x3E
+        \x3C/html\x3E
       `;
 
       const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8' });
@@ -814,9 +814,9 @@ function renderIntegratedMonitoringUI() {
       const jabatanKanan = isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`;
 
       const printHtml = `
-        <!DOCTYPE html>
-        <html lang="id">
-        <head>
+        \x3C!DOCTYPE html>
+        \x3Chtml lang="id">
+        \x3Chead>
           <meta charset="UTF-8">
           <title>${isSemua ? 'Rekapitulasi Kinerja Pegawai' : `Laporan Tugas - ${escapeHtml(d.pegawai?.namaPegawai || '')}`} | BPS Kalbar</title>
           <style>
@@ -994,8 +994,8 @@ function renderIntegratedMonitoringUI() {
               print-color-adjust: exact;
             }
           </style>
-        </head>
-        <body>
+        \x3C/head\x3E
+        \x3Cbody>
           <div class="no-print">
             <div style="font-weight: 600; color: #334155;">
               <span>Dokumen Siap Dicetak</span> &bull; 
@@ -1068,16 +1068,8 @@ function renderIntegratedMonitoringUI() {
             </div>
           </div>
 
-          \x3Cscript\x3E
-            window.addEventListener('load', function() {
-              setTimeout(function() {
-                window.focus();
-                window.print();
-              }, 450);
-            });
-          \x3C/script\x3E
-        </body>
-        </html>
+        \x3C/body\x3E
+        \x3C/html\x3E
       `;
 
       printWindow.document.open();
@@ -1087,7 +1079,8 @@ function renderIntegratedMonitoringUI() {
         try {
           if (printWindow && !printWindow.closed) {
             printWindow.focus();
+            printWindow.print();
           }
         } catch (e) {}
-      }, 700);
+      }, 500);
     }

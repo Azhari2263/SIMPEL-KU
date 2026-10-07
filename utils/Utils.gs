@@ -181,23 +181,27 @@ function isKeamananTaskForShift(t, kodeShift) {
   if (!kodeShift || kodeShift === 'O') return false;
   var combined = (String((t && t.ruangan) || '') + ' ' + String((t && t.kegiatan) || '') + ' ' + String((t && t.item) || '')).toUpperCase();
 
-  if (kodeShift === 'P') {
-    // Shift Pagi: PAGI dan SELAMA JAM KERJA, tidak termasuk MALAM atau SORE
-    if (combined.indexOf('MALAM') >= 0 || combined.indexOf('SORE') >= 0) return false;
-    return combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0 || combined.indexOf('SIANG') >= 0 || combined.indexOf('SHIFT P') >= 0;
-  } else if (kodeShift === 'S') {
-    // Shift Sore: SORE atau MALAM, tidak termasuk PAGI atau JAM KERJA pagi
-    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
-    return combined.indexOf('SORE') >= 0 || combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT S') >= 0;
-  } else if (kodeShift === 'M') {
-    // Shift Malam: MALAM, tidak termasuk PAGI atau JAM KERJA pagi
-    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
-    return combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT M') >= 0;
+  var hasPagi = combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0 || combined.indexOf('SIANG') >= 0 || combined.indexOf('SHIFT P') >= 0;
+  var hasSore = combined.indexOf('SORE') >= 0 || combined.indexOf('SHIFT S') >= 0;
+  var hasMalam = combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT M') >= 0;
+
+  // Jika tugas umum yang tidak memiliki penanda shift spesifik sama sekali, berlaku untuk semua shift aktif (P, S, M)
+  if (!hasPagi && !hasSore && !hasMalam) {
+    return true;
   }
 
-  // Jika tugas umum yang tidak spesifik menyebut shift, berlaku untuk semua shift kerja aktif
-  if (combined.indexOf('PAGI') < 0 && combined.indexOf('JAM KERJA') < 0 && combined.indexOf('MALAM') < 0 && combined.indexOf('SORE') < 0 && combined.indexOf('SIANG') < 0) {
-    return true;
+  if (kodeShift === 'P') {
+    // Shift Pagi: hanya tugas pagi/jam kerja, tidak tugas malam atau sore
+    if (hasMalam || hasSore) return false;
+    return hasPagi;
+  } else if (kodeShift === 'S') {
+    // Shift Sore: tugas sore atau malam, tidak tugas pagi
+    if (hasPagi) return false;
+    return hasSore || hasMalam;
+  } else if (kodeShift === 'M') {
+    // Shift Malam: tugas malam, tidak tugas pagi
+    if (hasPagi) return false;
+    return hasMalam;
   }
 
   return false;

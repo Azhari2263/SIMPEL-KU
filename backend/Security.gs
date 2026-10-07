@@ -504,100 +504,142 @@ function updateSecurityShift(token, namaPegawai, tanggal, shiftBaru, bulan, tahu
     if (!session) return { success: false, message: "Sesi telah berakhir." };
 
     const role = (session.role || '').toLowerCase();
-    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap')) {
+    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap') && !role.includes('koordinator') && !role.includes('humas')) {
       return { success: false, message: "Akses ditolak. Anda tidak memiliki wewenang mengubah jadwal." };
     }
 
     const ss = getDb();
     if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
 
+    const empName = (typeof namaPegawai === 'object' && namaPegawai !== null)
+      ? (namaPegawai.namaPegawai || namaPegawai.nama || namaPegawai.username)
+      : namaPegawai;
+    const targetDay = (typeof tanggal === 'object' && tanggal !== null)
+      ? (tanggal.tanggal || tanggal.dayNum)
+      : Number(tanggal);
+    const newShiftCode = String(shiftBaru || 'O').toUpperCase();
+
     const jadwalSheet = findJadwalSheet(ss);
     if (!jadwalSheet) return { success: false, message: "Sheet JadwalPiketSecurity tidak ditemukan." };
 
     const rawValues = jadwalSheet.getDataRange().getValues();
     const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
+    const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
     const grid = parseJadwalGrid(rawValues, selectedMonth);
 
     if (!grid || !grid.schedCols) return { success: false, message: "Kolom jadwal tidak valid." };
 
-    const targetCol = grid.schedCols.find(c => c.tanggal === Number(tanggal));
-    if (!targetCol) return { success: false, message: "Kolom tanggal " + tanggal + " tidak ditemukan." };
+    const targetCol = grid.schedCols.find(c => c.tanggal === Number(targetDay));
+    if (!targetCol) return { success: false, message: "Kolom tanggal " + targetDay + " tidak ditemukan." };
 
-    const fakeUser = { username: namaPegawai, namaPegawai: namaPegawai };
+    const fakeUser = { username: empName, namaPegawai: empName };
     const employeeRowIdx = findEmployeeRowInJadwal(rawValues, fakeUser, 0);
 
     if (employeeRowIdx === -1) {
-      return { success: false, message: "Pegawai " + namaPegawai + " tidak ditemukan dalam sheet jadwal." };
+      return { success: false, message: "Pegawai " + empName + " tidak ditemukan dalam sheet jadwal." };
     }
 
     const rowNum = employeeRowIdx + 1;
     const colNum = targetCol.colIdx + 1;
 
-    jadwalSheet.getRange(rowNum, colNum).setValue(shiftBaru.toUpperCase());
+    jadwalSheet.getRange(rowNum, colNum).setValue(newShiftCode);
 
     clearScriptCacheKeys([
-      "cache_sec_matrix_" + selectedMonth + "_" + (tahun || new Date().getFullYear()),
-      "cache_spv_dash_" + selectedMonth + "_" + (tahun || new Date().getFullYear()),
-      "cache_rekap_terpadu_" + selectedMonth + "_" + (tahun || new Date().getFullYear())
+      "cache_sec_matrix_" + selectedMonth + "_" + selectedYear,
+      "cache_spv_dash_" + selectedMonth + "_" + selectedYear,
+      "cache_rekap_terpadu_" + selectedMonth + "_" + selectedYear
     ]);
     resetMemoryCache();
 
     return {
       success: true,
-      message: `Jadwal ${namaPegawai} tgl ${tanggal} berhasil diubah ke Shift ${shiftBaru}.`,
-      updated: { namaPegawai, tanggal, shiftBaru }
+      message: `Jadwal ${empName} tgl ${targetDay} berhasil diubah ke Shift ${newShiftCode}.`,
+      updated: { namaPegawai: empName, tanggal: targetDay, shiftBaru: newShiftCode }
     };
   } catch (err) {
     return { success: false, message: "Gagal memperbarui shift: " + err.message };
   }
 }
 
-function swapSecurityShift(token, pegawai1, pegawai2, tanggal, bulan, tahun) {
+function swapSecurityShift(token, pegawai1, pegawai2, tanggal1, tanggal2, bulan, tahun) {
   try {
     const session = getSessionUser(token);
     if (!session) return { success: false, message: "Sesi telah berakhir." };
 
     const role = (session.role || '').toLowerCase();
-    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap')) {
+    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap') && !role.includes('koordinator') && !role.includes('humas')) {
       return { success: false, message: "Akses ditolak." };
     }
 
     const ss = getDb();
     if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
 
+    // Support flexible arguments (objects, single date vs two dates, etc.)
+    let name1 = pegawai1;
+    let name2 = pegawai2;
+    let d1 = tanggal1;
+    let d2 = tanggal2;
+    let m = bulan;
+    let y = tahun;
+
+    if (pegawai1 && typeof pegawai1 === 'object') {
+      name1 = pegawai1.namaPegawai || pegawai1.nama || pegawai1.username;
+      d1 = pegawai1.tanggal || pegawai1.dayNum;
+      if (pegawai2 && typeof pegawai2 === 'object') {
+        name2 = pegawai2.namaPegawai || pegawai2.nama || pegawai2.username;
+        d2 = pegawai2.tanggal || pegawai2.dayNum;
+      }
+      m = tanggal1;
+      y = tanggal2;
+    } else if (y === undefined) {
+      if (typeof tanggal2 === 'number' && typeof bulan === 'number' && bulan >= 2020) {
+        y = bulan;
+        m = tanggal2;
+        d2 = d1;
+      } else if (d2 === undefined || d2 === null) {
+        d2 = d1;
+      }
+    }
+    if (!d2) d2 = d1;
+
     const jadwalSheet = findJadwalSheet(ss);
     if (!jadwalSheet) return { success: false, message: "Sheet jadwal tidak ditemukan." };
 
     const rawValues = jadwalSheet.getDataRange().getValues();
-    const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
+    const selectedMonth = m ? Number(m) : (new Date().getMonth() + 1);
+    const selectedYear = y ? Number(y) : new Date().getFullYear();
     const grid = parseJadwalGrid(rawValues, selectedMonth);
 
-    const targetCol = grid.schedCols.find(c => c.tanggal === Number(tanggal));
-    if (!targetCol) return { success: false, message: "Tanggal tidak ditemukan." };
+    if (!grid || !grid.schedCols) return { success: false, message: "Kolom jadwal tidak valid." };
 
-    const rIdx1 = findEmployeeRowInJadwal(rawValues, { username: pegawai1, namaPegawai: pegawai1 }, 0);
-    const rIdx2 = findEmployeeRowInJadwal(rawValues, { username: pegawai2, namaPegawai: pegawai2 }, 0);
+    const targetCol1 = grid.schedCols.find(c => c.tanggal === Number(d1));
+    const targetCol2 = grid.schedCols.find(c => c.tanggal === Number(d2));
+    if (!targetCol1 || !targetCol2) return { success: false, message: "Tanggal tidak ditemukan dalam sheet jadwal." };
+
+    const rIdx1 = findEmployeeRowInJadwal(rawValues, { username: name1, namaPegawai: name1 }, 0);
+    const rIdx2 = findEmployeeRowInJadwal(rawValues, { username: name2, namaPegawai: name2 }, 0);
 
     if (rIdx1 === -1 || rIdx2 === -1) {
       return { success: false, message: "Salah satu pegawai tidak ditemukan dalam jadwal." };
     }
 
-    const val1 = rawValues[rIdx1][targetCol.colIdx] || 'O';
-    const val2 = rawValues[rIdx2][targetCol.colIdx] || 'O';
+    const val1 = rawValues[rIdx1][targetCol1.colIdx] || 'O';
+    const val2 = rawValues[rIdx2][targetCol2.colIdx] || 'O';
 
-    jadwalSheet.getRange(rIdx1 + 1, targetCol.colIdx + 1).setValue(val2);
-    jadwalSheet.getRange(rIdx2 + 1, targetCol.colIdx + 1).setValue(val1);
+    jadwalSheet.getRange(rIdx1 + 1, targetCol1.colIdx + 1).setValue(val2);
+    jadwalSheet.getRange(rIdx2 + 1, targetCol2.colIdx + 1).setValue(val1);
 
     clearScriptCacheKeys([
-      "cache_sec_matrix_" + selectedMonth + "_" + (tahun || new Date().getFullYear()),
-      "cache_spv_dash_" + selectedMonth + "_" + (tahun || new Date().getFullYear()),
-      "cache_rekap_terpadu_" + selectedMonth + "_" + (tahun || new Date().getFullYear())
+      "cache_sec_matrix_" + selectedMonth + "_" + selectedYear,
+      "cache_spv_dash_" + selectedMonth + "_" + selectedYear,
+      "cache_rekap_terpadu_" + selectedMonth + "_" + selectedYear
     ]);
     resetMemoryCache();
 
+    const tglInfo = (d1 === d2) ? `tgl ${d1}` : `tgl ${d1} dan tgl ${d2}`;
     return {
       success: true,
-      message: `Shift antara ${pegawai1} (${val1}) dan ${pegawai2} (${val2}) pada tgl ${tanggal} berhasil ditukar.`
+      message: `Shift antara ${name1} (${val1}) dan ${name2} (${val2}) pada ${tglInfo} berhasil ditukar.`
     };
   } catch (err) {
     return { success: false, message: "Gagal menukar shift: " + err.message };

@@ -94,18 +94,23 @@ function handleApiRequest(params) {
     } else if (action === 'updateSecurityShift') {
       result = updateSecurityShift(
         params.token,
-        params.namaPegawai || params.employeeNameOrId || params.employeeIdentifier,
+        params.namaPegawai || params.nama || params.employeeNameOrId || params.employeeIdentifier,
         params.tanggal || params.dayNum,
         params.shiftBaru || params.newShift,
         params.bulan,
         params.tahun
       );
     } else if (action === 'swapSecurityShift') {
+      const p1 = params.petugas1 ? (params.petugas1.namaPegawai || params.petugas1.nama) : (params.pegawai1 || params.nama1 || params.emp1Name);
+      const t1 = params.petugas1 ? params.petugas1.tanggal : (params.tanggal1 || params.tanggal || params.dayNum);
+      const p2 = params.petugas2 ? (params.petugas2.namaPegawai || params.petugas2.nama) : (params.pegawai2 || params.nama2 || params.emp2Name);
+      const t2 = params.petugas2 ? params.petugas2.tanggal : (params.tanggal2 || params.tanggal || params.dayNum);
       result = swapSecurityShift(
         params.token,
-        params.pegawai1 || params.emp1Name,
-        params.pegawai2 || params.emp2Name,
-        params.tanggal || params.dayNum,
+        p1,
+        p2,
+        t1,
+        t2,
         params.bulan,
         params.tahun
       );
