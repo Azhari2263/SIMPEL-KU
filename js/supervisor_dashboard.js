@@ -53,7 +53,7 @@ function renderSupervisorDashboardUI(data) {
       if (kpiTotalEl) kpiTotalEl.innerText = `${safePct}%`;
 
       const kpiDetailEl = document.getElementById('supKpiDetailChecklist');
-      if (kpiDetailEl) kpiDetailEl.innerText = `${done} / ${total} Checklist Selesai`;
+      if (kpiDetailEl) kpiDetailEl.innerText = `${done} / ${total} Tugas Selesai`;
 
       const kpiProgBar = document.getElementById('supKpiProgressChecklist');
       if (kpiProgBar) kpiProgBar.style.width = `${Math.min(100, Math.max(0, safePct))}%`;

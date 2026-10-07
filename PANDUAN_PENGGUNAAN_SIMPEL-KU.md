@@ -134,7 +134,7 @@ Menyajikan 3 kartu ringkasan terpisah untuk:
 3. **Unit Keamanan**: Kesiapsiagaan tugas pengamanan gedung dan kehadiran shift.
 
 ### 5.4 Rekapitulasi Progres Pegawai & Modal Rincian Tugas
-Tabel ini memuat seluruh nama pegawai, NIP, Unit Kerja, total target, checklist selesai, belum, dan progress bar.
+Tabel ini memuat seluruh nama pegawai, NIP, Unit Kerja, total target, tugas selesai, belum, dan progress bar.
 * Klik tombol **Detail** pada baris pegawai untuk membuka jendela popup (*modal*) rincian seluruh tugas dan progres checklist per ruangan yang menjadi tanggung jawab pegawai tersebut.
 
 ### 5.5 Visualisasi Grafik Tren & Rekapitulasi Terpadu

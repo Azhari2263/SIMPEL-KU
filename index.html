@@ -700,7 +700,7 @@
                 <div>
                   <p class="text-xs font-medium text-slate-500">Total Tugas Terpadu</p>
                   <h3 id="supKpiTotalChecklist" class="text-2xl font-bold text-slate-800 mt-1">0%</h3>
-                  <p id="supKpiDetailChecklist" class="text-xs text-slate-400 mt-0.5">0 / 0 Checklist Selesai</p>
+                  <p id="supKpiDetailChecklist" class="text-xs text-slate-400 mt-0.5">0 / 0 Tugas Selesai</p>
                 </div>
                 <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
                   <i class="fa-solid fa-list-check"></i>
@@ -873,7 +873,7 @@
                     <th class="py-3 px-4 rounded-l-xl">No</th>
                     <th class="py-3 px-4">Nama Pegawai</th>
                     <th class="py-3 px-4">Unit Kerja</th>
-                    <th class="py-3 px-4">Checklist Selesai</th>
+                    <th class="py-3 px-4">Tugas Selesai</th>
                     <th class="py-3 px-4">Persentase</th>
                     <th class="py-3 px-4">Status</th>
                     <th class="py-3 px-4 text-center rounded-r-xl">Aksi</th>
@@ -3955,7 +3955,7 @@ function renderSupervisorDashboardUI(data) {
       if (kpiTotalEl) kpiTotalEl.innerText = `${safePct}%`;
 
       const kpiDetailEl = document.getElementById('supKpiDetailChecklist');
-      if (kpiDetailEl) kpiDetailEl.innerText = `${done} / ${total} Checklist Selesai`;
+      if (kpiDetailEl) kpiDetailEl.innerText = `${done} / ${total} Tugas Selesai`;
 
       const kpiProgBar = document.getElementById('supKpiProgressChecklist');
       if (kpiProgBar) kpiProgBar.style.width = `${Math.min(100, Math.max(0, safePct))}%`;
