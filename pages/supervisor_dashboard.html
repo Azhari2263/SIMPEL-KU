@@ -14,6 +14,10 @@
                 <p class="text-xs md:text-sm text-blue-100 mt-1">Monitoring Kebersiahan, Pelayanan, dan Keamanan BPS Provinsi Kalimantan Barat</p>
               </div>
               <div class="flex items-center gap-2">
+                <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-emerald-400">
+                  <i class="fa-solid fa-file-export text-white"></i>
+                  <span>Export Laporan</span>
+                </button>
                 <button onclick="loadSupervisorDashboardData(true)" class="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer border border-blue-100">
                   <i class="fa-solid fa-arrows-rotate text-blue-700"></i>
                   <span class="text-blue-700 font-bold">Muat Ulang Data</span>
@@ -189,7 +193,10 @@
                 <h3 class="text-base font-bold text-slate-800">Rekapitulasi Kinerja Pegawai</h3>
                 <p class="text-xs text-slate-400">Daftar seluruh petugas teknis beserta persentase kepatuhan & rincian tugas</p>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <button onclick="openExportModal()" class="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-file-export text-emerald-600"></i> Export Rekap
+                </button>
                 <div class="relative">
                   <input type="text" id="searchSupPegawai" oninput="filterSupervisorPegawaiTable(this.value)" placeholder="Cari nama pegawai..." class="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
                   <i class="fa-solid fa-search absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>

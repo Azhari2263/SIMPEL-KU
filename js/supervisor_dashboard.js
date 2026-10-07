@@ -221,9 +221,14 @@ function renderSupervisorPegawaiTable(list) {
               <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${badgeBg}">${badgeText}</span>
             </td>
             <td class="py-3 px-4 text-center">
-              <button onclick="showEmployeeDetailModal('${escapeHtml(p.namaPegawai)}')" class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 mx-auto border border-brand-200">
-                <i class="fa-solid fa-eye text-[11px]"></i> Detail
-              </button>
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="showEmployeeDetailModal('${escapeHtml(p.namaPegawai)}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-brand-200" title="Detail Pegawai">
+                  <i class="fa-solid fa-eye text-[11px]"></i> Detail
+                </button>
+                <button onclick="openExportModal('${escapeHtml(p.username || p.namaPegawai)}')" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-emerald-200" title="Export Laporan Pegawai Ini">
+                  <i class="fa-solid fa-file-export text-[11px]"></i> Export
+                </button>
+              </div>
             </td>
           </tr>
         `;

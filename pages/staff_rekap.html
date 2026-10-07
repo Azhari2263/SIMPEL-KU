@@ -2,12 +2,18 @@
      SIMPEL-KU - PAGE: staff_rekap.html
      ============================================================== -->
 <section id="view-rekap" class="hidden space-y-6">
-          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <i class="fa-solid fa-chart-simple text-brand-600"></i>
-              <span>Rekapitulasi & Visualisasi Pencapaian</span>
-            </h3>
-            <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-chart-simple text-brand-600"></i>
+                <span>Rekapitulasi & Visualisasi Pencapaian</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+            </div>
+            <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2 cursor-pointer self-start sm:self-auto">
+              <i class="fa-solid fa-file-export"></i>
+              <span>Export / Cetak Laporan</span>
+            </button>
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

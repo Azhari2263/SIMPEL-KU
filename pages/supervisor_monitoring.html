@@ -11,9 +11,14 @@
                 </h3>
                 <p class="text-xs text-slate-400 mt-0.5">Saring checklist operasional berdasarkan unit, pegawai, ruangan, & status</p>
               </div>
-              <button onclick="loadIntegratedMonitoringData()" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 self-start sm:self-auto">
-                <i class="fa-solid fa-rotate"></i> Terapkan Filter
-              </button>
+              <div class="flex items-center gap-2 self-start sm:self-auto">
+                <button onclick="openExportModal()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-file-export"></i> Export Laporan
+                </button>
+                <button onclick="loadIntegratedMonitoringData()" class="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                  <i class="fa-solid fa-rotate"></i> Terapkan Filter
+                </button>
+              </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">

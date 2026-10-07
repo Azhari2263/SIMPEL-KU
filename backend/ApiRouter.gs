@@ -109,6 +109,8 @@ function handleApiRequest(params) {
         params.bulan,
         params.tahun
       );
+    } else if (action === 'getExportLaporanData') {
+      result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {

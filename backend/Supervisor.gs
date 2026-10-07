@@ -797,3 +797,266 @@ function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
     return { success: false, message: "Gagal memuat detail pegawai: " + err.message };
   }
 }
+
+/**
+ * ========================================================================
+ * 6. FITUR EXPORT LAPORAN (SEMUA PEGAWAI / INDIVIDU SETIAP BULAN)
+ * ========================================================================
+ */
+function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    const now = new Date();
+    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
+    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
+    const NAMA_BULAN = [
+      "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    const namaBulanStr = NAMA_BULAN[selectedMonth] || ("Bulan " + selectedMonth);
+    const isManager = (session.role === 'Admin' || session.role === 'Supervisor' || session.role === 'Tim Umum dan Humas' || session.role === 'Koordinator Lapangan');
+
+    // JIKA TIPE 'semua' (Hanya untuk Admin / Supervisor)
+    if (tipe === 'semua' && isManager) {
+      const allUsers = getAllUsersList(ss);
+      const nonManagementStaff = allUsers.filter(u => {
+        const r = (u.role || '').toLowerCase();
+        return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
+      });
+
+      const rekapPegawai = [];
+      let totalSemua = 0;
+      let selesaiSemua = 0;
+
+      nonManagementStaff.forEach(emp => {
+        const empUnit = emp.unit || 'Kebersihan';
+        let empTotal = 0;
+        let empSelesai = 0;
+
+        if (empUnit === 'Keamanan') {
+          const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
+          let tasksToUse = (resK && resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
+          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
+          if (empSheet) {
+            const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+            if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
+              tasksToUse = parsedSecSheet.items;
+            }
+          }
+
+          if (resK && resK.jadwal) {
+            resK.jadwal.forEach(j => {
+              if (j.kodeShift === 'O') return;
+              const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, j.kodeShift));
+              shiftTasks.forEach(t => {
+                empTotal++;
+                let isDone = false;
+                if (t.dailyStatus && (t.dailyStatus[j.tanggal] !== undefined && t.dailyStatus[j.tanggal] !== null)) {
+                  const st = t.dailyStatus[j.tanggal];
+                  isDone = (st === '1' || st === 1 || st === true);
+                } else {
+                  const isPastOrToday = (selectedYear < now.getFullYear()) ||
+                    (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
+                    (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && j.tanggal <= now.getDate());
+                  isDone = isPastOrToday;
+                }
+                if (isDone) empSelesai++;
+              });
+            });
+          }
+        } else {
+          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
+          if (empSheet) {
+            const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+            if (parsed && parsed.items) {
+              parsed.items.forEach(it => {
+                empTotal += (it.totalHariAktif || 0);
+                empSelesai += (it.selesaiCount || 0);
+              });
+            }
+          }
+        }
+
+        const belum = Math.max(0, empTotal - empSelesai);
+        const persen = (empTotal > 0 && !isNaN(empTotal)) ? Math.round((empSelesai / empTotal) * 100) : 0;
+        totalSemua += empTotal;
+        selesaiSemua += empSelesai;
+
+        rekapPegawai.push({
+          namaPegawai: emp.namaPegawai,
+          username: emp.username,
+          unit: empUnit,
+          role: emp.role || empUnit,
+          totalTarget: empTotal,
+          selesai: empSelesai,
+          belum: belum,
+          persen: persen,
+          status: persen >= 90 ? 'Optimal' : (persen >= 70 ? 'Cukup' : 'Perlu Perhatian')
+        });
+      });
+
+      const persenSemua = (totalSemua > 0 && !isNaN(totalSemua)) ? Math.round((selesaiSemua / totalSemua) * 100) : 0;
+
+      return {
+        success: true,
+        data: {
+          tipe: 'semua',
+          periode: {
+            bulan: selectedMonth,
+            tahun: selectedYear,
+            namaBulan: namaBulanStr,
+            labelPeriode: namaBulanStr + " " + selectedYear
+          },
+          summary: {
+            totalPegawai: rekapPegawai.length,
+            totalTarget: totalSemua,
+            totalSelesai: selesaiSemua,
+            totalBelum: Math.max(0, totalSemua - selesaiSemua),
+            persen: persenSemua
+          },
+          rekapPegawai: rekapPegawai
+        }
+      };
+    } else {
+      // EXPORT PER PEGAWAI (INDIVIDU)
+      let targetUser = null;
+      const allUsers = getAllUsersList(ss);
+      const queryUsername = (isManager && targetUsername) ? targetUsername : session.username;
+
+      targetUser = allUsers.find(u => u.username === queryUsername || u.namaPegawai === queryUsername);
+      if (!targetUser) {
+        targetUser = session;
+      }
+
+      const empUnit = targetUser.unit || 'Kebersihan';
+      const itemsList = [];
+      let jadwalSatpam = [];
+      let totalTarget = 0;
+      let totalSelesai = 0;
+      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+
+      if (empUnit === 'Keamanan') {
+        const resK = getJadwalKeamananInternal(ss, targetUser, selectedMonth, selectedYear);
+        let tasksToUse = (resK && resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
+        const empSheet = findEmployeeSheet(ss, targetUser.namaSheet, targetUser.namaPegawai, targetUser.username);
+        if (empSheet) {
+          const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+          if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
+            tasksToUse = parsedSecSheet.items;
+          }
+        }
+
+        if (resK && resK.jadwal) {
+          jadwalSatpam = resK.jadwal;
+          tasksToUse.forEach((t, idx) => {
+            let taskTarget = 0;
+            let taskSelesai = 0;
+            const dailyMap = {};
+
+            resK.jadwal.forEach(j => {
+              const d = j.tanggal;
+              if (j.kodeShift === 'O') {
+                dailyMap[d] = '-';
+                return;
+              }
+              const applies = isKeamananTaskForShift(t, j.kodeShift);
+              if (applies) {
+                taskTarget++;
+                let isDone = false;
+                if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
+                  isDone = (t.dailyStatus[d] === '1' || t.dailyStatus[d] === 1 || t.dailyStatus[d] === true);
+                } else {
+                  const isPastOrToday = (selectedYear < now.getFullYear()) ||
+                    (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
+                    (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
+                  isDone = isPastOrToday;
+                }
+                dailyMap[d] = isDone ? '1' : '0';
+                if (isDone) taskSelesai++;
+              } else {
+                dailyMap[d] = '-';
+              }
+            });
+
+            totalTarget += taskTarget;
+            totalSelesai += taskSelesai;
+
+            itemsList.push({
+              no: idx + 1,
+              ruangan: t.ruangan || 'Area Satpam',
+              kegiatan: t.kegiatan,
+              target: taskTarget,
+              selesai: taskSelesai,
+              belum: Math.max(0, taskTarget - taskSelesai),
+              persen: taskTarget > 0 ? Math.round((taskSelesai / taskTarget) * 100) : 0,
+              dailyStatus: dailyMap
+            });
+          });
+        }
+      } else {
+        // Kebersihan & Pelayanan
+        const empSheet = findEmployeeSheet(ss, targetUser.namaSheet, targetUser.namaPegawai, targetUser.username);
+        if (empSheet) {
+          const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+          if (parsed && parsed.items) {
+            parsed.items.forEach((it, idx) => {
+              totalTarget += (it.totalHariAktif || 0);
+              totalSelesai += (it.selesaiCount || 0);
+              itemsList.push({
+                no: idx + 1,
+                ruangan: it.ruangan,
+                kegiatan: it.kegiatan,
+                target: it.totalHariAktif || 0,
+                selesai: it.selesaiCount || 0,
+                belum: Math.max(0, (it.totalHariAktif || 0) - (it.selesaiCount || 0)),
+                persen: (it.totalHariAktif > 0) ? Math.round(((it.selesaiCount || 0) / it.totalHariAktif) * 100) : 0,
+                dailyStatus: it.dailyStatus || {}
+              });
+            });
+          }
+        }
+      }
+
+      const totalBelum = Math.max(0, totalTarget - totalSelesai);
+      const persen = (totalTarget > 0 && !isNaN(totalTarget)) ? Math.round((totalSelesai / totalTarget) * 100) : 0;
+
+      return {
+        success: true,
+        data: {
+          tipe: 'individu',
+          pegawai: {
+            namaPegawai: targetUser.namaPegawai,
+            username: targetUser.username,
+            unit: empUnit,
+            role: targetUser.role || ('Petugas ' + empUnit)
+          },
+          periode: {
+            bulan: selectedMonth,
+            tahun: selectedYear,
+            namaBulan: namaBulanStr,
+            labelPeriode: namaBulanStr + " " + selectedYear,
+            daysInMonth: daysInMonth
+          },
+          summary: {
+            totalTarget: totalTarget,
+            totalSelesai: totalSelesai,
+            totalBelum: totalBelum,
+            persen: persen,
+            status: persen >= 90 ? 'Optimal' : (persen >= 70 ? 'Cukup' : 'Perlu Perhatian')
+          },
+          jadwalShift: jadwalSatpam,
+          items: itemsList
+        }
+      };
+    }
+  } catch (err) {
+    return { success: false, message: "Gagal menyiapkan data export: " + err.message };
+  }
+}

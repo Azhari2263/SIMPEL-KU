@@ -74,6 +74,8 @@
             runner.updateSecurityShift(params.token, params.nama, params.tanggal, params.shiftBaru, params.alasan, params.bulan, params.tahun);
           } else if (action === 'swapSecurityShift') {
             runner.swapSecurityShift(params.token, params.nama1, params.tanggal1, params.nama2, params.tanggal2, params.alasan, params.bulan, params.tahun);
+          } else if (action === 'getExportLaporanData') {
+            runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
           } else if (typeof runner.handleApiRequest === 'function') {
             runner.handleApiRequest(action, params);
           } else {
@@ -306,6 +308,18 @@ function applySidebarCollapseState() {
             </div>
           </div>
           <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-emerald-600"></i>
+        </button>
+        <button onclick="openExportModal()" class="w-full p-3.5 rounded-xl border border-slate-200 hover:border-teal-500/50 hover:bg-teal-50/30 transition-all flex items-center justify-between text-left group">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center text-sm group-hover:scale-105 transition-transform">
+              <i class="fa-solid fa-file-export"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-800">Export Laporan</p>
+              <p class="text-[10px] text-slate-400">Unduh Excel & Cetak PDF</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-teal-600"></i>
         </button>
       `;
 
