@@ -205,11 +205,24 @@ function getJadwalKeamanan(token, bulan, tahun) {
       return { success: false, message: "Sheet jadwal piket keamanan tidak ditemukan pada spreadsheet." };
     }
 
-    const rawValues = jadwalSheet.getDataRange().getValues();
-    const displayValues = jadwalSheet.getDataRange().getDisplayValues();
     const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
 
-    const gridResult = parseJadwalGrid(rawValues, selectedMonth);
+    let rawValues = (typeof _cachedJadwalRawValues !== 'undefined' && _cachedJadwalRawValues) ? _cachedJadwalRawValues : null;
+    let displayValues = (typeof _cachedJadwalDispValues !== 'undefined' && _cachedJadwalDispValues) ? _cachedJadwalDispValues : null;
+    if (!rawValues || !displayValues) {
+      rawValues = jadwalSheet.getDataRange().getValues();
+      displayValues = jadwalSheet.getDataRange().getDisplayValues();
+      if (typeof _cachedJadwalRawValues !== 'undefined') _cachedJadwalRawValues = rawValues;
+      if (typeof _cachedJadwalDispValues !== 'undefined') _cachedJadwalDispValues = displayValues;
+    }
+
+    let gridResult = (typeof _cachedJadwalGrid !== 'undefined' && _cachedJadwalGrid[selectedMonth]) ? _cachedJadwalGrid[selectedMonth] : null;
+    if (!gridResult) {
+      gridResult = parseJadwalGrid(rawValues, selectedMonth);
+      if (typeof _cachedJadwalGrid !== 'undefined' && gridResult && !gridResult.error) {
+        _cachedJadwalGrid[selectedMonth] = gridResult;
+      }
+    }
     if (!gridResult || gridResult.error) {
       return { success: false, message: gridResult ? gridResult.error : "Format tabel jadwal tidak dapat dibaca." };
     }

@@ -298,10 +298,14 @@ function renderIntegratedMonitoringUI() {
       const tahun = document.getElementById('globalYearSelect').value;
       const cacheKey = `${bulan}_${tahun}`;
 
-      if (!forceRefresh && window._managerDataCache.rekap[cacheKey]) {
+      if (!forceRefresh && window._managerDataCache && window._managerDataCache.rekap && window._managerDataCache.rekap[cacheKey]) {
         const d = window._managerDataCache.rekap[cacheKey];
-        renderRekapCharts(d);
         renderRekapTable(d.rekapRuangan);
+        try {
+          renderRekapCharts(d);
+        } catch (chartErr) {
+          console.warn('Chart render warning:', chartErr);
+        }
         return;
       }
 
@@ -310,9 +314,15 @@ function renderIntegratedMonitoringUI() {
         const res = await callBackend('getIntegratedRekapMonitoring', { token: sessionToken, bulan, tahun });
         showLoader(false);
         if (res && res.success) {
-          window._managerDataCache.rekap[cacheKey] = res.data;
-          renderRekapCharts(res.data);
+          if (window._managerDataCache && window._managerDataCache.rekap) {
+            window._managerDataCache.rekap[cacheKey] = res.data;
+          }
           renderRekapTable(res.data.rekapRuangan);
+          try {
+            renderRekapCharts(res.data);
+          } catch (chartErr) {
+            console.warn('Chart render warning:', chartErr);
+          }
         } else {
           handleApiError(res);
         }

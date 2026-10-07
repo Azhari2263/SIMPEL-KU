@@ -271,7 +271,7 @@ function getRekapMonitoring(token, bulan, tahun) {
     const rekapHarianMap = {};
     const rekapHarian = parsedData.activeDays.map((d, i) => {
       rekapHarianMap[d] = i;
-      return { hari: d, total: 0, selesai: 0 };
+      return { hari: d, tanggal: d, total: 0, selesai: 0, done: 0 };
     });
 
     parsedData.items.forEach(item => {
@@ -288,11 +288,16 @@ function getRekapMonitoring(token, bulan, tahun) {
       rekapRuangan[item.ruangan].itemCount += 1;
 
       parsedData.activeDays.forEach(d => {
-        const isDone = item.dailyStatus[d] === "1" || item.dailyStatus[d] === 1;
-        const idx = rekapHarianMap[d];
-        if (idx !== undefined) {
-          rekapHarian[idx].total += 1;
-          if (isDone) rekapHarian[idx].selesai += 1;
+        const st = item.dailyStatus[d];
+        if (st === "1" || st === "0" || st === 1 || st === 0) {
+          const idx = rekapHarianMap[d];
+          if (idx !== undefined) {
+            rekapHarian[idx].total += 1;
+            if (st === "1" || st === 1) {
+              rekapHarian[idx].selesai += 1;
+              rekapHarian[idx].done += 1;
+            }
+          }
         }
       });
     });
@@ -322,12 +327,21 @@ function readSheetMonitoring(sheet, bulan, tahun) {
   const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
   const selectedYear = tahun ? Number(tahun) : now.getFullYear();
 
-  // Cek cache memori untuk menghindari re-parsing berulang
+  // Cek in-memory cache dan Script Cache untuk menghindari re-parsing berulang
+  const memKey = sheet.getName() + "_" + selectedMonth + "_" + selectedYear;
+  if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring && _cachedParsedMonitoring[memKey]) {
+    return _cachedParsedMonitoring[memKey];
+  }
+
   const cacheKey = "cache_m_" + sheet.getName() + "_" + selectedMonth + "_" + selectedYear;
   try {
     const cached = CacheService.getScriptCache().get(cacheKey);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring) {
+        _cachedParsedMonitoring[memKey] = parsed;
+      }
+      return parsed;
     }
   } catch (ce) { /* ignore cache read error */ }
 
@@ -492,15 +506,26 @@ function readSheetMonitoring(sheet, bulan, tahun) {
 
     const dailyStatus = {};
     let selesaiCount = 0;
+    let scheduledDaysCount = 0;
 
     activeDays.forEach(d => {
       const colIdx0 = dayColMap[d] - 1;
       const val = row[colIdx0];
+      const dateObj = new Date(selectedYear, selectedMonth - 1, d);
+      const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+
       if (val === true || val === 1 || val === '1' || val === '✓') {
         dailyStatus[d] = '1';
         selesaiCount++;
+        scheduledDaysCount++;
       } else if (val === false || val === 0 || val === '0') {
-        dailyStatus[d] = '0';
+        // Jika akhir pekan (Sabtu/Minggu) pada unit Kebersihan/Pelayanan dan tidak ada tugas khusus, tandai non-aktif
+        if (isWeekend && jenis !== 'Keamanan') {
+          dailyStatus[d] = '-';
+        } else {
+          dailyStatus[d] = '0';
+          scheduledDaysCount++;
+        }
       } else {
         dailyStatus[d] = '-';
       }
@@ -513,7 +538,7 @@ function readSheetMonitoring(sheet, bulan, tahun) {
       kegiatan: kegiatanText,
       dailyStatus: dailyStatus,
       colMapping: dayColMap,
-      totalHariAktif: activeDays.length,
+      totalHariAktif: scheduledDaysCount,
       selesaiCount: selesaiCount
     });
   }
@@ -527,7 +552,11 @@ function readSheetMonitoring(sheet, bulan, tahun) {
     jenis: jenis
   };
 
-  // Simpan ke CacheService untuk akselerasi
+  // Simpan ke in-memory cache dan CacheService untuk akselerasi
+  if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring) {
+    _cachedParsedMonitoring[memKey] = result;
+  }
+
   try {
     const ttl = (typeof CACHE_TTL_SEC !== 'undefined' && CACHE_TTL_SEC) ? CACHE_TTL_SEC : 60;
     CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), ttl);

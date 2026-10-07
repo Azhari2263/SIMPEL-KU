@@ -26,11 +26,19 @@ var _cachedDb = null;
 var _cachedSheetsList = null;
 var _cachedSheetsMap = null;
 var _cachedUserList = null;
+var _cachedParsedMonitoring = {};
+var _cachedJadwalRawValues = null;
+var _cachedJadwalDispValues = null;
+var _cachedJadwalGrid = {};
 
 function resetMemoryCache() {
   _cachedSheetsList = null;
   _cachedSheetsMap = null;
   _cachedUserList = null;
+  _cachedParsedMonitoring = {};
+  _cachedJadwalRawValues = null;
+  _cachedJadwalDispValues = null;
+  _cachedJadwalGrid = {};
 }
 
 function getCachedSheets(ss) {

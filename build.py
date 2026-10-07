@@ -132,6 +132,8 @@ def build_frontend():
     doc.append("  <script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"></script>")
     doc.append("  <!-- FontAwesome CDN -->")
     doc.append("  <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css\">")
+    doc.append("  <!-- Chart.js CDN -->")
+    doc.append("  <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js\"></script>")
     doc.append("  <!-- Google Fonts: Plus Jakarta Sans -->")
     doc.append("  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">")
     doc.append("  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>")

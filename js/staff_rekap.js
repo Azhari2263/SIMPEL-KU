@@ -72,8 +72,12 @@ async function loadRekapData() {
         });
         showLoader(false);
         if (res && res.success) {
-          renderRekapCharts(res.data);
           renderRekapTable(res.data.rekapRuangan);
+          try {
+            renderRekapCharts(res.data);
+          } catch (chartErr) {
+            console.warn("Chart rendering warning:", chartErr);
+          }
         } else {
           handleApiError(res);
         }
@@ -84,74 +88,86 @@ async function loadRekapData() {
     }
 
 function renderRekapCharts(data) {
-      const ctxTren = document.getElementById('chartTrenHarian').getContext('2d');
-      if (chartTrenInstance) chartTrenInstance.destroy();
+      if (!data) return;
+      if (typeof Chart === 'undefined') {
+        console.warn('Chart.js library is not available');
+        return;
+      }
 
-      const labelsHarian = data.rekapHarian.map(h => 'Tgl ' + h.hari);
-      const dataHarian = data.rekapHarian.map(h => h.selesai);
+      const canvasTren = document.getElementById('chartTrenHarian');
+      if (canvasTren && data.rekapHarian && data.rekapHarian.length) {
+        const ctxTren = canvasTren.getContext('2d');
+        if (chartTrenInstance) chartTrenInstance.destroy();
 
-      chartTrenInstance = new Chart(ctxTren, {
-        type: 'line',
-        data: {
-          labels: labelsHarian,
-          datasets: [{
-            label: 'Kegiatan Terlaksana',
-            data: dataHarian,
-            borderColor: '#2563eb',
-            backgroundColor: 'rgba(37, 99, 235, 0.08)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 3,
-            pointHoverRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-            x: { grid: { display: false } }
-          }
-        }
-      });
+        const labelsHarian = data.rekapHarian.map(h => 'Tgl ' + (h.hari !== undefined ? h.hari : (h.tanggal !== undefined ? h.tanggal : '')));
+        const dataHarian = data.rekapHarian.map(h => (h.selesai !== undefined ? h.selesai : (h.done || 0)));
 
-      const ctxRuang = document.getElementById('chartRuangan').getContext('2d');
-      if (chartRuanganInstance) chartRuanganInstance.destroy();
-
-      const labelsRuang = data.rekapRuangan.map(r => r.ruangan);
-      const dataRuangSelesai = data.rekapRuangan.map(r => r.selesai);
-      const dataRuangTotal = data.rekapRuangan.map(r => r.total);
-
-      chartRuanganInstance = new Chart(ctxRuang, {
-        type: 'bar',
-        data: {
-          labels: labelsRuang,
-          datasets: [
-            {
-              label: 'Selesai',
-              data: dataRuangSelesai,
-              backgroundColor: '#10b981',
-              borderRadius: 6
-            },
-            {
-              label: 'Total Target',
-              data: dataRuangTotal,
-              backgroundColor: '#e2e8f0',
-              borderRadius: 6
+        chartTrenInstance = new Chart(ctxTren, {
+          type: 'line',
+          data: {
+            labels: labelsHarian,
+            datasets: [{
+              label: 'Kegiatan Terlaksana',
+              data: dataHarian,
+              borderColor: '#2563eb',
+              backgroundColor: 'rgba(37, 99, 235, 0.08)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 3,
+              pointHoverRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+              x: { grid: { display: false } }
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
-          scales: {
-            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
-            x: { grid: { display: false } }
           }
-        }
-      });
+        });
+      }
+
+      const canvasRuang = document.getElementById('chartRuangan');
+      if (canvasRuang && data.rekapRuangan && data.rekapRuangan.length) {
+        const ctxRuang = canvasRuang.getContext('2d');
+        if (chartRuanganInstance) chartRuanganInstance.destroy();
+
+        const labelsRuang = data.rekapRuangan.map(r => r.ruangan);
+        const dataRuangSelesai = data.rekapRuangan.map(r => (r.selesai !== undefined ? r.selesai : (r.done || 0)));
+        const dataRuangTotal = data.rekapRuangan.map(r => (r.total !== undefined ? r.total : 0));
+
+        chartRuanganInstance = new Chart(ctxRuang, {
+          type: 'bar',
+          data: {
+            labels: labelsRuang,
+            datasets: [
+              {
+                label: 'Selesai',
+                data: dataRuangSelesai,
+                backgroundColor: '#10b981',
+                borderRadius: 6
+              },
+              {
+                label: 'Total Target',
+                data: dataRuangTotal,
+                backgroundColor: '#e2e8f0',
+                borderRadius: 6
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
     }
 
 function renderRekapTable(listRuangan) {
