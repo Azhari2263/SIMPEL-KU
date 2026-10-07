@@ -36,6 +36,22 @@ async function loadIntegratedMonitoringData(forceRefresh = false) {
         if (res && res.success) {
           window._managerDataCache.monitoring[cacheKey] = res.data;
           cachedIntegratedMonitoringData = res.data;
+
+          if (res.data.activeDays && res.data.activeDays.length > 0) {
+            const now = new Date();
+            const curBulan = Number(bulan);
+            const curTahun = Number(tahun);
+            if (now.getMonth() + 1 === curBulan && now.getFullYear() === curTahun) {
+              if (res.data.activeDays.includes(now.getDate())) {
+                adminMonitoringCurrentDay = now.getDate();
+              } else {
+                adminMonitoringCurrentDay = res.data.activeDays[0];
+              }
+            } else if (!res.data.activeDays.includes(adminMonitoringCurrentDay)) {
+              adminMonitoringCurrentDay = res.data.activeDays[0];
+            }
+          }
+
           populateAdminFilterDropdowns(res.data);
           renderAdminPeriodSubNav();
           renderIntegratedMonitoringUI();
@@ -222,11 +238,22 @@ function renderIntegratedMonitoringUI() {
         if (adminMonitoringCurrentPeriod === 'mingguan' && it.weekNum !== adminMonitoringCurrentWeek) return false;
         // Real-time Search Query
         if (searchQ) {
-          const combined = `${it.item || ''} ${it.pegawai || ''} ${it.ruangan || ''} ${it.unit || ''}`.toLowerCase();
+          const combined = `${it.item || ''} ${it.pegawai || ''} ${it.ruangan || ''} ${it.unit || ''} ${it.shift || ''} ${it.namaShift || ''}`.toLowerCase();
           if (!combined.includes(searchQ)) return false;
         }
         return true;
       });
+
+      const subTitleEl = document.getElementById('adminMonitoringSubtitle');
+      if (subTitleEl) {
+        if (adminMonitoringCurrentPeriod === 'harian') {
+          subTitleEl.innerText = `Menampilkan tugas checklist yang harus dikerjakan pada tanggal ${adminMonitoringCurrentDay} (sesuai shift & jadwal harian)`;
+        } else if (adminMonitoringCurrentPeriod === 'mingguan') {
+          subTitleEl.innerText = `Menampilkan tugas checklist pada Minggu ke-${adminMonitoringCurrentWeek} (sesuai shift & jadwal tugas)`;
+        } else {
+          subTitleEl.innerText = 'Menampilkan seluruh tugas checklist sesuai shift & jadwal operasional';
+        }
+      }
 
       if (countBadge) countBadge.innerText = `${filtered.length} Item Checklist`;
 
@@ -240,7 +267,12 @@ function renderIntegratedMonitoringUI() {
         return `
           <tr class="hover:bg-slate-50 transition border-t border-slate-100">
             <td class="py-3 px-4 font-semibold text-slate-400">${idx + 1}</td>
-            <td class="py-3 px-4 font-semibold text-slate-700">${escapeHtml(it.unit || '-')}</td>
+            <td class="py-3 px-4 font-semibold text-slate-700">
+              <span class="inline-flex items-center gap-1.5 flex-wrap">
+                <span>${escapeHtml(it.unit || '-')}</span>
+                ${it.shift ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${it.shift === 'P' ? 'bg-blue-100 text-blue-700 border border-blue-200' : it.shift === 'S' ? 'bg-amber-100 text-amber-700 border border-amber-200' : it.shift === 'M' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-600'}">Shift ${escapeHtml(it.namaShift || it.shift)}</span>` : ''}
+              </span>
+            </td>
             <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(it.pegawai || '-')}</td>
             <td class="py-3 px-4 text-slate-600">${escapeHtml(it.ruangan || '-')}</td>
             <td class="py-3 px-4 text-slate-800">${escapeHtml(it.item || '-')}</td>

@@ -246,6 +246,40 @@ function calculateMatchScore(cellVal, user) {
   return 0;
 }
 
+/**
+ * Memeriksa apakah suatu tugas checklist keamanan sesuai dengan kode shift tertentu.
+ * Aturan Shift:
+ *   'P' = Pagi (06.00 - 16.00 WIB): Meliputi tugas PAGI (06.00-07.30) dan SELAMA JAM KERJA (07.30-16.00)
+ *   'S' = Sore (15.30 - 23.30 WIB): Meliputi tugas SORE dan MALAM (penutupan kantor/patroli)
+ *   'M' = Malam (23.00 - 07.30 WIB): Meliputi tugas MALAM (23.00-07.30)
+ *   'O' = Libur (Bebas Tugas): Tidak ada tugas
+ */
+function isKeamananTaskForShift(t, kodeShift) {
+  if (!kodeShift || kodeShift === 'O') return false;
+  var combined = (String((t && t.ruangan) || '') + ' ' + String((t && t.kegiatan) || '') + ' ' + String((t && t.item) || '')).toUpperCase();
+
+  if (kodeShift === 'P') {
+    // Shift Pagi: PAGI dan SELAMA JAM KERJA, tidak termasuk MALAM atau SORE
+    if (combined.indexOf('MALAM') >= 0 || combined.indexOf('SORE') >= 0) return false;
+    return combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0 || combined.indexOf('SIANG') >= 0 || combined.indexOf('SHIFT P') >= 0;
+  } else if (kodeShift === 'S') {
+    // Shift Sore: SORE atau MALAM, tidak termasuk PAGI atau JAM KERJA pagi
+    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
+    return combined.indexOf('SORE') >= 0 || combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT S') >= 0;
+  } else if (kodeShift === 'M') {
+    // Shift Malam: MALAM, tidak termasuk PAGI atau JAM KERJA pagi
+    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
+    return combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT M') >= 0;
+  }
+
+  // Jika tugas umum yang tidak spesifik menyebut shift, berlaku untuk semua shift kerja aktif
+  if (combined.indexOf('PAGI') < 0 && combined.indexOf('JAM KERJA') < 0 && combined.indexOf('MALAM') < 0 && combined.indexOf('SORE') < 0 && combined.indexOf('SIANG') < 0) {
+    return true;
+  }
+
+  return false;
+}
+
 // <<<<<<<<<< END MODUL: utils/Utils.gs <<<<<<<<<<
 
 
@@ -1878,12 +1912,15 @@ function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
     const grid = parseJadwalGrid(rawValues, bulan);
     if (!grid || !grid.schedCols) return null;
 
-    const employeeRowIdx = findEmployeeRowInJadwal(rawValues, userObj, 0);
+    let employeeRowIdx = findEmployeeRowInJadwal(rawValues, userObj, 0);
+    if (employeeRowIdx === -1 && displayValues) {
+      employeeRowIdx = findEmployeeRowInJadwal(displayValues, userObj, 0);
+    }
     if (employeeRowIdx === -1) return null;
 
     const SHIFT_LABEL = { 'P': 'Pagi', 'S': 'Sore', 'M': 'Malam', 'O': 'Libur' };
     const empRow = rawValues[employeeRowIdx];
-    const empDispRow = displayValues[employeeRowIdx] || empRow;
+    const empDispRow = (displayValues && displayValues[employeeRowIdx]) ? displayValues[employeeRowIdx] : empRow;
 
     const jadwal = grid.schedCols.map(col => {
       const rawKode = String(empRow[col.colIdx] !== undefined && empRow[col.colIdx] !== null ? empRow[col.colIdx] : (empDispRow[col.colIdx] || '')).trim().toUpperCase();
@@ -1918,10 +1955,19 @@ function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
     const colMapping = {};
     grid.schedCols.forEach(sc => { colMapping[sc.tanggal] = sc.colIdx + 1; });
 
+    let finalTasks = defaultTasks;
+    const empSheet = findEmployeeSheet(ss, userObj.namaSheet, userObj.namaPegawai, userObj.username);
+    if (empSheet) {
+      const parsedTasks = readSheetMonitoring(empSheet, bulan, tahun);
+      if (parsedTasks && parsedTasks.items && parsedTasks.items.length > 0) {
+        finalTasks = parsedTasks.items;
+      }
+    }
+
     return {
       success: true,
       jadwal: jadwal,
-      taskItems: defaultTasks,
+      taskItems: finalTasks,
       colMapping: colMapping,
       sheetRowIndex: employeeRowIdx + 1
     };
@@ -2449,66 +2495,120 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
     targetUsers.forEach(emp => {
       const empUnit = emp.unit || 'Kebersihan';
 
-      const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-      let parsed = null;
-      if (empSheet) {
-        parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-      }
+      if (empUnit === 'Keamanan') {
+        const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
+        if (resK && resK.jadwal && resK.jadwal.length > 0) {
+          // Kumpulkan task items: gunakan sheet pegawai jika tersedia, atau standar defaultTasks
+          let tasksToUse = (resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
+          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
+          if (empSheet) {
+            const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+            if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
+              tasksToUse = parsedSecSheet.items;
+            }
+          }
 
-      if (parsed && parsed.items && parsed.items.length > 0) {
-        parsed.activeDays.forEach(d => activeDaysSet.add(d));
-        parsed.daftarRuangan.forEach(r => allRuanganSet.add(r));
+          resK.jadwal.forEach(j => {
+            const d = j.tanggal;
+            activeDaysSet.add(d);
 
-        parsed.items.forEach(it => {
-          parsed.activeDays.forEach(d => {
-            const st = it.dailyStatus ? it.dailyStatus[d] : null;
-            const isDone = (st === '1' || st === 1 || st === true);
-            aggregatedItems.push({
-              unit: empUnit,
-              pegawai: emp.namaPegawai,
-              namaPegawai: emp.namaPegawai,
-              username: emp.username,
-              ruangan: it.ruangan,
-              item: it.kegiatan,
-              dayNum: d,
-              weekNum: Math.min(5, Math.ceil(d / 7)),
-              isDone: isDone,
-              updatedAt: isDone ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00` : '-'
+            const shiftKode = j.kodeShift || 'O';
+            const namaShift = j.namaShift || (shiftKode === 'P' ? 'Pagi' : shiftKode === 'S' ? 'Sore' : shiftKode === 'M' ? 'Malam' : 'Libur');
+
+            // 1. Jika shift Off / Libur ('O'): pegawai bebas tugas, tidak ada checklist tugas yang muncul pada tanggal ini
+            if (shiftKode === 'O') {
+              return;
+            }
+
+            // 2. Filter checklist terpadu per tanggal HANYA memunculkan tugas yang harus dilakukan pada shift pegawai tersebut
+            const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, shiftKode));
+
+            shiftTasks.forEach(t => {
+              const rName = t.ruangan || ('Shift ' + namaShift);
+              allRuanganSet.add(rName);
+
+              let isDone = false;
+              if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
+                const st = t.dailyStatus[d];
+                isDone = (st === '1' || st === 1 || st === true);
+              } else {
+                // Jika jadwal terisi dan tanggal sudah berjalan/hari ini, tandai telah terlaksana sesuai shift
+                const isPastOrToday = (selectedYear < now.getFullYear()) ||
+                  (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
+                  (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
+                isDone = isPastOrToday;
+              }
+
+              aggregatedItems.push({
+                unit: 'Keamanan',
+                pegawai: emp.namaPegawai,
+                namaPegawai: emp.namaPegawai,
+                username: emp.username,
+                ruangan: rName,
+                item: t.kegiatan,
+                dayNum: d,
+                weekNum: Math.min(5, Math.ceil(d / 7)),
+                shift: shiftKode,
+                namaShift: namaShift,
+                isDone: isDone,
+                updatedAt: isDone
+                  ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} (Shift ${shiftKode})`
+                  : `Shift ${shiftKode} (Belum)`
+              });
             });
           });
-        });
-      } else if (empUnit === 'Keamanan') {
-        const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
-        if (resK && resK.taskItems) {
-          resK.taskItems.forEach(t => {
-            allRuanganSet.add(t.ruangan);
-            if (resK.jadwal) {
-              resK.jadwal.forEach(j => {
-                activeDaysSet.add(j.tanggal);
-                if (j.kodeShift !== 'O') {
-                  const rUpper = String(t.ruangan || '').toUpperCase();
-                  let appliesToShift = false;
-                  if (j.kodeShift === 'P' && (rUpper.includes('PAGI') || rUpper.includes('JAM KERJA'))) appliesToShift = true;
-                  else if ((j.kodeShift === 'S' || j.kodeShift === 'M') && rUpper.includes('MALAM')) appliesToShift = true;
-                  else if (j.kodeShift === 'S' && rUpper.includes('JAM KERJA')) appliesToShift = true;
+        }
+      } else {
+        // Unit Kerja lain (Kebersihan, Pelayanan, dll.)
+        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
+        let parsed = null;
+        if (empSheet) {
+          parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
+        }
 
-                  if (appliesToShift) {
-                    aggregatedItems.push({
-                      unit: 'Keamanan',
-                      pegawai: emp.namaPegawai,
-                      namaPegawai: emp.namaPegawai,
-                      username: emp.username,
-                      ruangan: t.ruangan,
-                      item: t.kegiatan,
-                      dayNum: j.tanggal,
-                      weekNum: Math.min(5, Math.ceil(j.tanggal / 7)),
-                      isDone: true,
-                      updatedAt: `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(j.tanggal).padStart(2, '0')} (Shift ${j.kodeShift})`
-                    });
-                  }
-                }
+        if (parsed && parsed.items && parsed.items.length > 0) {
+          parsed.activeDays.forEach(d => activeDaysSet.add(d));
+
+          parsed.items.forEach(it => {
+            parsed.activeDays.forEach(d => {
+              const st = it.dailyStatus ? it.dailyStatus[d] : null;
+
+              // Cek apakah hari tersebut adalah akhir pekan (Sabtu / Minggu)
+              const dateObj = new Date(selectedYear, selectedMonth - 1, d);
+              const dow = dateObj.getDay(); // 0 = Minggu, 6 = Sabtu
+              const isWeekend = (dow === 0 || dow === 6);
+
+              // Aturan kemunculan tugas yang harus dikerjakan pada hari tersebut:
+              // - Jika status '-' / null / kosong: tugas tidak dijadwalkan pada hari tersebut, jangan munculkan
+              // - Jika akhir pekan (Sabtu/Minggu) dan tidak ditandai selesai (st !== '1'): hari libur operasional, jangan munculkan
+              const isDone = (st === '1' || st === 1 || st === true);
+              const isScheduled = (st === '1' || st === 1 || st === true || st === '0' || st === 0 || st === false);
+
+              if (!isScheduled || st === '-') {
+                return; // Tidak ada kewajiban tugas pada hari dan tanggal ini
+              }
+
+              if (isWeekend && !isDone) {
+                return; // Libur akhir pekan operasional kantor
+              }
+
+              allRuanganSet.add(it.ruangan);
+
+              aggregatedItems.push({
+                unit: empUnit,
+                pegawai: emp.namaPegawai,
+                namaPegawai: emp.namaPegawai,
+                username: emp.username,
+                ruangan: it.ruangan,
+                item: it.kegiatan,
+                dayNum: d,
+                weekNum: Math.min(5, Math.ceil(d / 7)),
+                isDone: isDone,
+                updatedAt: isDone
+                  ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00`
+                  : '-'
               });
-            }
+            });
           });
         }
       }

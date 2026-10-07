@@ -63,7 +63,7 @@
           } else if (action === 'getSupervisorDashboardData') {
             runner.getSupervisorDashboardData(params.token, params.bulan, params.tahun);
           } else if (action === 'getIntegratedMonitoringData') {
-            runner.getIntegratedMonitoringData(params.token, params.unit || 'SEMUA', params.bulan, params.tahun, params.filterRuangan || 'SEMUA', params.filterStatus || 'SEMUA', params.pegawai || 'SEMUA');
+            runner.getIntegratedMonitoringData(params.token, params.bulan, params.tahun, params.filterUnit || params.unit || 'SEMUA', params.filterPegawai || params.pegawai || 'SEMUA', params.filterRuangan || 'SEMUA', params.filterStatus || 'SEMUA');
           } else if (action === 'getIntegratedRekapMonitoring') {
             runner.getIntegratedRekapMonitoring(params.token, params.bulan, params.tahun);
           } else if (action === 'getEmployeeDetailProgress') {

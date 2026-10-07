@@ -327,12 +327,15 @@ function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
     const grid = parseJadwalGrid(rawValues, bulan);
     if (!grid || !grid.schedCols) return null;
 
-    const employeeRowIdx = findEmployeeRowInJadwal(rawValues, userObj, 0);
+    let employeeRowIdx = findEmployeeRowInJadwal(rawValues, userObj, 0);
+    if (employeeRowIdx === -1 && displayValues) {
+      employeeRowIdx = findEmployeeRowInJadwal(displayValues, userObj, 0);
+    }
     if (employeeRowIdx === -1) return null;
 
     const SHIFT_LABEL = { 'P': 'Pagi', 'S': 'Sore', 'M': 'Malam', 'O': 'Libur' };
     const empRow = rawValues[employeeRowIdx];
-    const empDispRow = displayValues[employeeRowIdx] || empRow;
+    const empDispRow = (displayValues && displayValues[employeeRowIdx]) ? displayValues[employeeRowIdx] : empRow;
 
     const jadwal = grid.schedCols.map(col => {
       const rawKode = String(empRow[col.colIdx] !== undefined && empRow[col.colIdx] !== null ? empRow[col.colIdx] : (empDispRow[col.colIdx] || '')).trim().toUpperCase();
@@ -367,10 +370,19 @@ function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
     const colMapping = {};
     grid.schedCols.forEach(sc => { colMapping[sc.tanggal] = sc.colIdx + 1; });
 
+    let finalTasks = defaultTasks;
+    const empSheet = findEmployeeSheet(ss, userObj.namaSheet, userObj.namaPegawai, userObj.username);
+    if (empSheet) {
+      const parsedTasks = readSheetMonitoring(empSheet, bulan, tahun);
+      if (parsedTasks && parsedTasks.items && parsedTasks.items.length > 0) {
+        finalTasks = parsedTasks.items;
+      }
+    }
+
     return {
       success: true,
       jadwal: jadwal,
-      taskItems: defaultTasks,
+      taskItems: finalTasks,
       colMapping: colMapping,
       sheetRowIndex: employeeRowIdx + 1
     };

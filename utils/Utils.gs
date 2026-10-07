@@ -168,3 +168,38 @@ function calculateMatchScore(cellVal, user) {
 
   return 0;
 }
+
+/**
+ * Memeriksa apakah suatu tugas checklist keamanan sesuai dengan kode shift tertentu.
+ * Aturan Shift:
+ *   'P' = Pagi (06.00 - 16.00 WIB): Meliputi tugas PAGI (06.00-07.30) dan SELAMA JAM KERJA (07.30-16.00)
+ *   'S' = Sore (15.30 - 23.30 WIB): Meliputi tugas SORE dan MALAM (penutupan kantor/patroli)
+ *   'M' = Malam (23.00 - 07.30 WIB): Meliputi tugas MALAM (23.00-07.30)
+ *   'O' = Libur (Bebas Tugas): Tidak ada tugas
+ */
+function isKeamananTaskForShift(t, kodeShift) {
+  if (!kodeShift || kodeShift === 'O') return false;
+  var combined = (String((t && t.ruangan) || '') + ' ' + String((t && t.kegiatan) || '') + ' ' + String((t && t.item) || '')).toUpperCase();
+
+  if (kodeShift === 'P') {
+    // Shift Pagi: PAGI dan SELAMA JAM KERJA, tidak termasuk MALAM atau SORE
+    if (combined.indexOf('MALAM') >= 0 || combined.indexOf('SORE') >= 0) return false;
+    return combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0 || combined.indexOf('SIANG') >= 0 || combined.indexOf('SHIFT P') >= 0;
+  } else if (kodeShift === 'S') {
+    // Shift Sore: SORE atau MALAM, tidak termasuk PAGI atau JAM KERJA pagi
+    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
+    return combined.indexOf('SORE') >= 0 || combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT S') >= 0;
+  } else if (kodeShift === 'M') {
+    // Shift Malam: MALAM, tidak termasuk PAGI atau JAM KERJA pagi
+    if (combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0) return false;
+    return combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT M') >= 0;
+  }
+
+  // Jika tugas umum yang tidak spesifik menyebut shift, berlaku untuk semua shift kerja aktif
+  if (combined.indexOf('PAGI') < 0 && combined.indexOf('JAM KERJA') < 0 && combined.indexOf('MALAM') < 0 && combined.indexOf('SORE') < 0 && combined.indexOf('SIANG') < 0) {
+    return true;
+  }
+
+  return false;
+}
+
