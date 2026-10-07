@@ -74,10 +74,6 @@
             runner.updateSecurityShift(params.token, params.nama, params.tanggal, params.shiftBaru, params.alasan, params.bulan, params.tahun);
           } else if (action === 'swapSecurityShift') {
             runner.swapSecurityShift(params.token, params.nama1, params.tanggal1, params.nama2, params.tanggal2, params.alasan, params.bulan, params.tahun);
-          } else if (action === 'getInspeksiMutuData') {
-            runner.getInspeksiMutuData(params.token, params.unit || 'SEMUA', params.bulan, params.tahun);
-          } else if (action === 'saveInspeksiMutu') {
-            runner.saveInspeksiMutu(params.token, params.data);
           } else if (typeof runner.handleApiRequest === 'function') {
             runner.handleApiRequest(action, params);
           } else {
@@ -318,14 +314,14 @@ function applySidebarCollapseState() {
 
 function renderDynamicMenu(jenis) {
       // Sembunyikan semua menu dinamis terlebih dahulu
-      ['nav-dashboard', 'nav-kebersihan', 'nav-pelayanan', 'nav-keamanan', 'nav-dashboard-supervisor', 'nav-monitoring-admin', 'nav-shift-security', 'nav-inspeksi-mutu'].forEach(id => {
+      ['nav-dashboard', 'nav-kebersihan', 'nav-pelayanan', 'nav-keamanan', 'nav-dashboard-supervisor', 'nav-monitoring-admin', 'nav-shift-security'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
 
       if (isManagerRole(currentUser)) {
         // Tampilkan Menu Khusus Admin & Supervisor
-        ['nav-dashboard-supervisor', 'nav-rekap', 'nav-monitoring-admin', 'nav-shift-security', 'nav-inspeksi-mutu', 'nav-profil'].forEach(id => {
+        ['nav-dashboard-supervisor', 'nav-rekap', 'nav-monitoring-admin', 'nav-shift-security', 'nav-profil'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.classList.remove('hidden');
         });
@@ -361,7 +357,7 @@ function navigateTo(viewName) {
       const navBtn = document.getElementById('nav-' + viewName);
       if (navBtn) navBtn.classList.add('active');
 
-      ['view-dashboard-supervisor','view-dashboard','view-monitoring-admin','view-monitoring','view-rekap','view-shift-security','view-inspeksi-mutu','view-profil','view-keamanan'].forEach(id => {
+      ['view-dashboard-supervisor','view-dashboard','view-monitoring-admin','view-monitoring','view-rekap','view-shift-security','view-profil','view-keamanan'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
@@ -374,7 +370,7 @@ function navigateTo(viewName) {
 
       if (viewName === 'dashboard-supervisor') {
         document.getElementById('topbarTitle').innerText   = 'Dashboard Supervisor';
-        document.getElementById('topbarSubtitle').innerText = 'Pengawasan manajerial operasional & mutu layanan';
+        document.getElementById('topbarSubtitle').innerText = 'Pengawasan manajerial operasional dan checklist';
         document.getElementById('view-dashboard-supervisor')?.classList.remove('hidden');
         loadSupervisorDashboardData();
       } else if (viewName === 'monitoring-admin') {
@@ -387,11 +383,6 @@ function navigateTo(viewName) {
         document.getElementById('topbarSubtitle').innerText = 'Matriks jadwal piket dan pertukaran shift satpam';
         document.getElementById('view-shift-security')?.classList.remove('hidden');
         loadJadwalPiketSecurityMatrix();
-      } else if (viewName === 'inspeksi-mutu') {
-        document.getElementById('topbarTitle').innerText   = 'Inspeksi Mutu Layanan';
-        document.getElementById('topbarSubtitle').innerText = 'Audit berkala kepatuhan standar operasional';
-        document.getElementById('view-inspeksi-mutu')?.classList.remove('hidden');
-        loadInspeksiMutuData();
       } else if (viewName === 'dashboard') {
         document.getElementById('topbarTitle').innerText   = 'Dashboard Ringkasan';
         document.getElementById('topbarSubtitle').innerText = 'Ringkasan data checklist aktif';
@@ -446,8 +437,6 @@ function onGlobalDateChange() {
         loadIntegratedMonitoringData();
       } else if (activeView === 'shift-security') {
         loadJadwalPiketSecurityMatrix();
-      } else if (activeView === 'inspeksi-mutu') {
-        loadInspeksiMutuData();
       } else if (activeView === 'dashboard') {
         loadDashboardData();
       } else if (activeView === 'kebersihan' || activeView === 'pelayanan') {
@@ -470,8 +459,6 @@ function refreshCurrentPage() {
         loadIntegratedMonitoringData();
       } else if (activeView === 'shift-security') {
         loadJadwalPiketSecurityMatrix();
-      } else if (activeView === 'inspeksi-mutu') {
-        loadInspeksiMutuData();
       } else if (activeView === 'dashboard') {
         loadDashboardData();
       } else if (activeView === 'kebersihan' || activeView === 'pelayanan') {
@@ -550,11 +537,9 @@ function escapeHtml(text) {
     let cachedSupervisorPegawai         = [];
     let cachedIntegratedMonitoringData  = null;
     let cachedSecurityMatrix            = null;
-    let cachedInspeksiData              = [];
     let adminMonitoringPeriod           = 'harian';
     let adminSelectedDayNum             = new Date().getDate();
     let adminSelectedWeekNum            = 1;
-    let inspRatings                     = { 1: 5, 2: 5, 3: 5, 4: 5, 5: 5 };
 
 function isManagerRole(user) {
       if (!user) return false;
@@ -593,6 +578,5 @@ function closeModal(modalId) {
       dashboard: {},
       monitoring: {},
       rekap: {},
-      security: {},
-      inspeksi: {}
+      security: {}
     };

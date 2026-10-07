@@ -212,15 +212,6 @@ function getSupervisorDashboardData(token, bulan, tahun) {
     });
 
     const persenGlobal = (totalGlobalTarget > 0 && !isNaN(totalGlobalTarget)) ? Math.round((totalGlobalSelesai / totalGlobalTarget) * 100) : 0;
-    const inspeksiData = getInspeksiMutuData(token, selectedMonth, selectedYear);
-
-    let avgSkor = 5.0;
-    let totInsp = 0;
-    if (inspeksiData && inspeksiData.success && inspeksiData.data && inspeksiData.data.length > 0) {
-      totInsp = inspeksiData.data.length;
-      const sum = inspeksiData.data.reduce((acc, curr) => acc + Number(curr.skorRataRata || 0), 0);
-      avgSkor = Number((sum / totInsp).toFixed(1));
-    }
 
     const resultPayload = {
       bulan: selectedMonth,
@@ -234,12 +225,7 @@ function getSupervisorDashboardData(token, bulan, tahun) {
       unitSummary: unitSummary,
       shiftSecurity: shiftSecuritySummary,
       rekapPegawai: rekapPegawaiList,
-      tindakLanjut: dataTindakLanjut,
-      inspeksiMutuSummary: {
-        totalInspeksi: totInsp,
-        skorRataRata: avgSkor,
-        kategori: avgSkor >= 4.5 ? 'Sangat Baik' : (avgSkor >= 3.5 ? 'Baik' : 'Perlu Perbaikan')
-      }
+      tindakLanjut: dataTindakLanjut
     };
 
     putScriptCacheData(cacheKey, resultPayload, 60);

@@ -9,8 +9,7 @@ function clearManagerClientCache() {
         dashboard: {},
         monitoring: {},
         rekap: {},
-        security: {},
-        inspeksi: {}
+        security: {}
       };
     }
 
@@ -58,28 +57,15 @@ function renderSupervisorDashboardUI(data) {
       const kpiProgBar = document.getElementById('supKpiProgressChecklist');
       if (kpiProgBar) kpiProgBar.style.width = `${Math.min(100, Math.max(0, safePct))}%`;
 
-      // 2. KPI Card 2: Rata-rata Skor Mutu
-      const inspSum = data.inspeksiMutuSummary || {};
-      const avgSkor = Number(inspSum.skorRataRata || 0);
+      // 2. KPI Card 2: Tugas Selesai
       const kpiSkorEl = document.getElementById('supKpiSkorMutu');
-      if (kpiSkorEl) kpiSkorEl.innerText = `${avgSkor.toFixed(1)} / 5.0`;
+      if (kpiSkorEl) kpiSkorEl.innerText = `${done.toLocaleString('id-ID')} Tugas`;
 
       const kpiMutuDetailEl = document.getElementById('supKpiDetailMutu');
-      if (kpiMutuDetailEl) kpiMutuDetailEl.innerText = inspSum.kategori ? `Standar: ${inspSum.kategori}` : 'Audit Standar Mutu';
+      if (kpiMutuDetailEl) kpiMutuDetailEl.innerText = `${safePct}% dari ${total.toLocaleString('id-ID')} target tugas`;
 
-      const kpiStarsEl = document.getElementById('supKpiStars');
-      if (kpiStarsEl) {
-        const roundedStars = Math.round(avgSkor);
-        let starHtml = '';
-        for (let s = 1; s <= 5; s++) {
-          if (s <= roundedStars) {
-            starHtml += '<i class="fa-solid fa-star"></i>';
-          } else {
-            starHtml += '<i class="fa-regular fa-star text-slate-300"></i>';
-          }
-        }
-        kpiStarsEl.innerHTML = starHtml;
-      }
+      const kpiBadgeEl = document.getElementById('supKpiBadgeSelesai');
+      if (kpiBadgeEl) kpiBadgeEl.innerText = `${safePct}% Terlaksana (${done} Selesai)`;
 
       // 3. KPI Card 3: Satpam Bertugas Hari Ini
       const shiftSec = data.shiftSecurity || {};

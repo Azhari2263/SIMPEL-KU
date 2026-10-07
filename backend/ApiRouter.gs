@@ -109,10 +109,6 @@ function handleApiRequest(params) {
         params.bulan,
         params.tahun
       );
-    } else if (action === 'getInspeksiMutuData') {
-      result = getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit || params.filterUnit);
-    } else if (action === 'saveInspeksiMutu') {
-      result = saveInspeksiMutu(params.token, params.payload || params.inspeksiPayload || params);
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {
