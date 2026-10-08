@@ -5,11 +5,11 @@
  * ========================================================================
  */
 
-const CACHE_NAME = 'simpelku-pwa-v3.1';
+const CACHE_NAME = 'simpelku-pwa-v3.2';
 const STATIC_ASSETS = [
   './',
   'manifest.json',
-  'img/logo_BPS.png',
+  'img/logo_simpelku.png',
   'img/icon-192.png',
   'img/icon-512.png',
   'img/icon-maskable.png',

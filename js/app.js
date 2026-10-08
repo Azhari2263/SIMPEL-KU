@@ -1087,7 +1087,7 @@ function openViewBuktiModal(data) {
     } else if (data.fileUrl) {
       imgEl.src = data.fileUrl;
     } else {
-      imgEl.src = 'img/logo_BPS.png';
+      imgEl.src = 'img/logo_simpelku.png';
     }
   }
 

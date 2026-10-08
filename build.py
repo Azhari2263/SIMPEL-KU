@@ -204,9 +204,15 @@ def build_frontend():
     doc.append("</body>")
     doc.append("</html>")
     master_html = "\n".join(doc)
-    b64_path = os.path.join(BASE_DIR, "img", "logo_bps_b64.txt")
-    if os.path.exists(b64_path):
-        with open(b64_path, "r", encoding="utf-8") as f:
+    simpelku_b64_path = os.path.join(BASE_DIR, "img", "logo_simpelku_b64.txt")
+    if os.path.exists(simpelku_b64_path):
+        with open(simpelku_b64_path, "r", encoding="utf-8") as f:
+            simpelku_b64 = f.read().strip()
+        master_html = master_html.replace('src="img/logo_simpelku.png"', f'src="data:image/png;base64,{simpelku_b64}"')
+
+    bps_b64_path = os.path.join(BASE_DIR, "img", "logo_bps_b64.txt")
+    if os.path.exists(bps_b64_path):
+        with open(bps_b64_path, "r", encoding="utf-8") as f:
             bps_b64 = f.read().strip()
         master_html = master_html.replace('src="img/logo_BPS.png"', f'src="data:image/png;base64,{bps_b64}"')
     out_path = os.path.join(BASE_DIR, "index.html")
