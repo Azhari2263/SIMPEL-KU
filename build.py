@@ -216,6 +216,7 @@ const sandbox = {
   CacheService: {},
   PropertiesService: {},
   DriveApp: {},
+  Session: { getEffectiveUser: () => ({ getEmail: () => "" }), getActiveUser: () => ({ getEmail: () => "" }) },
   Utilities: {},
   Logger: console,
   console: console

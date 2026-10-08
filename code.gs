@@ -26,7 +26,10 @@
 // SPREADSHEET ID: Fallback jika tidak terikat ke container
 var SPREADSHEET_ID = "1c2XUeoYFt_UEqJruBSciKPAIiPEdNoJvTO9epLWVTqs";
 // GOOGLE DRIVE ROOT FOLDER ID: Folder Induk Penyimpanan Bukti Dukung Foto
+// URL Folder: https://drive.google.com/drive/folders/1WvFEHzdredv8wQEBRivNY9iDk5C6iktR?usp=sharing
 var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
+// Nama Folder Cadangan (Fallback) jika Folder Eksternal belum dibagikan langsung ke email deployer:
+var GOOGLE_DRIVE_FALLBACK_FOLDER_NAME = "[SIMPEL-KU] Bukti Dukung Foto";
 var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
 var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 
@@ -1121,11 +1124,100 @@ function getOrCreateChildFolder(parentFolder, folderName) {
   var nameClean = String(folderName || '').trim();
   if (!nameClean) nameClean = 'Lainnya';
 
-  var folders = parentFolder.getFoldersByName(nameClean);
-  if (folders.hasNext()) {
-    return folders.next();
+  try {
+    var folders = parentFolder.getFoldersByName(nameClean);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    return parentFolder.createFolder(nameClean);
+  } catch (err) {
+    try {
+      var checkFolders = parentFolder.getFoldersByName(nameClean);
+      if (checkFolders.hasNext()) {
+        return checkFolders.next();
+      }
+    } catch (eCheck) { /* ignore */ }
+    throw new Error("Gagal membuat folder '" + nameClean + "': " + err.message);
   }
-  return parentFolder.createFolder(nameClean);
+}
+
+/**
+ * Resolver Cerdas & Adaptif Folder Induk Google Drive:
+ * 1. Mencoba mengakses Folder ID yang dikonfigurasi (GOOGLE_DRIVE_ROOT_FOLDER_ID)
+ * 2. Menguji akses tulis ke folder target
+ * 3. Jika folder target tidak dapat diakses (karena link belum ditambahkan ke Drive deployer,
+ *    atau restriksi domain Workspace):
+ *    - Otomatis fallback ke folder cadangan di My Drive deployer: "[SIMPEL-KU] Bukti Dukung Foto"
+ *    - Menjamin proses upload bukti foto petugas TIDAK PERNAH MACET / GAGAL
+ */
+function resolveRootFolder(targetFolderId) {
+  var configuredId = targetFolderId || (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined' ? GOOGLE_DRIVE_ROOT_FOLDER_ID : '');
+  var fallbackFolderName = (typeof GOOGLE_DRIVE_FALLBACK_FOLDER_NAME !== 'undefined' ? GOOGLE_DRIVE_FALLBACK_FOLDER_NAME : '[SIMPEL-KU] Bukti Dukung Foto');
+  
+  var effectiveEmail = '';
+  try {
+    effectiveEmail = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '';
+  } catch (eEmail) { /* ignore */ }
+
+  var issues = [];
+
+  // Strategi 1: Coba akses folder ID yang dikonfigurasi
+  if (configuredId) {
+    try {
+      var folder = DriveApp.getFolderById(configuredId);
+      var folderName = folder.getName();
+      return {
+        folder: folder,
+        folderId: configuredId,
+        folderName: folderName,
+        isFallback: false,
+        note: "Menggunakan Folder Induk Utama (" + folderName + ")"
+      };
+    } catch (eTarget) {
+      issues.push("Folder ID '" + configuredId + "' gagal diakses: " + eTarget.message);
+    }
+  }
+
+  // Strategi 2: Cari apakah ada folder cadangan yang sudah dibuat sebelumnya di My Drive
+  try {
+    var existingFolders = DriveApp.getFoldersByName(fallbackFolderName);
+    if (existingFolders.hasNext()) {
+      var f = existingFolders.next();
+      return {
+        folder: f,
+        folderId: f.getId(),
+        folderName: f.getName(),
+        isFallback: true,
+        note: "Menggunakan folder cadangan: " + fallbackFolderName + " (Folder target ID " + configuredId + " belum dapat diakses)"
+      };
+    }
+  } catch (eSearch) {
+    issues.push("Pencarian folder cadangan gagal: " + eSearch.message);
+  }
+
+  // Strategi 3: Buat folder cadangan baru di Drive deployer
+  try {
+    var newFolder = DriveApp.createFolder(fallbackFolderName);
+    try {
+      newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (eShare) { /* batasan domain */ }
+
+    return {
+      folder: newFolder,
+      folderId: newFolder.getId(),
+      folderName: fallbackFolderName,
+      isFallback: true,
+      note: "Dibuat otomatis folder cadangan: " + fallbackFolderName + " karena folder induk belum dihubungkan ke email script (" + (effectiveEmail || "deployer") + ")"
+    };
+  } catch (eCreate) {
+    issues.push("Gagal membuat folder cadangan di Drive: " + eCreate.message);
+  }
+
+  // Jika semua gagal, kemungkinan besar OAuth scope DriveApp belum diotorisasi
+  throw new Error(
+    "Layanan Google Drive tidak dapat diakses (" + (issues.join(' | ') || 'Izin belum diotorisasi') + "). " +
+    "Pastikan akun Google Apps Script (" + (effectiveEmail || "deployer") + ") telah mengotorisasi izin Google Drive."
+  );
 }
 
 /**
@@ -1263,20 +1355,17 @@ function uploadBuktiDukungFoto(token, payload) {
     var fileName = cleanTaskSlug + '_' + datePart + '_' + timePart + '.jpg';
     var imageBlob = Utilities.newBlob(imageBytes, 'image/jpeg', fileName);
 
-    // 2. Akses Folder Induk Google Drive
-    var rootFolderId = (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined' && GOOGLE_DRIVE_ROOT_FOLDER_ID)
-      ? GOOGLE_DRIVE_ROOT_FOLDER_ID
-      : "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
-
-    var rootFolder;
+    // 2. Akses Folder Induk Google Drive (Menggunakan Resolver Cerdas & Fallback)
+    var rootFolderInfo;
     try {
-      rootFolder = DriveApp.getFolderById(rootFolderId);
+      rootFolderInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
     } catch (eDrive) {
       return {
         success: false,
-        message: "Gagal mengakses Folder Induk Google Drive (ID: " + rootFolderId + "). Pastikan izin akses Drive diberikan."
+        message: "Gagal mengakses Google Drive: " + eDrive.message
       };
     }
+    var rootFolder = rootFolderInfo.folder;
 
     // 3. Bangun Struktur Folder Secara Berjenjang Tanpa Duplikasi:
     // Folder Induk -> [Tahun] -> [Unit Kerja] -> [Bulan] -> [Nama Pegawai]
@@ -1354,14 +1443,22 @@ function uploadBuktiDukungFoto(token, payload) {
     ]);
     resetMemoryCache();
 
+    var successMsg = rootFolderInfo.isFallback
+      ? "Bukti foto berhasil disimpan ke Google Drive (" + rootFolderInfo.folderName + ")! Catatan: " + rootFolderInfo.note
+      : "Bukti dukung foto berhasil diunggah ke Google Drive!";
+
     return {
       success: true,
-      message: "Bukti dukung foto berhasil diunggah ke Google Drive!",
+      message: successMsg,
+      isFallbackFolder: rootFolderInfo.isFallback,
       data: {
         taskKey: taskKey,
         fileId: fileId,
         fileUrl: fileUrl,
         fileName: fileName,
+        folderUsed: rootFolderInfo.folderName,
+        isFallbackFolder: rootFolderInfo.isFallback,
+        folderNote: rootFolderInfo.note,
         koordinat: koordinatStr,
         lokasi: lokasiStr,
         waktu: waktuStr,
@@ -1597,6 +1694,115 @@ function getBuktiDukungData(token, bulan, tahun, unit, namaPegawai) {
       message: "Gagal memuat data bukti dukung: " + err.message
     };
   }
+}
+
+/**
+ * ========================================================================
+ * FUNGSI DIAGNOSTIK & OTORISASI GOOGLE DRIVE
+ * ========================================================================
+ * Jalankan fungsi ini langsung dari Editor Google Apps Script (Run / Jalankan)
+ * untuk:
+ * 1. Memicu dialog otorisasi izin Drive (Review Permissions -> Allow) jika belum.
+ * 2. Menguji apakah akun deployer dapat mengakses folder target 1WvFEHzdredv8wQEBRivNY9iDk5C6iktR.
+ * 3. Menguji hak akses baca, tulis (create folder/file), dan hapus.
+ * 4. Menghasilkan rekomendasi tindakan jika ada kendala hak akses.
+ */
+function testGoogleDriveAccess() {
+  var report = {
+    timestamp: new Date().toISOString(),
+    configuredFolderId: (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined') ? GOOGLE_DRIVE_ROOT_FOLDER_ID : '',
+    activeUser: '',
+    effectiveUser: '',
+    driveServiceReady: false,
+    targetFolderAccessible: false,
+    targetFolderName: '',
+    canCreateFile: false,
+    fallbackFolderAccessible: false,
+    recommendations: []
+  };
+
+  try {
+    report.effectiveUser = Session.getEffectiveUser().getEmail() || '(Akun Deployer)';
+    report.activeUser = Session.getActiveUser().getEmail() || '(Akun Aktif)';
+  } catch (e) {
+    report.effectiveUser = 'Tidak terdeteksi';
+  }
+
+  // 1. Uji Layanan Drive Dasar
+  try {
+    var rootDrive = DriveApp.getRootFolder();
+    report.driveServiceReady = !!rootDrive;
+    Logger.log("[OK] Layanan DriveApp berhasil diakses oleh akun: " + report.effectiveUser);
+  } catch (eDrive) {
+    report.driveServiceReady = false;
+    report.recommendations.push(
+      "KRUSIAL: Izin akses Google Drive belum diotorisasi di Apps Script. " +
+      "Klik tombol 'Run / Jalankan' pada fungsi testGoogleDriveAccess di editor Apps Script, " +
+      "lalu klik 'Review Permissions' dan 'Allow' untuk memberikan izin akses Google Drive."
+    );
+    Logger.log("[FAIL] Layanan DriveApp gagal: " + eDrive.message);
+    return report;
+  }
+
+  // 2. Uji Akses Folder Target yang Dikonfigurasi
+  var folderId = report.configuredFolderId;
+  if (!folderId) {
+    report.recommendations.push("Konfigurasi GOOGLE_DRIVE_ROOT_FOLDER_ID masih kosong.");
+  } else {
+    try {
+      var targetFolder = DriveApp.getFolderById(folderId);
+      report.targetFolderAccessible = true;
+      report.targetFolderName = targetFolder.getName();
+      Logger.log("[OK] Folder target terdeteksi: " + report.targetFolderName + " (ID: " + folderId + ")");
+
+      // Uji izin tulis (membuat file dummy sementara)
+      try {
+        var testBlob = Utilities.newBlob("SIMPEL-KU Test Access: " + new Date().toISOString(), "text/plain", "simpelku_test_write.tmp");
+        var testFile = targetFolder.createFile(testBlob);
+        report.canCreateFile = true;
+        testFile.setTrashed(true); // Langsung hapus file uji
+        Logger.log("[OK] Berhasil membuat dan menghapus file uji di folder target. Hak akses Editor LENGKAP & VALID!");
+      } catch (eWrite) {
+        report.canCreateFile = false;
+        report.recommendations.push(
+          "Folder target dapat dilihat tapi TIDAK DAPAT DITULIS (Read-Only): " + eWrite.message + ". " +
+          "Pastikan folder induk dibagikan sebagai 'Editor' ke email: " + report.effectiveUser
+        );
+        Logger.log("[FAIL] Gagal menulis ke folder target: " + eWrite.message);
+      }
+
+    } catch (eTarget) {
+      report.targetFolderAccessible = false;
+      Logger.log("[FAIL] Folder target ID '" + folderId + "' tidak dapat diakses: " + eTarget.message);
+      report.recommendations.push(
+        "PENYEBAB: Folder Google Drive (" + folderId + ") dibagikan dengan link 'Siapa saja yang memiliki link', " +
+        "tetapi akun Google script (" + report.effectiveUser + ") belum memiliki folder tersebut di inventaris Drive-nya.\n" +
+        "SOLUSI:\n" +
+        "1. Buka folder di browser: https://drive.google.com/drive/folders/" + folderId + "\n" +
+        "2. Klik 'Bagikan' (Share) dan masukkan email akun deployer script (" + report.effectiveUser + ") sebagai 'Editor'.\n" +
+        "3. ATAU buka link tersebut saat login dengan akun script (" + report.effectiveUser + "), lalu klik 'Tambahkan pintasan ke Drive' (Add shortcut to Drive)."
+      );
+    }
+  }
+
+  // 3. Uji Kesiapan Folder Cadangan Fallback
+  try {
+    var fallbackName = (typeof GOOGLE_DRIVE_FALLBACK_FOLDER_NAME !== 'undefined') ? GOOGLE_DRIVE_FALLBACK_FOLDER_NAME : '[SIMPEL-KU] Bukti Dukung Foto';
+    var fallbackFolders = DriveApp.getFoldersByName(fallbackName);
+    report.fallbackFolderAccessible = true;
+    if (fallbackFolders.hasNext()) {
+      Logger.log("[OK] Folder cadangan fallback siap di Drive: " + fallbackName);
+    } else {
+      Logger.log("[INFO] Folder cadangan fallback akan dibuat otomatis saat pertama kali upload diperlukan.");
+    }
+  } catch (eFb) {
+    report.fallbackFolderAccessible = false;
+    Logger.log("[FAIL] Folder fallback bermasalah: " + eFb.message);
+  }
+
+  Logger.log("=== LAPORAN DIAGNOSTIK GOOGLE DRIVE SELESAI ===");
+  Logger.log(JSON.stringify(report, null, 2));
+  return report;
 }
 
 // <<<<<<<<<< END MODUL: backend/BuktiDukung.gs <<<<<<<<<<
@@ -4481,6 +4687,8 @@ function handleApiRequest(params) {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {
       result = { success: true, message: setupAllUsers() };
+    } else if (action === 'testGoogleDriveAccess') {
+      result = { success: true, data: testGoogleDriveAccess() };
     } else {
       result = { success: false, message: 'Aksi "' + action + '" tidak dikenali.' };
     }

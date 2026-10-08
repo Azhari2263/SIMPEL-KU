@@ -302,6 +302,16 @@ Sistem SIMPEL-KU telah dikonfigurasi dengan akun multi-role berikut:
 #### Q: Ke mana data inspeksi mutu disimpan?
 > **A:** Data hasil penilaian inspeksi mutu langsung disimpan secara permanen ke sheet **`InspeksiMutu`** pada spreadsheet SIMPEL-KU lengkap dengan ID laporan, tanggal, unit, skor, catatan temuan, rekomendasi, dan nama pemeriksa (*inspektor*).
 
+#### Q: Mengapa foto bukti dukung tidak bisa diunggah ke Google Drive padahal folder induk sudah diberi akses editor untuk semua orang via link?
+> **A:** Di Google Drive dan Google Apps Script, pengaturan *"Siapa saja yang memiliki link: Editor"* hanya berlaku untuk interaksi manual di browser web. Saat skrip Google Apps Script berjalan di latar belakang (server-side via `DriveApp`), Google Drive membatasi akses programmatic hanya ke file/folder yang sudah ada dalam inventaris akun deployer skrip.
+> 
+> **Langkah Penyelesaian (Pilih salah satu):**
+> 1. **Bagikan Langsung ke Email Deployer (Paling Direkomendasikan):** Buka folder Google Drive [1WvFEHzdredv8wQEBRivNY9iDk5C6iktR](https://drive.google.com/drive/folders/1WvFEHzdredv8wQEBRivNY9iDk5C6iktR?usp=sharing), klik tombol **Bagikan** (*Share*), dan ketik alamat email akun Google yang digunakan untuk mendeploy Apps Script sebagai **Editor**.
+> 2. **Tambahkan Pintasan ke Drive Saya:** Buka link folder tersebut di browser saat sedang login dengan akun Google pembuat skrip, lalu klik menu titik tiga atau ikon **Tambahkan pintasan ke Drive** (*Add shortcut to Drive*).
+> 3. **Otorisasi Izin DriveApp di Apps Script:** Buka editor Google Apps Script, pilih fungsi `testGoogleDriveAccess` pada dropdown fungsi di atas, lalu klik tombol **Jalankan** (*Run*). Jika muncul dialog perizinan (*Authorization Required*), klik **Tinjau Izin (Review Permissions)** lalu pilih **Izinkan (Allow)**.
+> 
+> *Catatan: Sistem SIMPEL-KU kini telah dilengkapi fitur **Auto-Fallback Cerdas**. Jika folder induk eksternal belum dihubungkan, sistem otomatis menyimpan foto ke folder cadangan `[SIMPEL-KU] Bukti Dukung Foto` di Drive deployer sehingga proses upload petugas di lapangan **tidak akan pernah gagal atau macet**!*
+
 ---
 
 ## 13. Struktur Kode Modular & Panduan Pengembang (Developer Guide)

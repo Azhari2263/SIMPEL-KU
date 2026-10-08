@@ -132,6 +132,8 @@ function handleApiRequest(params) {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {
       result = { success: true, message: setupAllUsers() };
+    } else if (action === 'testGoogleDriveAccess') {
+      result = { success: true, data: testGoogleDriveAccess() };
     } else {
       result = { success: false, message: 'Aksi "' + action + '" tidak dikenali.' };
     }

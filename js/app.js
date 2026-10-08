@@ -95,6 +95,8 @@
             runner.getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
           } else if (action === 'saveInspeksiMutu') {
             runner.saveInspeksiMutu(params.token, params);
+          } else if (action === 'testGoogleDriveAccess') {
+            runner.testGoogleDriveAccess();
           } else if (typeof runner[action] === 'function') {
             runner[action](params);
           } else if (typeof runner.handleApiRequest === 'function') {
@@ -1026,7 +1028,8 @@ async function submitUploadBuktiFoto() {
     });
 
     if (res && res.success) {
-      showToast(res.message || 'Bukti foto berhasil disimpan ke Google Drive!', 'success');
+      const isFallback = res.isFallbackFolder || (res.data && res.data.isFallbackFolder);
+      showToast(res.message || 'Bukti foto berhasil disimpan ke Google Drive!', isFallback ? 'info' : 'success');
       closeModalUploadBukti();
 
       if (typeof currentUploadTaskPayload.onSuccess === 'function') {

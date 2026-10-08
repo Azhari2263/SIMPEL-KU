@@ -9,7 +9,10 @@
 // SPREADSHEET ID: Fallback jika tidak terikat ke container
 var SPREADSHEET_ID = "1c2XUeoYFt_UEqJruBSciKPAIiPEdNoJvTO9epLWVTqs";
 // GOOGLE DRIVE ROOT FOLDER ID: Folder Induk Penyimpanan Bukti Dukung Foto
+// URL Folder: https://drive.google.com/drive/folders/1WvFEHzdredv8wQEBRivNY9iDk5C6iktR?usp=sharing
 var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
+// Nama Folder Cadangan (Fallback) jika Folder Eksternal belum dibagikan langsung ke email deployer:
+var GOOGLE_DRIVE_FALLBACK_FOLDER_NAME = "[SIMPEL-KU] Bukti Dukung Foto";
 var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
 var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 
