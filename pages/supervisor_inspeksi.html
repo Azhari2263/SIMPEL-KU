@@ -20,8 +20,8 @@
               </div>
             </div>
 
-            <!-- Filter Unit Inspeksi -->
-            <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <!-- Filter Unit Inspeksi (Scrollable di Mobile) -->
+            <div class="flex items-center gap-2 pb-3 border-b border-slate-100 overflow-x-auto no-scrollbar">
               <button onclick="filterInspeksiUnit('SEMUA')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white" data-unit="SEMUA">Semua Unit</button>
               <button onclick="filterInspeksiUnit('Kebersihan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Kebersihan">Kebersihan</button>
               <button onclick="filterInspeksiUnit('Pelayanan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Pelayanan">Pelayanan</button>

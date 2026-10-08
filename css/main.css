@@ -151,3 +151,72 @@
     .table-modern tbody tr:hover {
       background-color: #f8fafc;
     }
+
+/* ========================================================
+   PWA & MOBILE RESPONSIVE OPTIMIZATIONS (ANDROID & IOS)
+   ======================================================== */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+/* Standalone PWA Notch & Dynamic Island Adjustment */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .glass-header {
+    padding-top: max(0.5rem, var(--sat));
+    height: calc(4rem + var(--sat));
+  }
+}
+
+/* Touch-friendly scrolling for tables and slider areas */
+.overflow-x-auto, .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile Clean UI Card & Modal Tweaks */
+@media (max-width: 640px) {
+  .modern-card {
+    border-radius: 0.875rem;
+  }
+  
+  .modal-dialog {
+    max-height: calc(100vh - 2rem - var(--sat) - var(--sab));
+  }
+
+  button, a {
+    touch-action: manipulation;
+  }
+}
+
+/* PWA Install Button Pulsing Glow Animation */
+@keyframes pwa-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+  }
+}
+
+.pwa-install-badge {
+  animation: pwa-pulse 2.5s infinite ease-in-out;
+}
+

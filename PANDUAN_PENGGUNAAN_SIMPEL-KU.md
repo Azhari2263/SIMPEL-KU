@@ -377,7 +377,43 @@ python build.py
 Skrip `build.py` akan:
 1. Menggabungkan seluruh modul backend menjadi `code.gs`.
 2. Menggabungkan seluruh komponen UI, view halaman, styling CSS, dan modul JS menjadi `index.html`.
-3. Menjalankan validasi sintaks otomatis di Node.js VM untuk memastikan kode bebas dari error sintaks sebelum diunggah ke Google Apps Script.
+3. Menjalankan validasi sintaks otomatis di Node.js VM untuk memastikan kode bebas dari error sintaks sebelum diunggah ke Google Apps Script atau Vercel.
+
+---
+
+## 14. Panduan Instalasi di Android & iOS (PWA)
+
+Aplikasi SIMPEL-KU telah mendukung standar **Progressive Web App (PWA)** sehingga dapat diinstal langsung sebagai aplikasi native di smartphone Android maupun iOS (iPhone/iPad):
+
+### 📱 Cara Instal di Android (Google Chrome / Samsung Internet / Edge)
+1. Buka tautan SIMPEL-KU di browser ponsel Anda.
+2. Ketuk tombol **"Instal Aplikasi"** yang muncul di bilah atas (Header) atau menu samping (Sidebar).
+3. Atau ketuk menu titik tiga (⋮) di browser Chrome, lalu pilih **"Instal aplikasi"** atau **"Tambahkan ke Layar Utama"** (*Add to Home screen*).
+4. Konfirmasi dengan menekan **Instal**. Ikon SIMPEL-KU akan terpasang di Layar Beranda dan App Drawer Anda dengan pengalaman layar penuh (*fullscreen*).
+
+### 🍏 Cara Instal di iOS (iPhone / iPad - Safari)
+1. Buka tautan SIMPEL-KU menggunakan browser **Safari**.
+2. Ketuk tombol **Bagikan** (*Share* icon: kotak dengan panah ke atas <i class="fa-solid fa-arrow-up-from-bracket"></i>) di bilah bawah layar.
+3. Gulir ke bawah dan ketuk opsi **"Tambahkan ke Layar Utama"** (*Add to Home Screen* <i class="fa-regular fa-square-plus"></i>).
+4. Ketuk **"Tambah"** (*Add*) di pojok kanan atas.
+5. Aplikasi SIMPEL-KU siap dibuka langsung dari Home Screen layaknya aplikasi App Store!
+
+---
+
+## 15. Panduan Deployment di Vercel
+
+Proyek ini telah dikonfigurasi dengan file `vercel.json` dan `package.json` sehingga dapat dideploy ke Vercel secara instan:
+
+### Langkah Deploy ke Vercel:
+1. Unggah (*push*) folder proyek ini ke repositori **GitHub / GitLab / Bitbucket**.
+2. Masuk ke dashboard [vercel.com](https://vercel.com) dan klik **Add New** -> **Project**.
+3. Pilih repositori SIMPEL-KU Anda.
+4. Pada bagian pengaturan proyek:
+   - **Framework Preset**: Pilih `Other` (atau biarkan default static).
+   - **Root Directory**: `./`
+   - **Build Command**: Kosongkan (atau biarkan default karena `index.html` sudah siap pakai).
+5. Klik tombol **Deploy**.
+6. Selesai! Aplikasi SIMPEL-KU akan langsung aktif dengan URL HTTPS dari Vercel (contoh: `https://simpel-ku.vercel.app`) dan otomatis dapat diinstal sebagai PWA di Android & iOS.
 
 ---
 *© 2026 Badan Pusat Statistik Provinsi Kalimantan Barat. Seluruh Hak Cipta Dilindungi.*

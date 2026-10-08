@@ -88,7 +88,13 @@
     </nav>
   </div>
 
-  <div class="p-2.5 border-t border-slate-100 overflow-hidden bg-slate-50/50">
+  <div class="p-2.5 border-t border-slate-100 overflow-hidden bg-slate-50/50 space-y-2">
+    <!-- Tombol Pasang Aplikasi PWA Mobile/Desktop -->
+    <button onclick="showPwaInstallPrompt()" id="sidebarInstallBtn" title="Pasang Aplikasi SIMPEL-KU di Perangkat" class="hidden w-full flex items-center justify-center space-x-3 px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 rounded-xl text-xs font-bold transition-all duration-200 border border-blue-200/80 overflow-hidden cursor-pointer shadow-2xs">
+      <i class="fa-solid fa-cloud-arrow-down flex-shrink-0 w-5 text-center text-blue-600"></i>
+      <span class="sidebar-label transition-opacity duration-200 truncate">Pasang Aplikasi</span>
+    </button>
+
     <button onclick="handleLogout()" id="sidebarLogoutBtn" title="Keluar (Logout)" class="w-full flex items-center justify-center space-x-3 px-3 py-2.5 bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-600 rounded-xl text-xs font-semibold transition-all duration-200 border border-slate-200/80 hover:border-rose-200 overflow-hidden cursor-pointer shadow-2xs">
       <i class="fa-solid fa-arrow-right-from-bracket flex-shrink-0 w-5 text-center"></i>
       <span class="sidebar-label transition-opacity duration-200 truncate">Keluar</span>

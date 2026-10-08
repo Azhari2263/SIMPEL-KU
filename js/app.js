@@ -131,6 +131,7 @@
       const today = new Date();
       document.getElementById('globalMonthSelect').value = String(today.getMonth() + 1);
       document.getElementById('globalYearSelect').value = String(today.getFullYear());
+      initPwaManager();
 
       const savedCollapse = localStorage.getItem('simpelkeb_sidebar_collapsed');
       if (savedCollapse === 'true') {
@@ -1122,3 +1123,102 @@ function openViewBuktiModal(data) {
       rekap: {},
       security: {}
     };
+
+    /**
+     * ========================================================================
+     * PWA SERVICE WORKER & INSTALLATION MANAGER (ANDROID & IOS)
+     * ========================================================================
+     */
+    let deferredPwaPrompt = null;
+
+    function initPwaManager() {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+      // Jika aplikasi sudah dibuka dalam mode standalone (terinstal), sembunyikan tombol instal
+      if (isStandalone) {
+        console.log('[PWA] Berjalan dalam mode Standalone PWA.');
+        hidePwaInstallButtons();
+        return;
+      }
+
+      // Pada iOS, tombol instal siap menampilkan instruksi penambahan ke Home Screen
+      if (isIos) {
+        showPwaInstallButtons();
+      }
+
+      // Tangkap event instalasi browser bawaan Android & Desktop
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPwaPrompt = e;
+        showPwaInstallButtons();
+        console.log('[PWA] beforeinstallprompt ditangkap, tombol instal aktif.');
+      });
+
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] Aplikasi SIMPEL-KU berhasil dipasang.');
+        deferredPwaPrompt = null;
+        hidePwaInstallButtons();
+        showToast('Aplikasi SIMPEL-KU berhasil dipasang di perangkat Anda!', 'success');
+      });
+
+      // Daftarkan Service Worker jika didukung browser
+      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => {
+              console.log('[PWA] Service Worker aktif:', reg.scope);
+            })
+            .catch((err) => {
+              console.warn('[PWA] Registrasi Service Worker diabaikan:', err.message);
+            });
+        });
+      }
+    }
+
+    function showPwaInstallButtons() {
+      const btnHeader = document.getElementById('btnPwaInstallHeader');
+      const btnSidebar = document.getElementById('sidebarInstallBtn');
+      if (btnHeader) btnHeader.classList.remove('hidden');
+      if (btnSidebar) btnSidebar.classList.remove('hidden');
+    }
+
+    function hidePwaInstallButtons() {
+      const btnHeader = document.getElementById('btnPwaInstallHeader');
+      const btnSidebar = document.getElementById('sidebarInstallBtn');
+      if (btnHeader) btnHeader.classList.add('hidden');
+      if (btnSidebar) btnSidebar.classList.add('hidden');
+    }
+
+    function showPwaInstallPrompt() {
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+      const androidSec = document.getElementById('pwaAndroidSection');
+      const iosSec = document.getElementById('pwaIosSection');
+
+      if (isIos) {
+        if (androidSec) androidSec.classList.add('hidden');
+        if (iosSec) iosSec.classList.remove('hidden');
+      } else {
+        if (androidSec) androidSec.classList.remove('hidden');
+        if (iosSec) iosSec.classList.add('hidden');
+      }
+
+      openModal('modalPwaInstall');
+    }
+
+    async function triggerNativePwaInstall() {
+      if (deferredPwaPrompt) {
+        closeModal('modalPwaInstall');
+        deferredPwaPrompt.prompt();
+        const choice = await deferredPwaPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          showToast('Memasang aplikasi SIMPEL-KU...', 'info');
+          hidePwaInstallButtons();
+        }
+        deferredPwaPrompt = null;
+      } else {
+        closeModal('modalPwaInstall');
+        showToast('Buka menu browser Anda (titik tiga) lalu pilih "Instal Aplikasi" atau "Tambahkan ke Layar Utama".', 'info');
+      }
+    }
+
