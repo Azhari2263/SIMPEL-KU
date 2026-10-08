@@ -804,13 +804,39 @@ function handleBuktiFileSelected(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
 
+  // Hentikan kamera live jika sedang berjalan
+  stopLiveCamera();
+
+  const loader = document.getElementById('buktiCameraLoading');
+  const loadingText = document.getElementById('buktiCameraLoadingText');
+  if (loader) {
+    loader.classList.remove('hidden');
+    if (loadingText) loadingText.innerText = 'Memuat foto dari galeri...';
+  }
+
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = async () => {
-      await processImageForBukti(img);
+      try {
+        if (loadingText) loadingText.innerText = 'Menerapkan watermark & kompresi...';
+        await processImageForBukti(img);
+      } catch (err) {
+        console.error('Error processing gallery image:', err);
+        showToast('Gagal memproses foto dari galeri: ' + err.message, 'error');
+      } finally {
+        if (loader) loader.classList.add('hidden');
+      }
+    };
+    img.onerror = () => {
+      if (loader) loader.classList.add('hidden');
+      showToast('Format gambar galeri tidak didukung atau file rusak.', 'error');
     };
     img.src = e.target.result;
+  };
+  reader.onerror = () => {
+    if (loader) loader.classList.add('hidden');
+    showToast('Gagal membaca file dari galeri.', 'error');
   };
   reader.readAsDataURL(file);
   event.target.value = '';
@@ -985,6 +1011,11 @@ function resetBuktiCapture() {
   const captureBtns = document.getElementById('buktiCaptureButtons');
   const previewImg = document.getElementById('buktiPreviewImg');
   const btnSubmit = document.getElementById('btnSubmitUploadBukti');
+  const fileInput = document.getElementById('buktiFileInput');
+  const galleryInput = document.getElementById('buktiGalleryInput');
+
+  if (fileInput) fileInput.value = '';
+  if (galleryInput) galleryInput.value = '';
 
   if (previewSection) previewSection.classList.add('hidden');
   if (camContainer) camContainer.classList.remove('hidden');
