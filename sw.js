@@ -5,7 +5,7 @@
  * ========================================================================
  */
 
-const CACHE_NAME = 'simpelku-pwa-v3.2';
+const CACHE_NAME = 'simpelku-pwa-v3.3';
 const STATIC_ASSETS = [
   './',
   'manifest.json',
