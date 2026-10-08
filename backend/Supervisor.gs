@@ -344,6 +344,9 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
                 shift: shiftKode,
                 namaShift: namaShift,
                 isDone: isDone,
+                sheetRowIndex: t.sheetRowIndex || null,
+                colIndex: (t.colMapping && t.colMapping[d]) ? t.colMapping[d] : (d + 1),
+                targetSheetName: emp.namaSheet || null,
                 updatedAt: isDone
                   ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} (Shift ${shiftKode})`
                   : `Shift ${shiftKode} (Belum)`
@@ -397,6 +400,9 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
                 dayNum: d,
                 weekNum: Math.min(5, Math.ceil(d / 7)),
                 isDone: isDone,
+                sheetRowIndex: it.sheetRowIndex || null,
+                colIndex: (it.colMapping && it.colMapping[d]) ? it.colMapping[d] : (d + 1),
+                targetSheetName: emp.namaSheet || null,
                 updatedAt: isDone
                   ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00`
                   : '-'
@@ -404,6 +410,39 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
             });
           });
         }
+      }
+    });
+
+    // Perkaya data dengan status bukti dukung foto & checklist pengawas
+    const bMap = getBuktiDukungMap(ss, selectedMonth, selectedYear);
+    aggregatedItems.forEach(it => {
+      const tKey = generateTaskKey(selectedYear, selectedMonth, it.dayNum, it.username || it.pegawai, it.ruangan, it.item);
+      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.item)].join('_');
+      const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+      if (rec) {
+        it.taskKey = rec.taskKey || tKey;
+        it.statusPengawas = rec.statusPengawas;
+        it.namaPengawas = rec.namaPengawas;
+        it.waktuValidasi = rec.waktuValidasiPengawas;
+        it.adaBukti = rec.adaBuktiDukung;
+        it.fileId = rec.fileIdDrive;
+        it.fileUrl = rec.fileUrlDrive;
+        it.fileName = rec.fileName;
+        it.koordinat = rec.koordinat;
+        it.lokasi = rec.lokasi;
+        it.waktuPelaksanaan = rec.waktu;
+      } else {
+        it.taskKey = tKey;
+        it.statusPengawas = false;
+        it.namaPengawas = '';
+        it.waktuValidasi = '';
+        it.adaBukti = false;
+        it.fileId = '';
+        it.fileUrl = '';
+        it.fileName = '';
+        it.koordinat = '';
+        it.lokasi = '';
+        it.waktuPelaksanaan = '';
       }
     });
 
@@ -415,6 +454,10 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
       aggregatedItems = aggregatedItems.filter(it => {
         if (filterStatus === 'SELESAI') return it.isDone;
         if (filterStatus === 'BELUM') return !it.isDone;
+        if (filterStatus === 'VALID' || filterStatus === 'TERVALIDASI') return it.statusPengawas === true;
+        if (filterStatus === 'BELUM_VALID' || filterStatus === 'BELUM_TERVALIDASI') return it.statusPengawas !== true;
+        if (filterStatus === 'ADA_BUKTI') return it.adaBukti === true;
+        if (filterStatus === 'TANPA_BUKTI') return it.adaBukti !== true;
         return true;
       });
     }
@@ -1067,3 +1110,157 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
     return { success: false, message: "Gagal menyiapkan data export: " + err.message };
   }
 }
+
+/**
+ * ========================================================================
+ * 7. FITUR PENGAWAS MENCENTANG TUGAS PEGAWAI (YANG BELUM DICEKLIST PEGAWAI)
+ * ========================================================================
+ */
+function supervisorToggleStaffTaskCheck(token, payload) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+
+    const isManager = (session.role === 'Admin' ||
+                       session.role === 'Supervisor' ||
+                       session.role === 'Tim Umum dan Humas' ||
+                       session.role === 'Koordinator Lapangan');
+
+    if (!isManager) {
+      return { success: false, message: "Akses ditolak. Hanya Pengawas atau Admin yang dapat mencentang tugas pegawai." };
+    }
+
+    if (!payload) {
+      return { success: false, message: "Data checklist tidak lengkap." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    const targetUsername = cleanStr(payload.username || '');
+    const targetNamaPegawai = cleanStr(payload.namaPegawai || payload.pegawai || '');
+    const targetSheetName = cleanStr(payload.targetSheetName || '');
+    const dayNum = Number(payload.dayNum || payload.tanggal || new Date().getDate());
+    const monthNum = Number(payload.bulan || (new Date().getMonth() + 1));
+    const yearNum = Number(payload.tahun || new Date().getFullYear());
+    const newStatus = (payload.newStatus === true || payload.newStatus === 1 || payload.newStatus === '1' || String(payload.newStatus).toUpperCase() === 'TRUE');
+    let rIdx = Number(payload.sheetRowIndex || 0);
+    let cIdx = Number(payload.colIndex || 0);
+    const namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
+    const ruangan = cleanStr(payload.ruangan || 'Area Umum');
+    const unitKerja = cleanStr(payload.unit || 'Kebersihan');
+
+    // 1. Temukan sheet pegawai & perbarui cell jika sheet personal ada
+    let sheetUpdated = false;
+    let empSheet = null;
+    if (targetSheetName) empSheet = findSheet(ss, targetSheetName);
+    if (!empSheet) empSheet = findEmployeeSheet(ss, targetSheetName, targetNamaPegawai, targetUsername);
+
+    if (empSheet) {
+      if (!rIdx || rIdx < 1 || !cIdx || cIdx < 1) {
+        const parsed = readSheetMonitoring(empSheet, monthNum, yearNum);
+        if (parsed && parsed.items) {
+          const found = parsed.items.find(i => i.kegiatan === namaTugas || getAlphaOnly(i.kegiatan) === getAlphaOnly(namaTugas));
+          if (found) {
+            rIdx = found.sheetRowIndex;
+            cIdx = (found.colMapping && found.colMapping[dayNum]) ? found.colMapping[dayNum] : (dayNum + 1);
+          }
+        }
+      }
+
+      if (rIdx >= 1 && cIdx >= 1) {
+        empSheet.getRange(rIdx, cIdx).setValue(newStatus);
+        sheetUpdated = true;
+      }
+    }
+
+    // 2. Simpan / Perbarui statusPetugas di sheet ValidasiDanBuktiDukung
+    const sh = setupBuktiDukungSheet(ss);
+    const taskKey = payload.taskKey || generateTaskKey(yearNum, monthNum, dayNum, targetUsername || targetNamaPegawai, ruangan, namaTugas);
+    const values = sh.getDataRange().getValues();
+    let existingRowIdx = -1;
+
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][0] || '').trim() === taskKey) {
+        existingRowIdx = r + 1;
+        break;
+      }
+    }
+
+    if (existingRowIdx === -1 && targetNamaPegawai && namaTugas) {
+      for (let r = 1; r < values.length; r++) {
+        const row = values[r];
+        const rDay = Number(row[5] || 0);
+        const rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        const rTugas = getAlphaOnly(String(row[11] || ''));
+        if (rDay === dayNum && rUser === getAlphaOnly(targetUsername || targetNamaPegawai) && rTugas === getAlphaOnly(namaTugas)) {
+          existingRowIdx = r + 1;
+          break;
+        }
+      }
+    }
+
+    const now = new Date();
+    const supervisorName = session.namaPegawai || session.username || 'Pengawas';
+
+    if (existingRowIdx > 0) {
+      sh.getRange(existingRowIdx, 2).setValue(now); // Timestamp
+      sh.getRange(existingRowIdx, 13).setValue(newStatus); // StatusPetugas
+      if (!values[existingRowIdx - 1][14] && newStatus) {
+        sh.getRange(existingRowIdx, 23).setValue('Diceklist oleh Pengawas (' + supervisorName + ')');
+      }
+    } else {
+      const NAMA_BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const newRow = [
+        taskKey,
+        now,
+        yearNum,
+        monthNum,
+        NAMA_BULAN[monthNum] || ('Bulan_' + monthNum),
+        dayNum,
+        Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB",
+        unitKerja,
+        targetNamaPegawai,
+        targetUsername,
+        ruangan,
+        namaTugas,
+        newStatus, // StatusPetugas
+        false,     // StatusPengawas
+        '',        // NamaPengawas
+        '',        // WaktuValidasiPengawas
+        false,     // AdaBuktiDukung
+        '', '', '', '', '',
+        'Checklist diisi oleh Pengawas (' + supervisorName + ')'
+      ];
+      sh.appendRow(newRow);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Invalidate script caches
+    clearScriptCacheKeys([
+      "cache_spv_dash_" + monthNum + "_" + yearNum,
+      "cache_rekap_terpadu_" + monthNum + "_" + yearNum,
+      empSheet ? ("cache_m_" + empSheet.getName() + "_" + monthNum + "_" + yearNum) : null
+    ]);
+    resetMemoryCache();
+
+    return {
+      success: true,
+      message: newStatus ? "Tugas pegawai berhasil dicentang selesai oleh Pengawas!" : "Centang tugas pegawai berhasil dibatalkan.",
+      data: {
+        taskKey: taskKey,
+        isDone: newStatus,
+        sheetUpdated: sheetUpdated,
+        namaPegawai: targetNamaPegawai,
+        namaTugas: namaTugas,
+        dayNum: dayNum
+      }
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal memperbarui status tugas pegawai: " + err.message };
+  }
+}
+

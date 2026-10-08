@@ -30,6 +30,8 @@ BACKEND_FILES = [
     "utils/Utils.gs",
     "backend/Database.gs",
     "backend/Auth.gs",
+    "backend/BuktiDukung.gs",
+    "backend/InspeksiMutu.gs",
     "backend/StaffMonitoring.gs",
     "backend/Security.gs",
     "backend/Supervisor.gs",
@@ -50,6 +52,7 @@ COMPONENTS_PAGES = {
         "pages/supervisor_dashboard.html",
         "pages/supervisor_monitoring.html",
         "pages/supervisor_shift.html",
+        "pages/supervisor_inspeksi.html",
         "pages/staff_dashboard.html",
         "pages/staff_monitoring.html",
         "pages/staff_rekap.html",
@@ -68,7 +71,8 @@ JS_FILES = [
     "js/staff_rekap.js",
     "js/supervisor_dashboard.js",
     "js/supervisor_monitoring.js",
-    "js/supervisor_shift.js"
+    "js/supervisor_shift.js",
+    "js/supervisor_inspeksi.js"
 ]
 
 def read_file(rel_path):
@@ -211,6 +215,8 @@ const sandbox = {
   ContentService: {},
   CacheService: {},
   PropertiesService: {},
+  DriveApp: {},
+  Utilities: {},
   Logger: console,
   console: console
 };

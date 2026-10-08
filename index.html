@@ -368,97 +368,353 @@
   <!-- ============================================================== -->
   <!-- MODAL: EXPORT & CETAK LAPORAN OPERASIONAL                     -->
   <!-- ============================================================== -->
-  <div id="modalExportLaporan" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden">
-    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
-      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
+  <div id="modalExportLaporan" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-100 overflow-hidden flex flex-col my-auto max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white text-base">
             <i class="fa-solid fa-file-export"></i>
           </div>
           <div>
-            <h3 class="text-sm font-bold">Export & Cetak Laporan SIMPEL-KU</h3>
-            <p class="text-[11px] text-emerald-100 mt-0.5">Unduh rekapitulasi semua pegawai atau laporan detail individu</p>
+            <h3 class="text-sm font-bold">Export, Preview & Cetak Laporan SIMPEL-KU</h3>
+            <p class="text-[11px] text-emerald-100 mt-0.5">Pratinjau resmi sebelum mengunduh atau mencetak dokumen</p>
           </div>
         </div>
-        <button onclick="closeModal('modalExportLaporan')" class="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center text-white transition">
+        <button onclick="closeModal('modalExportLaporan')" class="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center text-white transition cursor-pointer">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
-      <div class="p-5 space-y-4 text-xs">
-        <!-- 1. Pilihan Cakupan Laporan -->
-        <div id="exportScopeWrapper">
-          <label class="block font-bold text-slate-700 mb-1.5">Cakupan Laporan</label>
-          <div class="grid grid-cols-2 gap-2" id="exportScopeOptions">
-            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer bg-slate-50 transition" id="lblScopeSemua">
-              <input type="radio" name="exportScope" id="radioScopeSemua" value="semua" checked onchange="onExportScopeChange()" class="text-emerald-600 focus:ring-emerald-500">
-              <div>
-                <span class="font-bold text-slate-800 block">Semua Pegawai</span>
-                <span class="text-[10px] text-slate-400">Rekap terpadu lintas unit</span>
-              </div>
-            </label>
-            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer bg-slate-50 transition" id="lblScopeIndividu">
-              <input type="radio" name="exportScope" id="radioScopeIndividu" value="individu" onchange="onExportScopeChange()" class="text-emerald-600 focus:ring-emerald-500">
-              <div>
-                <span class="font-bold text-slate-800 block">Per Pegawai</span>
-                <span class="text-[10px] text-slate-400">Detail kegiatan individu</span>
-              </div>
-            </label>
+
+      <div class="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto flex-1">
+        <!-- Panel Parameter Laporan -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+          <!-- 1. Pilihan Cakupan Laporan -->
+          <div id="exportScopeWrapper">
+            <label class="block font-bold text-slate-700 mb-1">Cakupan Laporan</label>
+            <div class="grid grid-cols-2 gap-2" id="exportScopeOptions">
+              <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer bg-white transition" id="lblScopeSemua">
+                <input type="radio" name="exportScope" id="radioScopeSemua" value="semua" checked onchange="onExportScopeChange()" class="text-emerald-600 focus:ring-emerald-500">
+                <div>
+                  <span class="font-bold text-slate-800 block text-[11px]">Semua Pegawai</span>
+                  <span class="text-[9px] text-slate-400">Rekap terpadu</span>
+                </div>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 hover:border-emerald-500 cursor-pointer bg-white transition" id="lblScopeIndividu">
+                <input type="radio" name="exportScope" id="radioScopeIndividu" value="individu" onchange="onExportScopeChange()" class="text-emerald-600 focus:ring-emerald-500">
+                <div>
+                  <span class="font-bold text-slate-800 block text-[11px]">Per Pegawai</span>
+                  <span class="text-[9px] text-slate-400">Detail 31 hari</span>
+                </div>
+              </label>
+            </div>
           </div>
-        </div>
 
-        <!-- 2. Pilihan Pegawai (Muncul jika Per Pegawai) -->
-        <div id="exportEmployeeSelectWrapper" class="hidden">
-          <label class="block font-bold text-slate-700 mb-1">Pilih Pegawai / Petugas</label>
-          <select id="exportEmployeeSelect" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500">
-            <!-- Diisi dinamis -->
-          </select>
-        </div>
-
-        <!-- 3. Periode Bulan & Tahun -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Bulan Laporan</label>
-            <select id="exportMonthSelect" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 font-medium">
-              <option value="1">Januari</option>
-              <option value="2">Februari</option>
-              <option value="3">Maret</option>
-              <option value="4">April</option>
-              <option value="5">Mei</option>
-              <option value="6">Juni</option>
-              <option value="7">Juli</option>
-              <option value="8">Agustus</option>
-              <option value="9">September</option>
-              <option value="10">Oktober</option>
-              <option value="11">November</option>
-              <option value="12">Desember</option>
+          <!-- 2. Pilihan Pegawai (Muncul jika Per Pegawai) -->
+          <div id="exportEmployeeSelectWrapper" class="hidden">
+            <label class="block font-bold text-slate-700 mb-1">Pilih Pegawai / Petugas</label>
+            <select id="exportEmployeeSelect" onchange="triggerLiveExportPreview()" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 text-xs">
+              <!-- Diisi dinamis -->
             </select>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Tahun Laporan</label>
-            <select id="exportYearSelect" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 font-medium">
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
-            </select>
+
+          <!-- 3. Periode Bulan & Tahun -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Bulan</label>
+              <select id="exportMonthSelect" onchange="triggerLiveExportPreview()" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 font-medium text-xs">
+                <option value="1">Januari</option>
+                <option value="2">Februari</option>
+                <option value="3">Maret</option>
+                <option value="4">April</option>
+                <option value="5">Mei</option>
+                <option value="6">Juni</option>
+                <option value="7">Juli</option>
+                <option value="8">Agustus</option>
+                <option value="9">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Tahun</label>
+              <select id="exportYearSelect" onchange="triggerLiveExportPreview()" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 font-medium text-xs">
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <!-- Info Card -->
-        <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-2.5 text-slate-600">
-          <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-sm"></i>
-          <p class="text-[11px] leading-relaxed">
-            Format <strong>Excel (.xls)</strong> dapat langsung dibuka di Microsoft Excel atau Google Sheets. Format <strong>Cetak / PDF</strong> menyertakan Kop Dinas Resmi BPS Kalimantan Barat dan kolom tanda tangan pengesahan.
-          </p>
+        <!-- Tombol Aksi Pratinjau Cepat -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="triggerLiveExportPreview()" class="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+              <i class="fa-solid fa-arrows-rotate text-xs"></i>
+              <span>Segarkan Pratinjau</span>
+            </button>
+            <span class="text-[11px] text-slate-500">Pratinjau otomatis menyesuaikan parameter di atas</span>
+          </div>
+          <span class="text-[10px] text-slate-400 italic">Standar Dokumen Resmi BPS Kalbar</span>
+        </div>
+
+        <!-- Container Pratinjau Dokumen Langsung (Live Preview) -->
+        <div class="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-inner">
+          <div class="bg-slate-100 px-4 py-2 border-b border-slate-200 flex items-center justify-between text-xs font-bold text-slate-700">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-eye text-emerald-600"></i>
+              <span>Pratinjau Dokumen Laporan Resmi</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-mono">Format A4 Resmi</span>
+          </div>
+          <div id="modalExportPreviewArea" class="p-4 sm:p-6 max-h-[46vh] overflow-y-auto overflow-x-auto bg-slate-50/50">
+            <div class="text-center py-10 text-slate-400">
+              <i class="fa-solid fa-file-invoice text-3xl mb-2 text-slate-300 block"></i>
+              <span>Memuat pratinjau dokumen laporan...</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 bg-slate-50">
-        <button onclick="closeModal('modalExportLaporan')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">Batal</button>
-        <button onclick="runExportLaporan('excel')" id="btnExportExcel" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-file-excel"></i> Unduh Excel (.xls)
+      <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2.5 bg-slate-50">
+        <button onclick="closeModal('modalExportLaporan')" class="w-full sm:w-auto px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">
+          Tutup
         </button>
-        <button onclick="runExportLaporan('pdf')" id="btnExportPDF" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
-          <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button onclick="runExportLaporan('excel')" id="btnExportExcel" class="flex-1 sm:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Unduh Excel (.xls)</span>
+          </button>
+          <button onclick="runExportLaporan('pdf')" id="btnExportPDF" class="flex-1 sm:flex-none px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95">
+            <i class="fa-solid fa-print"></i>
+            <span>Cetak / Simpan PDF</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: UPLOAD BUKTI DUKUNG FOTO (KAMERA & KOMPRESI < 1 MB)     -->
+  <!-- ============================================================== -->
+  <div id="modalUploadBukti" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center text-base shadow-xs">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 tracking-tight">Upload Bukti Dukung Foto</h3>
+            <p class="text-xs text-slate-500">Ambil foto dari kamera / pilih file (Maks 1 MB, Watermark Otomatis)</p>
+          </div>
+        </div>
+        <button onclick="closeModalUploadBukti()" class="w-8 h-8 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <!-- Info Tugas Card -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+          <div class="flex items-center justify-between text-[11px]">
+            <span id="uploadBuktiUnitBadge" class="px-2 py-0.5 rounded-md font-bold bg-blue-100 text-blue-700 uppercase tracking-wider">Unit</span>
+            <span id="uploadBuktiTanggalText" class="font-semibold text-slate-600">Tanggal</span>
+          </div>
+          <h4 id="uploadBuktiNamaTugas" class="text-xs font-bold text-slate-900 leading-snug">Nama Tugas Pelaksanaan</h4>
+          <div class="flex items-center gap-3 text-[11px] text-slate-500">
+            <span><i class="fa-solid fa-location-dot mr-1 text-slate-400"></i><span id="uploadBuktiRuangan">Area</span></span>
+            <span>•</span>
+            <span><i class="fa-solid fa-user mr-1 text-slate-400"></i><span id="uploadBuktiPegawai">Petugas</span></span>
+          </div>
+        </div>
+
+        <!-- Camera Viewfinder / Preview Container -->
+        <div id="buktiCameraContainer" class="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 min-h-[220px] max-h-[300px] flex items-center justify-center shadow-inner">
+          <video id="buktiCameraVideo" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
+          
+          <!-- Placeholder saat kamera belum dibuka -->
+          <div id="buktiCameraPlaceholder" class="text-center p-6 text-slate-400 space-y-2">
+            <div class="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto text-xl mb-1">
+              <i class="fa-solid fa-camera"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-300">Kamera Belum Aktif</p>
+            <p class="text-[11px] text-slate-500 max-w-xs mx-auto">
+              Gunakan kamera langsung untuk mengambil foto atau pilih file gambar dari galeri perangkat.
+            </p>
+          </div>
+
+          <!-- Indikator Loading Kamera / GPS -->
+          <div id="buktiCameraLoading" class="absolute inset-0 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-2 hidden">
+            <div class="w-8 h-8 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <span class="text-xs font-medium" id="buktiCameraLoadingText">Menghubungkan kamera & GPS...</span>
+          </div>
+        </div>
+
+        <!-- Tombol Aksi Kamera & File Picker -->
+        <div id="buktiCaptureButtons" class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="toggleLiveCamera()" id="btnToggleCamera" class="flex-1 min-w-[120px] py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95">
+            <i class="fa-solid fa-video text-xs"></i>
+            <span id="btnToggleCameraText">Buka Kamera</span>
+          </button>
+          
+          <button type="button" onclick="captureSnapshotFromCamera()" id="btnSnapPhoto" class="hidden flex-1 min-w-[120px] py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs active:scale-95">
+            <i class="fa-solid fa-camera text-xs"></i>
+            <span>Ambil Foto</span>
+          </button>
+
+          <button type="button" onclick="switchCameraFacing()" id="btnSwitchCamera" class="hidden p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer" title="Ganti Kamera Depan/Belakang">
+            <i class="fa-solid fa-camera-rotate"></i>
+          </button>
+
+          <button type="button" onclick="document.getElementById('buktiFileInput').click()" class="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95">
+            <i class="fa-solid fa-folder-open text-xs text-slate-500"></i>
+            <span>Galeri / File</span>
+          </button>
+          <input type="file" id="buktiFileInput" accept="image/*" capture="environment" onchange="handleBuktiFileSelected(event)" class="hidden">
+        </div>
+
+        <!-- Preview Foto Terpilih (Setelah snapshot / pilih file) -->
+        <div id="buktiPreviewSection" class="hidden space-y-3">
+          <div class="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-950 shadow-md">
+            <img id="buktiPreviewImg" src="" alt="Preview Bukti Dukung" class="w-full h-auto max-h-[320px] object-contain mx-auto">
+            <span class="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold">
+              Preview Watermark
+            </span>
+          </div>
+
+          <!-- Metadata Box -->
+          <div class="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span>Metadata Foto Siap</span>
+              </span>
+              <span id="buktiSizeBadge" class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-mono font-bold">0 KB</span>
+            </div>
+            
+            <div class="space-y-1 text-[11px] text-slate-700">
+              <div class="flex items-start gap-1.5">
+                <i class="fa-solid fa-clock text-emerald-600 mt-0.5 w-3.5"></i>
+                <span id="buktiWaktuText" class="font-medium">- WIB</span>
+              </div>
+              <div class="flex items-start gap-1.5">
+                <i class="fa-solid fa-location-crosshairs text-emerald-600 mt-0.5 w-3.5"></i>
+                <span id="buktiKoordinatText" class="font-mono">-</span>
+              </div>
+              <div class="flex items-start gap-1.5">
+                <i class="fa-solid fa-map-location-dot text-emerald-600 mt-0.5 w-3.5"></i>
+                <span id="buktiLokasiText" class="font-medium truncate">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tombol Foto Ulang -->
+          <div class="flex justify-end">
+            <button type="button" onclick="resetBuktiCapture()" class="text-xs text-slate-500 hover:text-rose-600 font-bold transition flex items-center gap-1 cursor-pointer">
+              <i class="fa-solid fa-rotate-left"></i>
+              <span>Foto Ulang / Batalkan Pilihan</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Hidden untuk pemrosesan watermark dan kompresi -->
+        <canvas id="buktiWatermarkCanvas" class="hidden"></canvas>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/80 flex items-center justify-end gap-2.5">
+        <button type="button" onclick="closeModalUploadBukti()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">
+          Batal
+        </button>
+        <button type="button" onclick="submitUploadBuktiFoto()" id="btnSubmitUploadBukti" disabled class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+          <span>Simpan ke Google Drive</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL: LIHAT / BUKA BUKTI DUKUNG FOTO                          -->
+  <!-- ============================================================== -->
+  <div id="modalViewBukti" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm hidden overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-base shadow-xs">
+            <i class="fa-solid fa-image"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 tracking-tight">Bukti Dukung Foto Pelaksanaan Tugas</h3>
+            <p class="text-xs text-slate-500">Tersimpan di Google Drive & terverifikasi sistem</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalViewBukti')" class="w-8 h-8 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4 sm:p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <!-- Tampilan Foto Bukti -->
+        <div class="rounded-2xl overflow-hidden bg-slate-950 border border-slate-200 flex items-center justify-center min-h-[240px] shadow-sm">
+          <img id="viewBuktiImg" src="" alt="Foto Bukti Dukung" class="w-full h-auto max-h-[420px] object-contain mx-auto">
+        </div>
+
+        <!-- Informasi & Metadata Bukti -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <!-- Card Info Tugas -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tugas & Area</p>
+            <h4 id="viewBuktiNamaTugas" class="text-xs font-bold text-slate-900 leading-snug">Nama Tugas</h4>
+            <div class="flex items-center gap-2 text-slate-600 text-[11px]">
+              <span id="viewBuktiRuangan" class="font-medium">-</span>
+              <span>•</span>
+              <span id="viewBuktiPegawai" class="font-semibold text-slate-800">-</span>
+            </div>
+          </div>
+
+          <!-- Card Waktu & Koordinat -->
+          <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Waktu & Lokasi GPS</p>
+            <p id="viewBuktiWaktu" class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <i class="fa-solid fa-clock text-blue-500"></i>
+              <span>-</span>
+            </p>
+            <p id="viewBuktiKoordinat" class="text-[11px] font-mono text-slate-600 flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-location-crosshairs text-emerald-500"></i>
+              <span>-</span>
+            </p>
+            <p id="viewBuktiLokasi" class="text-[11px] text-slate-500 truncate">-</p>
+          </div>
+        </div>
+
+        <!-- Status Validasi Pengawas Card -->
+        <div id="viewBuktiStatusPengawasBox" class="p-3.5 rounded-2xl border flex items-center justify-between">
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Validasi Pengawas</p>
+            <p id="viewBuktiStatusPengawasText" class="text-xs font-bold mt-0.5">Belum Divalidasi</p>
+            <p id="viewBuktiPengawasDetail" class="text-[10px] text-slate-500 mt-0.5">-</p>
+          </div>
+          <div id="viewBuktiStatusPengawasBadge" class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-xs">
+            <i class="fa-solid fa-shield-check"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+        <a id="viewBuktiDriveLink" href="#" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+          <span>Buka di Google Drive</span>
+        </a>
+        <button type="button" onclick="closeModal('modalViewBukti')" class="w-full sm:w-auto px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">
+          Tutup
         </button>
       </div>
     </div>
@@ -1034,11 +1290,15 @@
 
       <!-- Filter Status -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Status Pengerjaan</label>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Status Pengerjaan & Validasi</label>
         <select id="adminFilterStatus" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
           <option value="SEMUA">Semua Status</option>
-          <option value="SELESAI">Sudah Selesai</option>
-          <option value="BELUM">Belum Selesai</option>
+          <option value="SELESAI">Selesai (Petugas)</option>
+          <option value="BELUM">Belum Selesai (Petugas)</option>
+          <option value="VALID">✓ Sudah Divalidasi Pengawas</option>
+          <option value="BELUM_VALID">Belum Divalidasi Pengawas</option>
+          <option value="ADA_BUKTI">📸 Memiliki Bukti Foto</option>
+          <option value="TANPA_BUKTI">Belum Ada Bukti Foto</option>
         </select>
       </div>
 
@@ -1079,18 +1339,20 @@
       <table class="w-full text-left text-xs text-slate-600 border-collapse table-modern">
         <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
           <tr>
-            <th class="py-3 px-4">No</th>
-            <th class="py-3 px-4">Unit</th>
-            <th class="py-3 px-4">Pegawai</th>
-            <th class="py-3 px-4">Area / Ruangan</th>
+            <th class="py-3 px-3">No</th>
+            <th class="py-3 px-3">Unit</th>
+            <th class="py-3 px-3">Pegawai</th>
+            <th class="py-3 px-3">Area / Ruangan</th>
             <th class="py-3 px-4">Tugas / Item Monitoring</th>
-            <th class="py-3 px-4">Status</th>
-            <th class="py-3 px-4 text-right">Terakhir Update</th>
+            <th class="py-3 px-3 text-center">Status Petugas</th>
+            <th class="py-3 px-3 text-center">Bukti Dukung</th>
+            <th class="py-3 px-3 text-center">Validasi Pengawas</th>
+            <th class="py-3 px-3 text-right">Log Update</th>
           </tr>
         </thead>
         <tbody id="adminMonitoringTableBody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="py-8 text-center text-slate-400 font-medium">Klik 'Terapkan Filter' untuk memuat data.</td>
+            <td colspan="9" class="py-8 text-center text-slate-400 font-medium">Klik 'Terapkan Filter' untuk memuat data.</td>
           </tr>
         </tbody>
       </table>
@@ -1255,6 +1517,63 @@
         <!-- ============================================================== -->
         <!-- VIEW: INSPEKSI MUTU (ADMIN / SUPERVISOR)                       -->
         <!-- ============================================================== -->
+
+<!-- ==============================================================
+     SIMPEL-KU - PAGE: supervisor_inspeksi.html
+     ============================================================== -->
+<section id="view-inspeksi-mutu" class="space-y-6 hidden">
+          <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                  <i class="fa-solid fa-star-half-stroke text-purple-500"></i> Audit & Inspeksi Standar Mutu Layanan
+                </h3>
+                <p class="text-xs text-slate-400">Evaluasi kepatuhan SOP berkala untuk Unit Kebersihan, Pelayanan, dan Keamanan</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="openInspeksiMutuModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-2">
+                  <i class="fa-solid fa-plus"></i> Tambah Inspeksi Baru
+                </button>
+                <button onclick="loadInspeksiMutuData()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+                  <i class="fa-solid fa-rotate"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filter Unit Inspeksi -->
+            <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+              <button onclick="filterInspeksiUnit('SEMUA')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white" data-unit="SEMUA">Semua Unit</button>
+              <button onclick="filterInspeksiUnit('Kebersihan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Kebersihan">Kebersihan</button>
+              <button onclick="filterInspeksiUnit('Pelayanan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Pelayanan">Pelayanan</button>
+              <button onclick="filterInspeksiUnit('Keamanan')" class="insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600" data-unit="Keamanan">Keamanan</button>
+            </div>
+
+            <!-- Inspeksi Table -->
+            <div class="overflow-x-auto mt-4">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th class="py-3 px-4 rounded-l-xl">Tanggal</th>
+                    <th class="py-3 px-4">Unit</th>
+                    <th class="py-3 px-4">Area / Ruangan</th>
+                    <th class="py-3 px-4">Auditor</th>
+                    <th class="py-3 px-4">Skor Mutu</th>
+                    <th class="py-3 px-4">Catatan Temuan</th>
+                    <th class="py-3 px-4 rounded-r-xl">Tindak Lanjut</th>
+                  </tr>
+                </thead>
+                <tbody id="inspeksiTableBody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="7" class="py-8 text-center text-slate-400">Memuat data inspeksi mutu...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- ================= VIEW 1: DASHBOARD ================= -->
 
 <!-- ==============================================================
      SIMPEL-KU - PAGE: staff_dashboard.html
@@ -1440,66 +1759,200 @@
      SIMPEL-KU - PAGE: staff_rekap.html
      ============================================================== -->
 <section id="view-rekap" class="hidden space-y-6">
+  <!-- Header Rekapitulasi -->
   <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
       <h3 class="text-base font-bold text-slate-900 flex items-center gap-2 tracking-tight">
         <i class="fa-solid fa-chart-simple text-blue-600"></i>
         <span>Rekapitulasi & Visualisasi Pencapaian</span>
       </h3>
-      <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian dan kepatuhan per ruangan</p>
+      <p class="text-xs text-slate-500 mt-0.5">Analisis ketercapaian checklist harian, kepatuhan per ruangan, dan laporan resmi</p>
     </div>
-    <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer self-start sm:self-auto active:scale-95">
-      <i class="fa-solid fa-file-export text-xs"></i>
-      <span>Export / Cetak Laporan</span>
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openExportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-2 cursor-pointer self-start sm:self-auto active:scale-95">
+        <i class="fa-solid fa-file-export text-xs"></i>
+        <span>Export / Cetak Laporan</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Banner Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
+      <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Target Checklist</p>
+      <h3 class="text-xl sm:text-2xl font-black text-slate-900 mt-1" id="rekapKpiTotal">0</h3>
+      <p class="text-[10px] text-slate-500 mt-0.5">Seluruh tugas aktif</p>
+    </div>
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
+      <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Tugas Selesai</p>
+      <h3 class="text-xl sm:text-2xl font-black text-emerald-600 mt-1" id="rekapKpiSelesai">0</h3>
+      <p class="text-[10px] text-slate-500 mt-0.5">Tercatat selesai dikerjakan</p>
+    </div>
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
+      <p class="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Belum Selesai</p>
+      <h3 class="text-xl sm:text-2xl font-black text-rose-600 mt-1" id="rekapKpiBelum">0</h3>
+      <p class="text-[10px] text-slate-500 mt-0.5">Perlu perhatian / tindak lanjut</p>
+    </div>
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
+      <p class="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Tingkat Capaian</p>
+      <h3 class="text-xl sm:text-2xl font-black text-blue-600 mt-1" id="rekapKpiPersen">0%</h3>
+      <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2">
+        <div id="rekapKpiProgressBar" class="h-full bg-blue-600 rounded-full transition-all duration-300" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigasi Tab Rekapitulasi -->
+  <div class="flex items-center gap-2 border-b border-slate-200/80 pb-2 overflow-x-auto no-scrollbar">
+    <button onclick="switchRekapTab('ruangan')" id="btnTabRekapRuangan" class="px-3.5 py-2 rounded-xl text-xs font-bold transition bg-brand-600 text-white shadow-xs cursor-pointer flex-shrink-0 flex items-center gap-1.5">
+      <i class="fa-solid fa-table-cells text-xs"></i>
+      <span>Ringkasan Ruangan & Grafik</span>
+    </button>
+    <button onclick="switchRekapTab('pegawai')" id="btnTabRekapPegawai" class="px-3.5 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 cursor-pointer flex-shrink-0 flex items-center gap-1.5">
+      <i class="fa-solid fa-users text-xs"></i>
+      <span>Rekap Semua Pegawai</span>
+    </button>
+    <button onclick="switchRekapTab('preview')" id="btnTabRekapPreview" class="px-3.5 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 cursor-pointer flex-shrink-0 flex items-center gap-1.5">
+      <i class="fa-solid fa-file-lines text-xs"></i>
+      <span>Pratinjau Lembar Laporan BPS</span>
     </button>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
-      <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-        <span>Tren Kepatuhan Checklist Harian</span>
-        <i class="fa-solid fa-chart-line text-blue-500"></i>
-      </h4>
-      <div class="relative h-64">
-        <canvas id="chartTrenHarian"></canvas>
+  <!-- TAB 1: Ringkasan Per Ruangan & Grafik Tren -->
+  <div id="rekapTabRuanganSection" class="space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+          <span>Tren Kepatuhan Checklist Harian</span>
+          <i class="fa-solid fa-chart-line text-blue-500"></i>
+        </h4>
+        <div class="relative h-64">
+          <canvas id="chartTrenHarian"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
+        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
+          <span>Pencapaian Berdasarkan Ruangan</span>
+          <i class="fa-solid fa-chart-bar text-amber-500"></i>
+        </h4>
+        <div class="relative h-64">
+          <canvas id="chartRuangan"></canvas>
+        </div>
       </div>
     </div>
 
-    <div class="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
-      <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center justify-between">
-        <span>Pencapaian Berdasarkan Ruangan</span>
-        <i class="fa-solid fa-chart-bar text-amber-500"></i>
-      </h4>
-      <div class="relative h-64">
-        <canvas id="chartRuangan"></canvas>
+    <!-- Tabel Rekapitulasi Detail Ruangan -->
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 tracking-tight">Tabel Ringkasan Per Ruangan</h4>
+          <p class="text-xs text-slate-500">Ketercapaian checklist operasional berdasarkan pos / area</p>
+        </div>
+        <span class="text-xs text-slate-500 font-semibold px-2.5 py-0.5 rounded-full bg-slate-100">Bulan Aktif</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse table-modern">
+          <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
+            <tr>
+              <th class="p-3.5">Nama Ruangan</th>
+              <th class="p-3.5 text-center">Jumlah Kegiatan</th>
+              <th class="p-3.5 text-center">Total Target Checklist</th>
+              <th class="p-3.5 text-center">Selesai Dikerjakan</th>
+              <th class="p-3.5 text-center">Persentase</th>
+              <th class="p-3.5 min-w-[160px]">Status Bar</th>
+            </tr>
+          </thead>
+          <tbody id="rekapTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="6" class="p-6 text-center text-slate-400 font-medium">Memuat rekapitulasi...</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- Tabel Rekapitulasi Detail -->
-  <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-      <h4 class="text-sm font-bold text-slate-900 tracking-tight">Tabel Ringkasan Per Ruangan</h4>
-      <span class="text-xs text-slate-500 font-semibold px-2.5 py-0.5 rounded-full bg-slate-100">Bulan Aktif</span>
+  <!-- TAB 2: Rekapitulasi Kinerja Seluruh Pegawai -->
+  <div id="rekapTabPegawaiSection" class="hidden space-y-4">
+    <div class="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 tracking-tight">Rekapitulasi Kinerja Pegawai Lintas Unit</h4>
+          <p class="text-xs text-slate-500">Perbandingan ketercapaian tugas petugas Kebersihan, Pelayanan, dan Keamanan</p>
+        </div>
+        <button onclick="openExportModal()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+          <i class="fa-solid fa-file-excel text-xs"></i>
+          <span>Unduh Rekap Pegawai</span>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse table-modern">
+          <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
+            <tr>
+              <th class="p-3.5 text-center w-12">No</th>
+              <th class="p-3.5">Nama Pegawai</th>
+              <th class="p-3.5 text-center">Unit Kerja</th>
+              <th class="p-3.5 text-right">Target Tugas</th>
+              <th class="p-3.5 text-right text-emerald-600 font-bold">Selesai</th>
+              <th class="p-3.5 text-right text-rose-600 font-bold">Belum</th>
+              <th class="p-3.5 text-center">Capaian (%)</th>
+              <th class="p-3.5 text-center">Status Kinerja</th>
+              <th class="p-3.5 text-center">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="rekapPegawaiTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="9" class="p-6 text-center text-slate-400 font-medium">Memuat data pegawai...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-xs border-collapse table-modern">
-        <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
-          <tr>
-            <th class="p-3.5">Nama Ruangan</th>
-            <th class="p-3.5 text-center">Jumlah Kegiatan</th>
-            <th class="p-3.5 text-center">Total Target Checklist</th>
-            <th class="p-3.5 text-center">Selesai Dikerjakan</th>
-            <th class="p-3.5 text-center">Persentase</th>
-            <th class="p-3.5 min-w-[160px]">Status Bar</th>
-          </tr>
-        </thead>
-        <tbody id="rekapTableBody" class="divide-y divide-slate-100">
-          <tr>
-            <td colspan="6" class="p-6 text-center text-slate-400 font-medium">Memuat rekapitulasi...</td>
-          </tr>
-        </tbody>
-      </table>
+  </div>
+
+  <!-- TAB 3: Pratinjau Lembar Laporan BPS (Live Preview) -->
+  <div id="rekapTabPreviewSection" class="hidden space-y-4">
+    <!-- Toolbar Aksi Pratinjau -->
+    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Cakupan Dokumen</label>
+          <select id="previewScopeSelect" onchange="renderInlineLaporanPreview()" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold">
+            <option value="semua">Rekap Seluruh Pegawai</option>
+            <option value="individu">Laporan Individu Pegawai</option>
+          </select>
+        </div>
+        <div id="previewEmployeeSelectWrapper" class="hidden">
+          <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Pilih Pegawai</label>
+          <select id="previewEmployeeSelect" onchange="renderInlineLaporanPreview()" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-xs font-semibold">
+            <!-- Diisi dinamis -->
+          </select>
+        </div>
+        <button onclick="renderInlineLaporanPreview()" class="mt-4 md:mt-0 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs">
+          <i class="fa-solid fa-arrows-rotate text-xs"></i>
+          <span>Segarkan Dokumen</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="exportFromInlinePreview('excel')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-file-excel text-xs"></i>
+          <span>Unduh Excel</span>
+        </button>
+        <button onclick="exportFromInlinePreview('pdf')" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-print text-xs"></i>
+          <span>Cetak / PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Lembar Dokumen Pratinjau Resmi BPS Kalbar -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-4 sm:p-8 overflow-x-auto" id="inlineLaporanPreviewCard">
+      <div class="text-center py-12 text-slate-400">
+        <i class="fa-solid fa-file-lines text-4xl mb-3 text-slate-300 block"></i>
+        <span>Memuat pratinjau lembar laporan resmi...</span>
+      </div>
     </div>
   </div>
 </section>
@@ -1916,6 +2369,20 @@ function formatDateIndo(day, month, year) {
             runner.swapSecurityShift(params.token, p1, p2, t1, t2, params.bulan, params.tahun);
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+          } else if (action === 'uploadBuktiDukung') {
+            runner.uploadBuktiDukungFoto(params.token, params);
+          } else if (action === 'updateSupervisorChecklist') {
+            runner.updateSupervisorChecklist(params.token, params);
+          } else if (action === 'supervisorToggleStaffTaskCheck') {
+            runner.supervisorToggleStaffTaskCheck(params.token, params);
+          } else if (action === 'getBuktiDukungData') {
+            runner.getBuktiDukungData(params.token, params.bulan, params.tahun, params.unit, params.namaPegawai);
+          } else if (action === 'getInspeksiMutuData') {
+            runner.getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
+          } else if (action === 'saveInspeksiMutu') {
+            runner.saveInspeksiMutu(params.token, params);
+          } else if (typeof runner[action] === 'function') {
+            runner[action](params);
           } else if (typeof runner.handleApiRequest === 'function') {
             runner.handleApiRequest(action, params);
           } else {
@@ -2422,6 +2889,510 @@ function closeModal(modalId) {
       const m = document.getElementById(modalId);
       if (m) m.classList.add('hidden');
     }
+
+/**
+ * ========================================================================
+ * BUKTI DUKUNG CONTROLLER: KAMERA, WATERMARK, KOMPRESI & GOOGLE DRIVE
+ * ========================================================================
+ */
+let currentUploadTaskPayload = null;
+let liveMediaStream          = null;
+let currentFacingMode        = 'environment';
+let currentCapturedBase64    = null;
+let currentPhotoMetadata     = null;
+
+function openUploadBuktiModal(taskInfo) {
+  currentUploadTaskPayload = taskInfo;
+  currentCapturedBase64 = null;
+  currentPhotoMetadata = null;
+
+  const unitBadge = document.getElementById('uploadBuktiUnitBadge');
+  const tglText = document.getElementById('uploadBuktiTanggalText');
+  const tugasText = document.getElementById('uploadBuktiNamaTugas');
+  const ruangText = document.getElementById('uploadBuktiRuangan');
+  const pegText = document.getElementById('uploadBuktiPegawai');
+
+  if (unitBadge) unitBadge.innerText = taskInfo.unit || 'Umum';
+  if (tglText) tglText.innerText = formatDateIndo(taskInfo.dayNum, taskInfo.bulan, taskInfo.tahun);
+  if (tugasText) tugasText.innerText = taskInfo.namaTugas || '-';
+  if (ruangText) ruangText.innerText = taskInfo.ruangan || 'Area Umum';
+  if (pegText) pegText.innerText = taskInfo.namaPegawai || '-';
+
+  resetBuktiCapture();
+  openModal('modalUploadBukti');
+}
+
+function closeModalUploadBukti() {
+  stopLiveCamera();
+  closeModal('modalUploadBukti');
+}
+
+async function toggleLiveCamera() {
+  if (liveMediaStream) {
+    stopLiveCamera();
+  } else {
+    await startLiveCamera();
+  }
+}
+
+async function startLiveCamera() {
+  const video = document.getElementById('buktiCameraVideo');
+  const placeholder = document.getElementById('buktiCameraPlaceholder');
+  const loader = document.getElementById('buktiCameraLoading');
+  const btnToggle = document.getElementById('btnToggleCameraText');
+  const btnSnap = document.getElementById('btnSnapPhoto');
+  const btnSwitch = document.getElementById('btnSwitchCamera');
+
+  if (loader) {
+    loader.classList.remove('hidden');
+    const loadingText = document.getElementById('buktiCameraLoadingText');
+    if (loadingText) loadingText.innerText = 'Menghubungkan kamera & GPS...';
+  }
+
+  try {
+    const constraints = {
+      video: {
+        facingMode: currentFacingMode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+
+    liveMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (video) {
+      video.srcObject = liveMediaStream;
+      video.classList.remove('hidden');
+    }
+    if (placeholder) placeholder.classList.add('hidden');
+    if (btnToggle) btnToggle.innerText = 'Tutup Kamera';
+    if (btnSnap) btnSnap.classList.remove('hidden');
+    if (btnSwitch) btnSwitch.classList.remove('hidden');
+  } catch (err) {
+    showToast('Kamera tidak dapat dibuka: ' + err.message + '. Anda dapat memilih foto dari galeri.', 'warning');
+  } finally {
+    if (loader) loader.classList.add('hidden');
+  }
+}
+
+function stopLiveCamera() {
+  if (liveMediaStream) {
+    liveMediaStream.getTracks().forEach(t => t.stop());
+    liveMediaStream = null;
+  }
+  const video = document.getElementById('buktiCameraVideo');
+  const placeholder = document.getElementById('buktiCameraPlaceholder');
+  const btnToggle = document.getElementById('btnToggleCameraText');
+  const btnSnap = document.getElementById('btnSnapPhoto');
+  const btnSwitch = document.getElementById('btnSwitchCamera');
+
+  if (video) {
+    video.srcObject = null;
+    video.classList.add('hidden');
+  }
+  if (placeholder) placeholder.classList.remove('hidden');
+  if (btnToggle) btnToggle.innerText = 'Buka Kamera';
+  if (btnSnap) btnSnap.classList.add('hidden');
+  if (btnSwitch) btnSwitch.classList.add('hidden');
+}
+
+async function switchCameraFacing() {
+  currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+  if (liveMediaStream) {
+    stopLiveCamera();
+    await startLiveCamera();
+  }
+}
+
+function getDeviceGeolocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        coords: '-0.026330, 109.342512',
+        lokasi: 'BPS Provinsi Kalimantan Barat, Jl. Sutan Syahrir No. 24, Pontianak'
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        const coordStr = `${lat}, ${lng}`;
+        let locationName = 'Area Kantor BPS Provinsi Kalimantan Barat';
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+          });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.display_name) {
+              const road = data.address?.road || data.address?.suburb || data.address?.city || '';
+              locationName = road ? `${road}, Pontianak` : data.display_name.split(',').slice(0, 3).join(',');
+            }
+          }
+        } catch (e) {
+          locationName = 'Jl. Sutan Syahrir No. 24, Pontianak, Kalbar';
+        }
+
+        resolve({ coords: coordStr, lokasi: locationName });
+      },
+      () => {
+        resolve({
+          coords: '-0.026330, 109.342512',
+          lokasi: 'BPS Provinsi Kalimantan Barat, Jl. Sutan Syahrir No. 24, Pontianak'
+        });
+      },
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 60000 }
+    );
+  });
+}
+
+async function captureSnapshotFromCamera() {
+  const video = document.getElementById('buktiCameraVideo');
+  if (!video || !liveMediaStream) {
+    showToast('Kamera tidak aktif.', 'warning');
+    return;
+  }
+
+  const loader = document.getElementById('buktiCameraLoading');
+  if (loader) {
+    loader.classList.remove('hidden');
+    const loadingText = document.getElementById('buktiCameraLoadingText');
+    if (loadingText) loadingText.innerText = 'Mengambil foto & GPS metadata...';
+  }
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = video.videoWidth || 1280;
+  tempCanvas.height = video.videoHeight || 720;
+  const ctx = tempCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  stopLiveCamera();
+
+  const img = new Image();
+  img.onload = async () => {
+    await processImageForBukti(img);
+    if (loader) loader.classList.add('hidden');
+  };
+  img.src = tempCanvas.toDataURL('image/jpeg', 0.9);
+}
+
+function handleBuktiFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      await processImageForBukti(img);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+async function processImageForBukti(imgElement) {
+  const geoData = await getDeviceGeolocation();
+  const result = applyWatermarkAndCompress(imgElement, geoData);
+
+  currentCapturedBase64 = result.base64;
+  currentPhotoMetadata = {
+    coords: geoData.coords,
+    lokasi: geoData.lokasi,
+    waktuWib: result.waktuWib,
+    fileSizeKB: result.sizeKB
+  };
+
+  const previewImg = document.getElementById('buktiPreviewImg');
+  const sizeBadge = document.getElementById('buktiSizeBadge');
+  const waktuText = document.getElementById('buktiWaktuText');
+  const coordText = document.getElementById('buktiKoordinatText');
+  const lokasiText = document.getElementById('buktiLokasiText');
+  const btnSubmit = document.getElementById('btnSubmitUploadBukti');
+  const previewSection = document.getElementById('buktiPreviewSection');
+  const camContainer = document.getElementById('buktiCameraContainer');
+  const captureBtns = document.getElementById('buktiCaptureButtons');
+
+  if (previewImg) previewImg.src = result.dataUrl;
+  if (sizeBadge) {
+    sizeBadge.innerText = `${result.sizeKB} KB (Maks 1 MB - Memenuhi Syarat)`;
+    sizeBadge.className = 'px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-mono font-bold';
+  }
+  if (waktuText) waktuText.innerText = result.waktuWib;
+  if (coordText) coordText.innerText = geoData.coords;
+  if (lokasiText) lokasiText.innerText = geoData.lokasi;
+
+  if (camContainer) camContainer.classList.add('hidden');
+  if (captureBtns) captureBtns.classList.add('hidden');
+  if (previewSection) previewSection.classList.remove('hidden');
+  if (btnSubmit) btnSubmit.disabled = false;
+}
+
+function applyWatermarkAndCompress(img, geoData) {
+  const canvas = document.getElementById('buktiWatermarkCanvas') || document.createElement('canvas');
+  
+  // Skala proporsional maksimal 1280px lebar
+  const maxDimension = 1280;
+  let targetWidth = img.naturalWidth || img.width || 1280;
+  let targetHeight = img.naturalHeight || img.height || 720;
+
+  if (targetWidth > maxDimension || targetHeight > maxDimension) {
+    if (targetWidth > targetHeight) {
+      targetHeight = Math.round((targetHeight * maxDimension) / targetWidth);
+      targetWidth = maxDimension;
+    } else {
+      targetWidth = Math.round((targetWidth * maxDimension) / targetHeight);
+      targetHeight = maxDimension;
+    }
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d');
+
+  // Gambar foto dasar
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+  // Waktu WIB Sekarang
+  const now = new Date();
+  const daysID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const monthsID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const hariStr = daysID[now.getDay()];
+  const tglStr = `${now.getDate()} ${monthsID[now.getMonth()]} ${now.getFullYear()}`;
+  const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
+  const waktuLengkapWib = `${hariStr}, ${tglStr} - ${jamStr} WIB`;
+
+  // 1. Gambar Watermark Banner di bagian bawah
+  const bannerHeight = Math.max(90, Math.round(targetHeight * 0.16));
+  const bannerY = targetHeight - bannerHeight;
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  ctx.fillRect(0, bannerY, targetWidth, bannerHeight);
+
+  // Garis aksen atas banner
+  ctx.fillStyle = '#2563eb';
+  ctx.fillRect(0, bannerY, targetWidth, Math.max(3, Math.round(targetHeight * 0.005)));
+
+  // 2. Tulis Text Metadata di dalam banner
+  const fontSize = Math.max(12, Math.round(targetHeight * 0.024));
+  ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+
+  const padX = Math.round(targetWidth * 0.03);
+  let lineY = bannerY + Math.round(fontSize * 1.5);
+  const lineSpacing = Math.round(fontSize * 1.35);
+
+  const taskName = currentUploadTaskPayload?.namaTugas || 'Pelaksanaan Tugas';
+  const ruangan = currentUploadTaskPayload?.ruangan || 'Area Umum';
+  const pegawai = currentUploadTaskPayload?.namaPegawai || currentUser?.namaPegawai || '-';
+  const unit = currentUploadTaskPayload?.unit || 'Umum';
+
+  ctx.fillText(`📋 TUGAS: ${taskName.toUpperCase()} | RUANG: ${ruangan.toUpperCase()}`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.font = `600 ${Math.round(fontSize * 0.9)}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText(`📅 WAKTU: ${waktuLengkapWib}`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.fillText(`📍 LOKASI: ${geoData.lokasi} (${geoData.coords})`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.fillStyle = '#93c5fd';
+  ctx.fillText(`👤 PETUGAS: ${pegawai} (${unit}) | BPS PROVINSI KALIMANTAN BARAT`, padX, lineY);
+
+  // 3. Watermark Badge di sudut kanan atas
+  const badgeFont = Math.max(10, Math.round(targetHeight * 0.02));
+  ctx.font = `bold ${badgeFont}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  const badgeText = 'SIMPEL-KU • BPS KALBAR';
+  const badgeMetrics = ctx.measureText(badgeText);
+  const badgePadX = 12;
+  const badgePadY = 6;
+  const badgeW = badgeMetrics.width + (badgePadX * 2);
+  const badgeH = badgeFont + (badgePadY * 2);
+  const badgeX = targetWidth - badgeW - 16;
+  const badgeY = 16;
+
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH - badgePadY - 2);
+
+  // 4. Kompresi Foto (Maksimal 1 MB)
+  let quality = 0.82;
+  let dataUrl = canvas.toDataURL('image/jpeg', quality);
+  let sizeBytes = Math.round((dataUrl.length * 3) / 4);
+
+  let iterations = 0;
+  while (sizeBytes > 1024 * 1024 && quality > 0.3 && iterations < 6) {
+    quality -= 0.12;
+    dataUrl = canvas.toDataURL('image/jpeg', quality);
+    sizeBytes = Math.round((dataUrl.length * 3) / 4);
+    iterations++;
+  }
+
+  const sizeKB = Math.round(sizeBytes / 1024);
+  const base64Pure = dataUrl.split('base64,')[1];
+
+  return {
+    dataUrl: dataUrl,
+    base64: base64Pure,
+    sizeKB: sizeKB,
+    waktuWib: waktuLengkapWib
+  };
+}
+
+function resetBuktiCapture() {
+  currentCapturedBase64 = null;
+  currentPhotoMetadata = null;
+
+  const previewSection = document.getElementById('buktiPreviewSection');
+  const camContainer = document.getElementById('buktiCameraContainer');
+  const captureBtns = document.getElementById('buktiCaptureButtons');
+  const previewImg = document.getElementById('buktiPreviewImg');
+  const btnSubmit = document.getElementById('btnSubmitUploadBukti');
+
+  if (previewSection) previewSection.classList.add('hidden');
+  if (camContainer) camContainer.classList.remove('hidden');
+  if (captureBtns) captureBtns.classList.remove('hidden');
+  if (previewImg) previewImg.src = '';
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Simpan ke Google Drive</span>';
+  }
+}
+
+async function submitUploadBuktiFoto() {
+  if (!currentCapturedBase64 || !currentUploadTaskPayload) {
+    showToast('Silakan ambil foto bukti terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubmitUploadBukti');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-1.5"></div><span>Mengunggah ke Drive...</span>';
+  }
+
+  showToast('Mengunggah bukti foto ke Google Drive...', 'info');
+
+  try {
+    const res = await callBackend('uploadBuktiDukung', {
+      token: sessionToken,
+      imageBase64: currentCapturedBase64,
+      namaTugas: currentUploadTaskPayload.namaTugas,
+      ruangan: currentUploadTaskPayload.ruangan,
+      unit: currentUploadTaskPayload.unit,
+      tanggal: currentUploadTaskPayload.dayNum,
+      bulan: currentUploadTaskPayload.bulan,
+      tahun: currentUploadTaskPayload.tahun,
+      targetNamaPegawai: currentUploadTaskPayload.namaPegawai,
+      targetUsername: currentUploadTaskPayload.username,
+      koordinat: currentPhotoMetadata?.coords || '',
+      lokasi: currentPhotoMetadata?.lokasi || '',
+      waktuWib: currentPhotoMetadata?.waktuWib || '',
+      catatan: ''
+    });
+
+    if (res && res.success) {
+      showToast(res.message || 'Bukti foto berhasil disimpan ke Google Drive!', 'success');
+      closeModalUploadBukti();
+
+      if (typeof currentUploadTaskPayload.onSuccess === 'function') {
+        currentUploadTaskPayload.onSuccess(res.data);
+      } else {
+        refreshCurrentPage();
+      }
+    } else {
+      showToast((res && res.message) ? res.message : 'Gagal mengunggah foto ke Google Drive.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Coba Unggah Lagi</span>';
+      }
+    }
+  } catch (err) {
+    showToast('Kesalahan pengunggahan: ' + err.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Coba Unggah Lagi</span>';
+    }
+  }
+}
+
+function openViewBuktiModal(data) {
+  if (!data) return;
+
+  const imgEl = document.getElementById('viewBuktiImg');
+  const namaTugasEl = document.getElementById('viewBuktiNamaTugas');
+  const ruanganEl = document.getElementById('viewBuktiRuangan');
+  const pegawaiEl = document.getElementById('viewBuktiPegawai');
+  const waktuEl = document.getElementById('viewBuktiWaktu');
+  const koordinatEl = document.getElementById('viewBuktiKoordinat');
+  const lokasiEl = document.getElementById('viewBuktiLokasi');
+  const driveLinkEl = document.getElementById('viewBuktiDriveLink');
+  const spvBox = document.getElementById('viewBuktiStatusPengawasBox');
+  const spvText = document.getElementById('viewBuktiStatusPengawasText');
+  const spvDetail = document.getElementById('viewBuktiPengawasDetail');
+  const spvBadge = document.getElementById('viewBuktiStatusPengawasBadge');
+
+  if (namaTugasEl) namaTugasEl.innerText = data.namaTugas || '-';
+  if (ruanganEl) ruanganEl.innerText = data.ruangan || '-';
+  if (pegawaiEl) pegawaiEl.innerText = `${data.namaPegawai || '-'} (${data.unit || 'Umum'})`;
+  if (waktuEl) waktuEl.innerHTML = `<i class="fa-solid fa-clock text-blue-500 mr-1.5"></i><span>${escapeHtml(data.waktu || '-')}</span>`;
+  if (koordinatEl) koordinatEl.innerHTML = `<i class="fa-solid fa-location-crosshairs text-emerald-500 mr-1.5"></i><span>${escapeHtml(data.koordinat || 'Tidak tercatat')}</span>`;
+  if (lokasiEl) lokasiEl.innerText = data.lokasi || 'Kantor BPS Provinsi Kalimantan Barat';
+
+  const fileUrl = data.fileUrl || (data.fileId ? `https://drive.google.com/file/d/${data.fileId}/view` : '#');
+  if (driveLinkEl) driveLinkEl.href = fileUrl;
+
+  if (imgEl) {
+    imgEl.src = '';
+    if (data.fileId) {
+      imgEl.src = `https://drive.google.com/thumbnail?id=${data.fileId}&sz=w1000`;
+    } else if (data.fileUrl) {
+      imgEl.src = data.fileUrl;
+    } else {
+      imgEl.src = 'img/logo_BPS.png';
+    }
+  }
+
+  if (spvBox && spvText && spvDetail && spvBadge) {
+    if (data.statusPengawas) {
+      spvBox.className = 'p-3.5 rounded-2xl border flex items-center justify-between bg-emerald-50/80 border-emerald-200 text-emerald-950';
+      spvText.innerText = '✓ Telah Divalidasi oleh Pengawas';
+      spvText.className = 'text-xs font-bold text-emerald-800 mt-0.5';
+      spvDetail.innerText = data.namaPengawas ? `Divalidasi oleh ${data.namaPengawas} pada ${data.waktuValidasi || '-'}` : 'Pemeriksaan pengawas selesai';
+      spvBadge.className = 'w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-xs bg-emerald-500 text-white';
+      spvBadge.innerHTML = '<i class="fa-solid fa-check"></i>';
+    } else {
+      spvBox.className = 'p-3.5 rounded-2xl border flex items-center justify-between bg-slate-50 border-slate-200/80 text-slate-800';
+      spvText.innerText = 'Belum Divalidasi oleh Pengawas';
+      spvText.className = 'text-xs font-bold text-slate-700 mt-0.5';
+      spvDetail.innerText = 'Tugas ini menunggu checklist verifikasi dari Supervisor / Pengawas';
+      spvBadge.className = 'w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-xs bg-slate-200 text-slate-500';
+      spvBadge.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i>';
+    }
+  }
+
+  openModal('modalViewBukti');
+}
 
     /**
      * ========================================================================
@@ -3142,37 +4113,20 @@ function renderMonitoringView() {
               </div>
             </div>
 
-            <div class="space-y-2 pt-1">
+            <div class="space-y-3 pt-1">
         `;
 
         roomItems.forEach(item => {
           const st = item.dailyStatus ? item.dailyStatus[dayNum] : '-';
           const colIndex = (item.colMapping && item.colMapping[dayNum]) ? item.colMapping[dayNum] : (dayNum + 1);
+          const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+          const hasEvidence = (ev.adaBukti === true);
+          const isSupervisorValid = (ev.statusPengawas === true);
 
           if (st === '1') {
-            if (isToday) {
-              html += `
-                <div onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, false, ${dayNum})"
-                  title="Klik untuk membatalkan centang (TRUE -> FALSE)"
-                  class="group flex items-center justify-between p-3.5 rounded-xl border border-emerald-300 bg-emerald-50/70 hover:bg-rose-50/80 hover:border-rose-300 cursor-pointer transition-all active:scale-[0.99] shadow-2xs">
-                  <div class="flex items-center space-x-3 min-w-0 pr-2">
-                    <div class="w-7 h-7 rounded-lg bg-emerald-500 group-hover:bg-rose-500 text-white flex items-center justify-center text-xs flex-shrink-0 transition-colors shadow-xs">
-                      <i class="fa-solid fa-check group-hover:hidden"></i>
-                      <i class="fa-solid fa-xmark hidden group-hover:inline"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-800 line-through group-hover:no-underline decoration-slate-400 truncate">
-                      ${escapeHtml(item.kegiatan)}
-                    </span>
-                  </div>
-                  <span class="px-2.5 py-1 rounded-lg bg-emerald-100 group-hover:bg-rose-100 text-emerald-800 group-hover:text-rose-700 text-[10px] font-bold flex-shrink-0 transition-colors">
-                    <span class="group-hover:hidden">✓ TRUE (Bisa Batal)</span>
-                    <span class="hidden group-hover:inline">Batalkan Centang</span>
-                  </span>
-                </div>
-              `;
-            } else {
-              html += `
-                <div class="flex items-center justify-between p-3.5 rounded-xl border border-emerald-200/80 bg-emerald-50/40 cursor-not-allowed transition-all opacity-95">
+            html += `
+              <div class="p-3.5 rounded-2xl border ${isToday ? 'border-emerald-300 bg-emerald-50/40' : 'border-emerald-200/80 bg-emerald-50/20'} space-y-2.5 shadow-2xs">
+                <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center space-x-3 min-w-0 pr-2">
                     <div class="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs flex-shrink-0 shadow-xs">
                       <i class="fa-solid fa-check"></i>
@@ -3181,29 +4135,121 @@ function renderMonitoringView() {
                       ${escapeHtml(item.kegiatan)}
                     </span>
                   </div>
-                  <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold flex-shrink-0 flex items-center gap-1">
-                    <i class="fa-solid fa-lock text-[9px]"></i>
-                    <span>🔒 TRUE (Dikunci)</span>
-                  </span>
+
+                  ${isToday ? `
+                    <button onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, false, ${dayNum})"
+                      title="Klik untuk membatalkan checklist hari ini"
+                      class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold flex-shrink-0 transition-colors cursor-pointer active:scale-95">
+                      Batalkan Centang
+                    </button>
+                  ` : `
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold flex-shrink-0 flex items-center gap-1">
+                      <i class="fa-solid fa-lock text-[9px]"></i>
+                      <span>Terkunci</span>
+                    </span>
+                  `}
                 </div>
-              `;
-            }
+
+                <!-- Toolbar Bukti Dukung & Status Pengawas -->
+                <div class="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer" title="Upload ulang foto bukti">
+                        <i class="fa-solid fa-camera-rotate text-[10px] text-slate-500"></i>
+                        <span>Ganti</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold" title="Divalidasi oleh ${escapeHtml(ev.namaPengawas || 'Pengawas')} (${escapeHtml(ev.waktuValidasiPengawas || '')})">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas ${ev.namaPengawas ? '(' + escapeHtml(ev.namaPengawas) + ')' : ''}</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi Pengawas</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `;
           } else if (st === '0') {
             html += `
-              <div onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, true, ${dayNum})"
-                class="group flex items-center justify-between p-3.5 rounded-xl border-2 border-rose-200 bg-rose-50/40 hover:border-emerald-500 hover:bg-emerald-50/40 cursor-pointer transition-all active:scale-[0.99] shadow-2xs">
-                <div class="flex items-center space-x-3 min-w-0 pr-2">
-                  <div class="w-7 h-7 rounded-lg border-2 border-rose-400 group-hover:border-emerald-500 bg-white flex items-center justify-center text-xs text-transparent group-hover:text-emerald-600 flex-shrink-0 transition-all">
-                    <i class="fa-solid fa-check"></i>
+              <div class="p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/30 space-y-2.5 shadow-2xs">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center space-x-3 min-w-0 pr-2">
+                    <div class="w-7 h-7 rounded-lg border-2 border-rose-400 bg-white flex items-center justify-center text-xs text-transparent flex-shrink-0">
+                      <i class="fa-solid fa-check"></i>
+                    </div>
+                    <span class="text-xs font-medium text-slate-900 leading-snug">
+                      ${escapeHtml(item.kegiatan)}
+                    </span>
                   </div>
-                  <span class="text-xs font-medium text-slate-900 group-hover:text-emerald-900 leading-snug">
-                    ${escapeHtml(item.kegiatan)}
-                  </span>
+                  <button onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, true, ${dayNum})" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-emerald-600 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer active:scale-95">
+                    <span>Centang Selesai</span>
+                    <i class="fa-solid fa-check text-[10px]"></i>
+                  </button>
                 </div>
-                <button class="px-3 py-1.5 rounded-lg bg-rose-600 group-hover:bg-emerald-600 text-white text-[11px] font-bold transition-all flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>Centang Selesai</span>
-                  <i class="fa-solid fa-check text-[10px]"></i>
-                </button>
+
+                <!-- Toolbar Bukti Dukung & Status Pengawas -->
+                <div class="pt-2 border-t border-rose-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
               </div>
             `;
           } else {
@@ -3437,6 +4483,66 @@ function renderMonitoringView() {
         showToast("Kesalahan server: " + err.message, "error");
         refreshCurrentPage();
       }
+    }
+
+    /**
+     * Membuka modal upload bukti dukung untuk staf kebersihan / pelayanan
+     */
+    function triggerUploadBuktiStaff(sheetRowIndex, dayNum) {
+      if (!cachedMonitoringData || !cachedMonitoringData.items) return;
+      const item = cachedMonitoringData.items.find(i => i.sheetRowIndex === sheetRowIndex);
+      if (!item) return;
+
+      const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+      const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+      openUploadBuktiModal({
+        sheetRowIndex: sheetRowIndex,
+        ruangan: item.ruangan || 'Area Umum',
+        namaTugas: item.kegiatan,
+        unit: cachedMonitoringData.jenis || 'Kebersihan',
+        namaPegawai: cachedMonitoringData.namaPegawai || currentUser?.namaPegawai,
+        username: currentUser?.username,
+        dayNum: dayNum,
+        bulan: currentBulan,
+        tahun: currentTahun,
+        onSuccess: function() {
+          loadMonitoringData(cachedMonitoringData.jenis || 'Kebersihan');
+        }
+      });
+    }
+
+    /**
+     * Membuka viewer bukti foto untuk staf
+     */
+    function openBuktiPhotoViewerStaff(sheetRowIndex, dayNum) {
+      if (!cachedMonitoringData || !cachedMonitoringData.items) return;
+      const item = cachedMonitoringData.items.find(i => i.sheetRowIndex === sheetRowIndex);
+      if (!item) return;
+
+      const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+      const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+      const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+      openViewBuktiModal({
+        namaTugas: item.kegiatan,
+        ruangan: item.ruangan,
+        namaPegawai: cachedMonitoringData.namaPegawai || currentUser?.namaPegawai,
+        unit: cachedMonitoringData.jenis || 'Kebersihan',
+        tanggal: dayNum,
+        bulan: currentBulan,
+        tahun: currentTahun,
+        waktu: ev.waktu || '-',
+        koordinat: ev.koordinat || '',
+        lokasi: ev.lokasi || '',
+        fileId: ev.fileId || '',
+        fileUrl: ev.fileUrl || '',
+        fileName: ev.fileName || '',
+        statusPengawas: ev.statusPengawas,
+        namaPengawas: ev.namaPengawas,
+        waktuValidasi: ev.waktuValidasiPengawas,
+        statusPetugas: item.dailyStatus && (item.dailyStatus[dayNum] === '1')
+      });
     }
 
 // <<<<<<<<<< END MODUL JS: js/staff_monitoring.js <<<<<<<<<<
@@ -3689,17 +4795,73 @@ function renderJadwalKeamananUI() {
           grouped[grpName].forEach(item => {
             const isChecked = item.dailyStatus && (item.dailyStatus[selectedKeamananDay] === '1' || item.dailyStatus[selectedKeamananDay] === 1);
             const colIndex  = (item.colMapping && item.colMapping[selectedKeamananDay]) ? item.colMapping[selectedKeamananDay] : (selectedKeamananDay + 1);
+            const ev = (item.dailyEvidence && item.dailyEvidence[selectedKeamananDay]) ? item.dailyEvidence[selectedKeamananDay] : {};
+            const hasEvidence = (ev.adaBukti === true);
+            const isSupervisorValid = (ev.statusPengawas === true);
 
             taskHtml += `
-              <div onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
-                class="group flex items-start space-x-3.5 p-3.5 rounded-xl border transition-all cursor-pointer ${isChecked ? 'bg-emerald-50/60 border-emerald-200/80' : 'bg-white border-slate-200/80 hover:border-brand-400'}">
-                <div class="w-6 h-6 rounded-lg ${isChecked ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-300 text-transparent'} flex-shrink-0 flex items-center justify-center text-xs mt-0.5">
-                  <i class="fa-solid fa-check text-[10px]"></i>
+              <div class="p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-emerald-50/50 border-emerald-200/80 shadow-2xs' : 'bg-white border-slate-200/80 hover:border-indigo-300'} space-y-2.5">
+                <div class="flex items-start justify-between gap-3">
+                  <div onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
+                    class="flex items-start space-x-3 flex-1 min-w-0 cursor-pointer select-none">
+                    <div class="w-6 h-6 rounded-lg ${isChecked ? 'bg-emerald-500 text-white shadow-xs' : 'bg-white border-2 border-slate-300 text-transparent'} flex-shrink-0 flex items-center justify-center text-xs mt-0.5 transition-colors">
+                      <i class="fa-solid fa-check text-[10px]"></i>
+                    </div>
+                    <p class="text-xs font-medium ${isChecked ? 'text-slate-700 line-through decoration-slate-400' : 'text-slate-800'} leading-relaxed">
+                      ${escapeHtml(item.kegiatan)}
+                    </p>
+                  </div>
+                  <button onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
+                    class="px-2.5 py-1 rounded-lg text-[10px] font-bold flex-shrink-0 transition-colors cursor-pointer active:scale-95 ${
+                      isChecked
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                    }">
+                    ${isChecked ? 'Batal Centang' : 'Tandai Selesai'}
+                  </button>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-medium ${isChecked ? 'text-slate-700 line-through decoration-slate-400' : 'text-slate-800'} leading-relaxed">
-                    ${escapeHtml(item.kegiatan)}
-                  </p>
+
+                <!-- Toolbar Bukti Dukung & Status Validasi Pengawas -->
+                <div class="pt-2 border-t ${isChecked ? 'border-emerald-200/60' : 'border-slate-100'} flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                      <button onclick="triggerUploadBuktiSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer" title="Upload ulang foto bukti">
+                        <i class="fa-solid fa-camera-rotate text-[10px] text-slate-500"></i>
+                        <span>Ganti</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold" title="Divalidasi oleh ${escapeHtml(ev.namaPengawas || 'Pengawas')} (${escapeHtml(ev.waktuValidasiPengawas || '')})">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas ${ev.namaPengawas ? '(' + escapeHtml(ev.namaPengawas) + ')' : ''}</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi Pengawas</span>
+                      </span>
+                    `}
+                  </div>
                 </div>
               </div>
             `;
@@ -3747,6 +4909,66 @@ async function toggleKeamananTaskCheck(sheetRowIndex, colIndex, newStatus, dayNu
         refreshCurrentPage();
       }
     }
+
+/**
+ * Membuka modal upload bukti dukung untuk staf keamanan
+ */
+function triggerUploadBuktiSecurity(sheetRowIndex, dayNum) {
+  if (!cachedKeamananData || !cachedKeamananData.taskItems) return;
+  const item = cachedKeamananData.taskItems.find(i => i.sheetRowIndex === sheetRowIndex);
+  if (!item) return;
+
+  const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+  const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+  openUploadBuktiModal({
+    sheetRowIndex: sheetRowIndex,
+    ruangan: item.ruangan || 'Pos Keamanan',
+    namaTugas: item.kegiatan,
+    unit: 'Keamanan',
+    namaPegawai: cachedKeamananData.namaPegawai || currentUser?.namaPegawai,
+    username: currentUser?.username,
+    dayNum: dayNum,
+    bulan: currentBulan,
+    tahun: currentTahun,
+    onSuccess: function() {
+      loadJadwalKeamanan();
+    }
+  });
+}
+
+/**
+ * Membuka viewer bukti foto untuk staf keamanan
+ */
+function openBuktiPhotoViewerSecurity(sheetRowIndex, dayNum) {
+  if (!cachedKeamananData || !cachedKeamananData.taskItems) return;
+  const item = cachedKeamananData.taskItems.find(i => i.sheetRowIndex === sheetRowIndex);
+  if (!item) return;
+
+  const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+  const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+  const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+  openViewBuktiModal({
+    namaTugas: item.kegiatan,
+    ruangan: item.ruangan || 'Pos Keamanan',
+    namaPegawai: cachedKeamananData.namaPegawai || currentUser?.namaPegawai,
+    unit: 'Keamanan',
+    tanggal: dayNum,
+    bulan: currentBulan,
+    tahun: currentTahun,
+    waktu: ev.waktu || '-',
+    koordinat: ev.koordinat || '',
+    lokasi: ev.lokasi || '',
+    fileId: ev.fileId || '',
+    fileUrl: ev.fileUrl || '',
+    fileName: ev.fileName || '',
+    statusPengawas: ev.statusPengawas,
+    namaPengawas: ev.namaPengawas,
+    waktuValidasi: ev.waktuValidasiPengawas,
+    statusPetugas: item.dailyStatus && (item.dailyStatus[dayNum] === '1' || item.dailyStatus[dayNum] === 1)
+  });
+}
 
 // <<<<<<<<<< END MODUL JS: js/staff_security.js <<<<<<<<<<
 
@@ -3925,33 +5147,284 @@ function renderRekapCharts(data) {
       }
     }
 
-function renderRekapTable(listRuangan) {
-      const tbody = document.getElementById('rekapTableBody');
-      if (!listRuangan || listRuangan.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400">Belum ada data rekapitulasi.</td></tr>';
-        return;
-      }
+function switchRekapTab(tab) {
+  const tabs = [
+    { id: 'ruangan', btn: 'btnTabRekapRuangan', sec: 'rekapTabRuanganSection' },
+    { id: 'pegawai', btn: 'btnTabRekapPegawai', sec: 'rekapTabPegawaiSection' },
+    { id: 'preview', btn: 'btnTabRekapPreview', sec: 'rekapTabPreviewSection' }
+  ];
 
-      let html = '';
-      listRuangan.forEach(r => {
-        const persen = r.total > 0 ? Math.round((r.selesai / r.total) * 100) : 0;
-        html += `
-          <tr class="hover:bg-slate-50 transition-colors">
-            <td class="p-3.5 font-bold text-slate-800">${escapeHtml(r.ruangan)}</td>
-            <td class="p-3.5 text-center font-medium text-slate-600">${r.itemCount} Item</td>
-            <td class="p-3.5 text-center font-medium text-slate-600">${r.total}</td>
-            <td class="p-3.5 text-center font-bold text-emerald-600">${r.selesai}</td>
-            <td class="p-3.5 text-center font-extrabold ${persen === 100 ? 'text-emerald-600' : 'text-brand-600'}">${persen}%</td>
-            <td class="p-3.5">
-              <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div class="h-full rounded-full ${persen === 100 ? 'bg-emerald-500' : 'bg-brand-600'}" style="width: ${persen}%"></div>
-              </div>
-            </td>
-          </tr>
-        `;
-      });
-      tbody.innerHTML = html;
+  tabs.forEach(t => {
+    const btn = document.getElementById(t.btn);
+    const sec = document.getElementById(t.sec);
+    if (t.id === tab) {
+      if (btn) btn.className = 'px-3.5 py-2 rounded-xl text-xs font-bold transition bg-brand-600 text-white shadow-xs cursor-pointer flex-shrink-0 flex items-center gap-1.5';
+      if (sec) sec.classList.remove('hidden');
+    } else {
+      if (btn) btn.className = 'px-3.5 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 cursor-pointer flex-shrink-0 flex items-center gap-1.5';
+      if (sec) sec.classList.add('hidden');
     }
+  });
+
+  if (tab === 'pegawai') {
+    loadRekapPegawaiTab();
+  } else if (tab === 'preview') {
+    initInlineLaporanPreview();
+  }
+}
+
+function renderRekapTable(listRuangan) {
+  const tbody = document.getElementById('rekapTableBody');
+  if (!listRuangan || listRuangan.length === 0) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="p-6 text-center text-slate-400 font-medium">Belum ada data rekapitulasi untuk bulan ini.</td></tr>';
+    updateRekapKpiCards(0, 0, 0, 0);
+    return;
+  }
+
+  let totalAll = 0;
+  let selesaiAll = 0;
+
+  let html = '';
+  listRuangan.forEach(r => {
+    const rTot = Number(r.total || 0);
+    const rSel = Number(r.selesai !== undefined ? r.selesai : (r.done || 0));
+    const persen = rTot > 0 ? Math.round((rSel / rTot) * 100) : 0;
+    totalAll += rTot;
+    selesaiAll += rSel;
+
+    html += `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="p-3.5 font-bold text-slate-800">${escapeHtml(r.ruangan)}</td>
+        <td class="p-3.5 text-center font-medium text-slate-600">${r.itemCount || '-'} Item</td>
+        <td class="p-3.5 text-center font-medium text-slate-600">${rTot}</td>
+        <td class="p-3.5 text-center font-bold text-emerald-600">${rSel}</td>
+        <td class="p-3.5 text-center font-extrabold ${persen >= 90 ? 'text-emerald-600' : (persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${persen}%</td>
+        <td class="p-3.5">
+          <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+            <div class="h-full rounded-full ${persen >= 90 ? 'bg-emerald-500' : (persen >= 70 ? 'bg-amber-500' : 'bg-rose-500')}" style="width: ${persen}%"></div>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  const belumAll = Math.max(0, totalAll - selesaiAll);
+  const persenAll = totalAll > 0 ? Math.round((selesaiAll / totalAll) * 100) : 0;
+
+  // Baris Total Keseluruhan
+  html += `
+    <tr class="bg-slate-50/80 font-bold border-t-2 border-slate-300">
+      <td class="p-3.5 text-slate-900 uppercase tracking-wider">TOTAL KESELURUHAN</td>
+      <td class="p-3.5 text-center text-slate-600">${listRuangan.length} Area</td>
+      <td class="p-3.5 text-center text-slate-800">${totalAll}</td>
+      <td class="p-3.5 text-center text-emerald-600 font-extrabold">${selesaiAll}</td>
+      <td class="p-3.5 text-center text-brand-700 font-black">${persenAll}%</td>
+      <td class="p-3.5">
+        <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+          <div class="h-full rounded-full bg-brand-600" style="width: ${persenAll}%"></div>
+        </div>
+      </td>
+    </tr>
+  `;
+
+  if (tbody) tbody.innerHTML = html;
+  updateRekapKpiCards(totalAll, selesaiAll, belumAll, persenAll);
+}
+
+function updateRekapKpiCards(total, selesai, belum, persen) {
+  const elTot = document.getElementById('rekapKpiTotal');
+  const elSel = document.getElementById('rekapKpiSelesai');
+  const elBel = document.getElementById('rekapKpiBelum');
+  const elPct = document.getElementById('rekapKpiPersen');
+  const elBar = document.getElementById('rekapKpiProgressBar');
+
+  if (elTot) elTot.innerText = total;
+  if (elSel) elSel.innerText = selesai;
+  if (elBel) elBel.innerText = belum;
+  if (elPct) elPct.innerText = persen + '%';
+  if (elBar) elBar.style.width = persen + '%';
+}
+
+async function loadRekapPegawaiTab() {
+  const tbody = document.getElementById('rekapPegawaiTableBody');
+  if (!tbody) return;
+
+  const bulan = document.getElementById('globalMonthSelect').value;
+  const tahun = document.getElementById('globalYearSelect').value;
+
+  tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400 font-medium"><div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-1.5"></div>Memuat rekapitulasi seluruh pegawai...</td></tr>';
+
+  try {
+    const res = await callBackend('getExportLaporanData', {
+      token: sessionToken,
+      tipe: 'semua',
+      bulan: bulan,
+      tahun: tahun
+    });
+
+    if (res && res.success && res.data && res.data.rekapPegawai) {
+      renderRekapPegawaiTable(res.data.rekapPegawai, res.data.summary);
+    } else {
+      tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-rose-500 font-medium"><i class="fa-solid fa-circle-exclamation mr-1"></i>${escapeHtml(res?.message || 'Gagal memuat rekap pegawai.')}</td></tr>`;
+    }
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" class="p-6 text-center text-rose-500 font-medium">Kesalahan: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderRekapPegawaiTable(listPegawai, summary) {
+  const tbody = document.getElementById('rekapPegawaiTableBody');
+  if (!tbody) return;
+
+  if (!listPegawai || listPegawai.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="p-6 text-center text-slate-400">Tidak ada data pegawai untuk bulan ini.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  listPegawai.forEach((p, idx) => {
+    const statusClass = p.persen >= 90
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : (p.persen >= 70 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
+
+    html += `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="p-3.5 text-center text-slate-400 font-semibold">${idx + 1}</td>
+        <td class="p-3.5 font-bold text-slate-800">
+          <span>${escapeHtml(p.namaPegawai)}</span>
+          <span class="block text-[10px] text-slate-400 font-normal">@${escapeHtml(p.username || '-')}</span>
+        </td>
+        <td class="p-3.5 text-center">
+          <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200/60">${escapeHtml(p.unit || '-')}</span>
+        </td>
+        <td class="p-3.5 text-right font-medium text-slate-600">${p.totalTarget || 0}</td>
+        <td class="p-3.5 text-right font-bold text-emerald-600">${p.selesai || 0}</td>
+        <td class="p-3.5 text-right font-bold text-rose-600">${p.belum || 0}</td>
+        <td class="p-3.5 text-center font-black ${p.persen >= 90 ? 'text-emerald-600' : (p.persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${p.persen || 0}%</td>
+        <td class="p-3.5 text-center">
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusClass}">${escapeHtml(p.status || '-')}</span>
+        </td>
+        <td class="p-3.5 text-center">
+          <button onclick="openExportModal('${escapeHtml(p.username)}')" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition cursor-pointer">
+            <i class="fa-solid fa-file-export mr-1"></i> Cetak
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  if (summary) {
+    html += `
+      <tr class="bg-slate-100/80 font-bold border-t-2 border-slate-300">
+        <td colspan="3" class="p-3.5 text-center uppercase tracking-wider text-slate-900">TOTAL KESELURUHAN PEGAWAI (${listPegawai.length})</td>
+        <td class="p-3.5 text-right font-bold text-slate-800">${summary.totalTarget || 0}</td>
+        <td class="p-3.5 text-right font-extrabold text-emerald-600">${summary.totalSelesai || 0}</td>
+        <td class="p-3.5 text-right font-extrabold text-rose-600">${summary.totalBelum || 0}</td>
+        <td class="p-3.5 text-center font-black text-brand-700">${summary.persen || 0}%</td>
+        <td class="p-3.5 text-center" colspan="2">
+          <span class="text-xs font-bold text-slate-700">${summary.persen >= 90 ? 'Sangat Baik' : (summary.persen >= 70 ? 'Cukup Baik' : 'Perlu Peningkatan')}</span>
+        </td>
+      </tr>
+    `;
+  }
+
+  tbody.innerHTML = html;
+}
+
+function initInlineLaporanPreview() {
+  populateInlinePreviewEmployeeSelect();
+  renderInlineLaporanPreview();
+}
+
+function populateInlinePreviewEmployeeSelect() {
+  const sel = document.getElementById('previewEmployeeSelect');
+  const scopeSel = document.getElementById('previewScopeSelect');
+  const wrapper = document.getElementById('previewEmployeeSelectWrapper');
+  if (!sel || !scopeSel) return;
+
+  const isIndividu = (scopeSel.value === 'individu');
+  if (wrapper) {
+    if (isIndividu) wrapper.classList.remove('hidden');
+    else wrapper.classList.add('hidden');
+  }
+
+  // Populate options from export modal selector if available
+  const exportEmpSel = document.getElementById('exportEmployeeSelect');
+  if (exportEmpSel && exportEmpSel.options.length > 0) {
+    sel.innerHTML = exportEmpSel.innerHTML;
+  } else {
+    sel.innerHTML = `<option value="${currentUser?.username || ''}">${escapeHtml(currentUser?.namaPegawai || 'Saya')}</option>`;
+  }
+}
+
+async function renderInlineLaporanPreview() {
+  const card = document.getElementById('inlineLaporanPreviewCard');
+  if (!card) return;
+
+  const scopeSel = document.getElementById('previewScopeSelect');
+  const empSel = document.getElementById('previewEmployeeSelect');
+  const wrapper = document.getElementById('previewEmployeeSelectWrapper');
+
+  const scope = scopeSel ? scopeSel.value : 'semua';
+  if (wrapper) {
+    if (scope === 'individu') wrapper.classList.remove('hidden');
+    else wrapper.classList.add('hidden');
+  }
+
+  const bulan = document.getElementById('globalMonthSelect').value;
+  const tahun = document.getElementById('globalYearSelect').value;
+  const targetUser = (scope === 'individu') ? (empSel ? empSel.value : currentUser?.username) : '';
+
+  card.innerHTML = `
+    <div class="text-center py-12 text-slate-400">
+      <div class="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+      <span class="text-xs">Memuat pratinjau lembar laporan resmi BPS...</span>
+    </div>
+  `;
+
+  try {
+    const res = await callBackend('getExportLaporanData', {
+      token: sessionToken,
+      tipe: scope,
+      bulan: bulan,
+      tahun: tahun,
+      targetUsername: targetUser
+    });
+
+    if (res && res.success && res.data) {
+      if (typeof renderLaporanPreviewHtml === 'function') {
+        card.innerHTML = renderLaporanPreviewHtml(res.data);
+      } else {
+        card.innerHTML = `<div class="p-6 text-center text-xs text-slate-500">Pratinjau data siap. Gunakan tombol export di atas.</div>`;
+      }
+    } else {
+      card.innerHTML = `<div class="p-6 text-center text-xs text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${escapeHtml(res?.message || 'Gagal memuat pratinjau.')}</div>`;
+    }
+  } catch (err) {
+    card.innerHTML = `<div class="p-6 text-center text-xs text-rose-500">Kesalahan: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function exportFromInlinePreview(format) {
+  const scopeSel = document.getElementById('previewScopeSelect');
+  const empSel = document.getElementById('previewEmployeeSelect');
+  const scope = scopeSel ? scopeSel.value : 'semua';
+  const targetUser = (scope === 'individu') ? (empSel ? empSel.value : currentUser?.username) : null;
+
+  // Set values on export modal then trigger export
+  const radioSemua = document.getElementById('radioScopeSemua');
+  const radioIndividu = document.getElementById('radioScopeIndividu');
+  if (scope === 'semua' && radioSemua) radioSemua.checked = true;
+  if (scope === 'individu' && radioIndividu) radioIndividu.checked = true;
+
+  onExportScopeChange();
+  if (targetUser) {
+    const sel = document.getElementById('exportEmployeeSelect');
+    if (sel) sel.value = targetUser;
+  }
+
+  runExportLaporan(format);
+}
 
 // <<<<<<<<<< END MODUL JS: js/staff_rekap.js <<<<<<<<<<
 
@@ -4549,35 +6022,246 @@ function renderIntegratedMonitoringUI() {
 
       if (countBadge) countBadge.innerText = `${filtered.length} Item Checklist`;
 
+      window._currentFilteredSupervisorItems = filtered;
+
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada data checklist yang cocok dengan kriteria pencarian / filter.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-400 font-medium">Tidak ada data checklist yang cocok dengan kriteria pencarian / filter.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map((it, idx) => {
         const isDone = it.isDone;
+        const isPengawasValid = (it.statusPengawas === true);
+        const hasEvidence = (it.adaBukti === true);
+
         return `
           <tr class="hover:bg-slate-50 transition border-t border-slate-100">
-            <td class="py-3 px-4 font-semibold text-slate-400">${idx + 1}</td>
-            <td class="py-3 px-4 font-semibold text-slate-700">
+            <td class="py-3 px-3 font-semibold text-slate-400">${idx + 1}</td>
+            <td class="py-3 px-3 font-semibold text-slate-700">
               <span class="inline-flex items-center gap-1.5 flex-wrap">
                 <span>${escapeHtml(it.unit || '-')}</span>
                 ${it.shift ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${it.shift === 'P' ? 'bg-blue-100 text-blue-700 border border-blue-200' : it.shift === 'S' ? 'bg-amber-100 text-amber-700 border border-amber-200' : it.shift === 'M' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-600'}">Shift ${escapeHtml(it.namaShift || it.shift)}</span>` : ''}
               </span>
             </td>
-            <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(it.pegawai || '-')}</td>
-            <td class="py-3 px-4 text-slate-600">${escapeHtml(it.ruangan || '-')}</td>
-            <td class="py-3 px-4 text-slate-800">${escapeHtml(it.item || '-')}</td>
-            <td class="py-3 px-4">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isDone ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
-                <i class="fa-solid ${isDone ? 'fa-circle-check text-emerald-600' : 'fa-circle-xmark text-rose-600'}"></i>
-                ${isDone ? 'Selesai' : 'Belum'}
-              </span>
+            <td class="py-3 px-3 font-bold text-slate-800">${escapeHtml(it.pegawai || '-')}</td>
+            <td class="py-3 px-3 text-slate-600">${escapeHtml(it.ruangan || '-')}</td>
+            <td class="py-3 px-4 text-slate-800 font-medium">${escapeHtml(it.item || '-')}</td>
+            
+            <!-- Kolom Status Petugas (Interaktif: Pengawas Dapat Mencetak Centang Selesai Jika Pegawai Belum Centang) -->
+            <td class="py-3 px-3 text-center">
+              ${isDone ? `
+                <div class="flex flex-col items-center gap-1">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                    <span>Selesai</span>
+                  </span>
+                  <button onclick="toggleStaffTaskCheckFromSupervisor(${idx}, false)" title="Batalkan checklist tugas pegawai ini" class="text-[10px] text-slate-400 hover:text-rose-600 font-medium transition-colors cursor-pointer">
+                    Batal Centang
+                  </button>
+                </div>
+              ` : `
+                <div class="flex flex-col items-center gap-1">
+                  <button onclick="toggleStaffTaskCheckFromSupervisor(${idx}, true)" title="Pengawas mencentang tugas pegawai ini yang belum diceklist pegawai" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-600 hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span>Centang Selesai</span>
+                  </button>
+                  <span class="text-[10px] text-rose-500 font-semibold">Belum Diceklist</span>
+                </div>
+              `}
             </td>
-            <td class="py-3 px-4 text-slate-400 font-mono text-[11px] text-right">${escapeHtml(it.updatedAt || '-')}</td>
+
+            <!-- Kolom Bukti Dukung Foto -->
+            <td class="py-3 px-3 text-center">
+              ${hasEvidence ? `
+                <button onclick="openBuktiPhotoViewerFromRow(${idx})" title="Lihat Bukti Foto" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-2xs transition cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-camera text-emerald-600"></i>
+                  <span>Tersedia</span>
+                </button>
+              ` : `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-400 border border-slate-200/60">
+                  <i class="fa-solid fa-minus text-[9px]"></i>
+                  <span>Belum Ada</span>
+                </span>
+              `}
+            </td>
+
+            <!-- Kolom Validasi Pengawas (Interactive Checklist & Uncheck) -->
+            <td class="py-3 px-3 text-center">
+              ${isPengawasValid ? `
+                <div class="flex flex-col items-center">
+                  <button onclick="toggleSupervisorValidationFromRow(${idx}, false)" title="Klik untuk membatalkan checklist validasi pengawas (Uncheck)" class="group inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-rose-600 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-check group-hover:hidden text-xs"></i>
+                    <i class="fa-solid fa-xmark hidden group-hover:inline text-xs"></i>
+                    <span class="group-hover:hidden">Tervalidasi</span>
+                    <span class="hidden group-hover:inline">Batalkan</span>
+                  </button>
+                  <span class="text-[10px] text-slate-500 mt-1 max-w-[130px] truncate text-center" title="Divalidasi oleh ${escapeHtml(it.namaPengawas || 'Pengawas')} (${escapeHtml(it.waktuValidasi || '')})">
+                    ${escapeHtml(it.namaPengawas ? 'Oleh ' + it.namaPengawas : 'Tervalidasi')}
+                  </span>
+                </div>
+              ` : `
+                <div class="flex flex-col items-center">
+                  <button onclick="toggleSupervisorValidationFromRow(${idx}, true)" title="Berikan checklist validasi terhadap tugas ini" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-clipboard-check text-xs"></i>
+                    <span>Validasi</span>
+                  </button>
+                  <span class="text-[10px] text-slate-400 mt-1">Belum Valid</span>
+                </div>
+              `}
+            </td>
+
+            <td class="py-3 px-3 text-slate-400 font-mono text-[11px] text-right">
+              ${escapeHtml(it.waktuValidasi || it.updatedAt || '-')}
+            </td>
           </tr>
         `;
       }).join('');
+    }
+
+    /**
+     * Pengawas mencentang / membatalkan tugas pegawai yang belum diceklist pegawai
+     */
+    async function toggleStaffTaskCheckFromSupervisor(idx, newStatus) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      // Optimistic update
+      const oldDone = it.isDone;
+      it.isDone = newStatus;
+      it.updatedAt = newStatus ? `${tahun}-${String(bulan).padStart(2, '0')}-${String(it.dayNum).padStart(2, '0')} (Diceklist Pengawas)` : '-';
+      renderIntegratedMonitoringUI();
+
+      showToast(newStatus ? 'Mencatat checklist tugas pegawai...' : 'Membatalkan centang tugas pegawai...', 'info');
+
+      try {
+        const res = await callBackend('supervisorToggleStaffTaskCheck', {
+          token: sessionToken,
+          taskKey: it.taskKey,
+          sheetRowIndex: it.sheetRowIndex,
+          colIndex: it.colIndex,
+          targetSheetName: it.targetSheetName,
+          namaPegawai: it.pegawai || it.namaPegawai,
+          username: it.username,
+          unit: it.unit,
+          ruangan: it.ruangan,
+          namaTugas: it.item,
+          dayNum: it.dayNum,
+          bulan: bulan,
+          tahun: tahun,
+          newStatus: newStatus
+        });
+
+        if (res && res.success) {
+          showToast(res.message || (newStatus ? 'Tugas pegawai berhasil dicentang selesai oleh Pengawas!' : 'Centang tugas dibatalkan.'), 'success');
+          if (res.data && res.data.taskKey) {
+            it.taskKey = res.data.taskKey;
+          }
+          renderIntegratedMonitoringUI();
+        } else {
+          it.isDone = oldDone;
+          renderIntegratedMonitoringUI();
+          showToast((res && res.message) ? res.message : 'Gagal memperbarui status tugas pegawai.', 'error');
+        }
+      } catch (err) {
+        it.isDone = oldDone;
+        renderIntegratedMonitoringUI();
+        showToast('Kesalahan server: ' + err.message, 'error');
+      }
+    }
+
+    async function toggleSupervisorValidationFromRow(idx, newStatus) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      // Optimistic update
+      it.statusPengawas = newStatus;
+      it.namaPengawas = newStatus ? (currentUser?.namaPegawai || currentUser?.username || 'Pengawas') : '';
+      it.waktuValidasi = newStatus ? (new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB') : '';
+
+      // Jika memvalidasi tugas yang belum selesai, otomatis centang selesai tugas pegawai juga!
+      const alsoCheckStaff = (!it.isDone && newStatus);
+      if (alsoCheckStaff) {
+        it.isDone = true;
+      }
+
+      renderIntegratedMonitoringUI();
+
+      showToast(newStatus ? (alsoCheckStaff ? 'Memvalidasi & mencentang tugas pegawai...' : 'Memvalidasi tugas...') : 'Membatalkan checklist validasi...', 'info');
+
+      try {
+        const res = await callBackend('updateSupervisorChecklist', {
+          token: sessionToken,
+          taskKey: it.taskKey,
+          sheetRowIndex: it.sheetRowIndex,
+          colIndex: it.colIndex,
+          targetSheetName: it.targetSheetName,
+          namaPegawai: it.pegawai || it.namaPegawai,
+          username: it.username,
+          unit: it.unit,
+          ruangan: it.ruangan,
+          namaTugas: it.item,
+          tanggal: it.dayNum,
+          bulan: bulan,
+          tahun: tahun,
+          newStatus: newStatus,
+          statusPetugas: it.isDone,
+          alsoCheckStaff: alsoCheckStaff
+        });
+
+        if (res && res.success) {
+          showToast(res.message || (newStatus ? 'Tugas berhasil divalidasi!' : 'Validasi pengawas dibatalkan!'), 'success');
+          if (res.data) {
+            it.taskKey = res.data.taskKey || it.taskKey;
+            it.statusPengawas = res.data.statusPengawas;
+            it.namaPengawas = res.data.namaPengawas;
+            it.waktuValidasi = res.data.waktuValidasiPengawas;
+          }
+          renderIntegratedMonitoringUI();
+        } else {
+          it.statusPengawas = !newStatus;
+          if (alsoCheckStaff) it.isDone = false;
+          renderIntegratedMonitoringUI();
+          showToast((res && res.message) ? res.message : 'Gagal memperbarui validasi pengawas.', 'error');
+        }
+      } catch (err) {
+        it.statusPengawas = !newStatus;
+        if (alsoCheckStaff) it.isDone = false;
+        renderIntegratedMonitoringUI();
+        showToast('Kesalahan server: ' + err.message, 'error');
+      }
+    }
+
+    function openBuktiPhotoViewerFromRow(idx) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+      openViewBuktiModal({
+        namaTugas: it.item,
+        ruangan: it.ruangan,
+        namaPegawai: it.pegawai || it.namaPegawai,
+        unit: it.unit,
+        tanggal: it.dayNum,
+        bulan: document.getElementById('globalMonthSelect').value,
+        tahun: document.getElementById('globalYearSelect').value,
+        waktu: it.waktuPelaksanaan || it.updatedAt,
+        koordinat: it.koordinat,
+        lokasi: it.lokasi,
+        fileId: it.fileId,
+        fileUrl: it.fileUrl,
+        fileName: it.fileName,
+        statusPengawas: it.statusPengawas,
+        namaPengawas: it.namaPengawas,
+        waktuValidasi: it.waktuValidasi,
+        statusPetugas: it.isDone
+      });
     }
 
 /**
@@ -4636,9 +6320,11 @@ function renderIntegratedMonitoringUI() {
 
     /**
      * ========================================================================
-     * 5. FITUR EXPORT LAPORAN (EXCEL & CETAK/PDF)
+     * 5. FITUR EXPORT LAPORAN (EXCEL & CETAK/PDF DENGAN LIVE PREVIEW)
      * ========================================================================
      */
+    let _lastExportReportData = null;
+
     function openExportModal(defaultEmpUsername = null) {
       const curMonth = document.getElementById('globalMonthSelect')?.value || 
                        document.getElementById('adminFilterBulan')?.value || 
@@ -4680,6 +6366,10 @@ function renderIntegratedMonitoringUI() {
       }
 
       openModal('modalExportLaporan');
+      // Trigger live preview begitu modal terbuka
+      setTimeout(() => {
+        triggerLiveExportPreview();
+      }, 50);
     }
 
     function onExportScopeChange() {
@@ -4693,6 +6383,7 @@ function renderIntegratedMonitoringUI() {
           empWrapper.classList.add('hidden');
         }
       }
+      triggerLiveExportPreview();
     }
 
     function populateExportEmployeeSelect(selectedUsername = null) {
@@ -4744,6 +6435,271 @@ function renderIntegratedMonitoringUI() {
       }).join('');
     }
 
+    /**
+     * Muat dan perbarui pratinjau langsung di dalam modal export
+     */
+    async function triggerLiveExportPreview() {
+      const previewArea = document.getElementById('modalExportPreviewArea');
+      if (!previewArea) return;
+
+      const role = (currentUser?.role || '').toLowerCase();
+      const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
+      let scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'semua';
+      if (!isManager) scope = 'individu';
+
+      const bulan = document.getElementById('exportMonthSelect')?.value || (new Date().getMonth() + 1);
+      const tahun = document.getElementById('exportYearSelect')?.value || new Date().getFullYear();
+
+      let targetUser = '';
+      if (scope === 'individu') {
+        if (isManager) {
+          targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+        } else {
+          targetUser = currentUser?.username;
+        }
+      }
+
+      previewArea.innerHTML = `
+        <div class="text-center py-10 text-slate-400">
+          <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <span class="text-xs font-medium">Memuat pratinjau lembar laporan BPS...</span>
+        </div>
+      `;
+
+      try {
+        const res = await callBackend('getExportLaporanData', {
+          token: sessionToken,
+          tipe: scope,
+          bulan: bulan,
+          tahun: tahun,
+          targetUsername: targetUser
+        });
+
+        if (res && res.success && res.data) {
+          _lastExportReportData = res.data;
+          previewArea.innerHTML = renderLaporanPreviewHtml(res.data);
+        } else {
+          previewArea.innerHTML = `
+            <div class="p-6 text-center text-xs text-rose-500 font-medium">
+              <i class="fa-solid fa-circle-exclamation mr-1"></i>${escapeHtml(res?.message || 'Gagal memuat pratinjau laporan.')}
+            </div>
+          `;
+        }
+      } catch (err) {
+        previewArea.innerHTML = `
+          <div class="p-6 text-center text-xs text-rose-500 font-medium">
+            Kesalahan: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Render dokumen laporan resmi berformat HTML bersih untuk preview inline & modal
+     */
+    function renderLaporanPreviewHtml(d) {
+      if (!d) return '<div class="p-4 text-center text-slate-400 text-xs">Data tidak tersedia.</div>';
+      const isSemua = (d.tipe === 'semua');
+      const periode = d.periode || {};
+      const summary = d.summary || {};
+
+      let tableHtml = '';
+      if (isSemua) {
+        const rows = (d.rekapPegawai || []).map((p, idx) => {
+          const badgeClass = p.persen >= 90
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : (p.persen >= 70 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
+          return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+              <td class="p-2.5 text-center text-slate-400 font-medium text-xs">${idx + 1}</td>
+              <td class="p-2.5 font-bold text-slate-800 text-xs">${escapeHtml(p.namaPegawai)}</td>
+              <td class="p-2.5 text-center text-xs text-slate-600">${escapeHtml(p.unit || '-')}</td>
+              <td class="p-2.5 text-right font-medium text-slate-700 text-xs">${p.totalTarget || 0}</td>
+              <td class="p-2.5 text-right font-bold text-emerald-600 text-xs">${p.selesai || 0}</td>
+              <td class="p-2.5 text-right font-bold text-rose-600 text-xs">${p.belum || 0}</td>
+              <td class="p-2.5 text-center font-black text-xs ${p.persen >= 90 ? 'text-emerald-600' : (p.persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${p.persen || 0}%</td>
+              <td class="p-2.5 text-center text-xs">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHtml(p.status || '-')}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tableHtml = `
+          <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
+                  <th class="p-2.5 text-center w-10">No</th>
+                  <th class="p-2.5">Nama Pegawai / Petugas</th>
+                  <th class="p-2.5 text-center w-28">Unit Kerja</th>
+                  <th class="p-2.5 text-right w-24">Target</th>
+                  <th class="p-2.5 text-right w-24">Selesai</th>
+                  <th class="p-2.5 text-right w-24">Belum</th>
+                  <th class="p-2.5 text-center w-24">Capaian</th>
+                  <th class="p-2.5 text-center w-32">Status Kinerja</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr class="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs">
+                  <td colspan="3" class="p-2.5 text-center uppercase text-slate-900 font-extrabold tracking-wider">TOTAL KESELURUHAN</td>
+                  <td class="p-2.5 text-right text-slate-900 font-bold">${summary.totalTarget || 0}</td>
+                  <td class="p-2.5 text-right text-emerald-700 font-black">${summary.totalSelesai || 0}</td>
+                  <td class="p-2.5 text-right text-rose-700 font-black">${summary.totalBelum || 0}</td>
+                  <td class="p-2.5 text-center text-brand-700 font-black">${summary.persen || 0}%</td>
+                  <td class="p-2.5 text-center font-bold text-slate-700">${summary.persen >= 90 ? 'Optimal' : (summary.persen >= 70 ? 'Cukup' : 'Perlu Perhatian')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        // INDIVIDU (Detail per tanggal 1..31)
+        const days = periode.daysInMonth || 31;
+        let dayHeaders = '';
+        for (let d = 1; d <= days; d++) {
+          dayHeaders += `<th class="p-1 text-center font-bold text-[10px] w-6 border border-slate-700/60">${d}</th>`;
+        }
+
+        const rows = (d.items || []).map((it, idx) => {
+          let dayCells = '';
+          for (let d = 1; d <= days; d++) {
+            const val = it.dailyStatus ? it.dailyStatus[d] : '-';
+            let cellDisp = '-';
+            let cellClass = 'text-slate-300';
+            if (val === '1' || val === 1 || val === true) {
+              cellDisp = '✓';
+              cellClass = 'text-emerald-600 font-black bg-emerald-50/70';
+            } else if (val === '0' || val === 0 || val === false) {
+              cellDisp = '✗';
+              cellClass = 'text-rose-600 font-black bg-rose-50/70';
+            }
+            dayCells += `<td class="p-1 text-center text-[10px] border border-slate-200 ${cellClass}">${cellDisp}</td>`;
+          }
+
+          return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+              <td class="p-2 text-center text-slate-400 font-medium text-xs border border-slate-200">${idx + 1}</td>
+              <td class="p-2 font-bold text-slate-800 text-xs border border-slate-200 whitespace-nowrap">${escapeHtml(it.ruangan || '-')}</td>
+              <td class="p-2 text-slate-700 text-xs border border-slate-200 min-w-[200px]">${escapeHtml(it.kegiatan || '-')}</td>
+              ${dayCells}
+              <td class="p-2 text-right font-medium text-slate-700 text-xs border border-slate-200">${it.target || 0}</td>
+              <td class="p-2 text-right font-bold text-emerald-600 text-xs border border-slate-200">${it.selesai || 0}</td>
+              <td class="p-2 text-right font-bold text-rose-600 text-xs border border-slate-200">${it.belum || 0}</td>
+              <td class="p-2 text-center font-black text-xs border border-slate-200 ${it.persen >= 90 ? 'text-emerald-600' : (it.persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${it.persen || 0}%</td>
+            </tr>
+          `;
+        }).join('');
+
+        tableHtml = `
+          <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider">
+                  <th class="p-2 text-center w-8 border border-slate-700" rowspan="2">No</th>
+                  <th class="p-2 w-32 border border-slate-700" rowspan="2">Ruangan / Pos</th>
+                  <th class="p-2 border border-slate-700" rowspan="2">Uraian Tugas / Kegiatan</th>
+                  <th class="p-1.5 text-center border border-slate-700" colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
+                  <th class="p-1.5 text-center border border-slate-700" colspan="4">Ringkasan Capaian</th>
+                </tr>
+                <tr class="bg-slate-800 text-slate-200 text-[10px]">
+                  ${dayHeaders}
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Target</th>
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Selesai</th>
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Belum</th>
+                  <th class="p-1.5 text-center w-14 border border-slate-700">(%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr class="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs">
+                  <td colspan="${3 + days}" class="p-2 text-center uppercase text-slate-900 font-extrabold tracking-wider border border-slate-200">TOTAL CAPAIAN BULAN INI</td>
+                  <td class="p-2 text-right text-slate-900 font-bold border border-slate-200">${summary.totalTarget || 0}</td>
+                  <td class="p-2 text-right text-emerald-700 font-black border border-slate-200">${summary.totalSelesai || 0}</td>
+                  <td class="p-2 text-right text-rose-700 font-black border border-slate-200">${summary.totalBelum || 0}</td>
+                  <td class="p-2 text-center text-brand-700 font-black border border-slate-200">${summary.persen || 0}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="space-y-4 font-sans bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <!-- KOP SURAT RESMI BPS KALBAR -->
+          <div class="text-center pb-3 border-b-2 border-slate-900">
+            <h2 class="text-base sm:text-lg font-black tracking-wide text-slate-900 uppercase">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</h2>
+            <p class="text-[11px] text-slate-600 mt-0.5">Jl. Sutan Syahrir No. 24/42, Pontianak 78116 | Telp: (0561) 732049 | Email: bps6100@bps.go.id</p>
+            <div class="mt-1 font-bold text-xs text-brand-700 uppercase tracking-wider">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</div>
+          </div>
+
+          <!-- JUDUL LAPORAN -->
+          <div class="text-center py-1">
+            <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+              ${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & CHECKLIST TUGAS PEGAWAI'}
+            </h3>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Periode: <strong class="text-slate-800">${escapeHtml(periode.labelPeriode || '')}</strong></p>
+          </div>
+
+          <!-- META INFORMASI -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            ${isSemua ? `
+              <div><span class="text-slate-500 font-medium">Total Petugas:</span> <strong class="text-slate-900">${summary.totalPegawai || 0} Orang</strong></div>
+              <div><span class="text-slate-500 font-medium">Bulan Pelaporan:</span> <strong class="text-slate-900">${escapeHtml(periode.labelPeriode || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Status Kepatuhan:</span> <strong class="text-emerald-700">${summary.persen || 0}% Terpenuhi</strong></div>
+              <div><span class="text-slate-500 font-medium">Format Dokumen:</span> <strong class="text-slate-900">Rekap Gabungan</strong></div>
+            ` : `
+              <div><span class="text-slate-500 font-medium">Nama Petugas:</span> <strong class="text-slate-900">${escapeHtml(d.pegawai?.namaPegawai || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Unit Kerja:</span> <strong class="text-slate-900">${escapeHtml(d.pegawai?.unit || '')} (${escapeHtml(d.pegawai?.role || '')})</strong></div>
+              <div><span class="text-slate-500 font-medium">Akun Pengguna:</span> <strong class="text-slate-700">@${escapeHtml(d.pegawai?.username || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Bulan Pelaporan:</span> <strong class="text-slate-900">${escapeHtml(periode.labelPeriode || '')}</strong></div>
+            `}
+          </div>
+
+          <!-- KARTU RINGKASAN KPI -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Target</span>
+              <span class="text-base font-black text-slate-800">${summary.totalTarget || 0}</span>
+            </div>
+            <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-center">
+              <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Tugas Selesai</span>
+              <span class="text-base font-black text-emerald-700">${summary.totalSelesai || 0}</span>
+            </div>
+            <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-200/80 text-center">
+              <span class="block text-[10px] font-bold text-rose-500 uppercase tracking-wider">Belum Selesai</span>
+              <span class="text-base font-black text-rose-700">${summary.totalBelum || 0}</span>
+            </div>
+            <div class="p-3 bg-blue-50/70 rounded-xl border border-blue-200/80 text-center">
+              <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">Capaian (%)</span>
+              <span class="text-base font-black text-blue-700">${summary.persen || 0}%</span>
+            </div>
+          </div>
+
+          <!-- TABEL DATA -->
+          ${tableHtml}
+
+          <!-- LEMBAR PENGESAHAN TANDA TANGAN -->
+          <div class="pt-6 grid grid-cols-2 gap-4 text-xs text-center border-t border-slate-200 mt-6">
+            <div>
+              <p class="font-medium text-slate-600">Mengetahui,<br><strong class="text-slate-900">Kasubbag Umum BPS Prov. Kalbar</strong></p>
+              <div class="h-16"></div>
+              <p class="font-bold underline text-slate-900">( .................................................... )</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">NIP. ........................................</p>
+            </div>
+            <div>
+              <p class="font-medium text-slate-600">Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br><strong class="text-slate-900">${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong></p>
+              <div class="h-16"></div>
+              <p class="font-bold underline text-slate-900">( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function runExportLaporan(format) {
       const role = (currentUser?.role || '').toLowerCase();
       const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
@@ -4762,6 +6718,21 @@ function renderIntegratedMonitoringUI() {
         }
       }
 
+      // Jika data pratinjau terakhir sudah sama persis, gunakan langsung tanpa round-trip tambahan
+      if (_lastExportReportData && 
+          _lastExportReportData.tipe === scope && 
+          _lastExportReportData.periode?.bulan == bulan && 
+          _lastExportReportData.periode?.tahun == tahun && 
+          (scope !== 'individu' || _lastExportReportData.pegawai?.username === targetUser)) {
+        closeModal('modalExportLaporan');
+        if (format === 'excel') {
+          downloadExcelReport(_lastExportReportData);
+        } else {
+          printPdfReport(_lastExportReportData);
+        }
+        return;
+      }
+
       showLoader(true, 'Menyiapkan berkas laporan...');
       try {
         const res = await callBackend('getExportLaporanData', {
@@ -4774,6 +6745,7 @@ function renderIntegratedMonitoringUI() {
         showLoader(false);
 
         if (res && res.success && res.data) {
+          _lastExportReportData = res.data;
           closeModal('modalExportLaporan');
           if (format === 'excel') {
             downloadExcelReport(res.data);
@@ -4795,7 +6767,7 @@ function renderIntegratedMonitoringUI() {
       const periode = d.periode || {};
       const summary = d.summary || {};
 
-      let sheetName = isSemua ? 'Rekap_Semua' : 'Laporan_Individu';
+      let sheetName = isSemua ? 'Rekap_Semua_Pegawai' : 'Detail_Tugas_Individu';
       let fileName = isSemua 
         ? `SIMPELKU_Rekap_Semua_Pegawai_${periode.namaBulan || 'Bulan'}_${periode.tahun || 'Tahun'}.xls`
         : `SIMPELKU_Laporan_${(d.pegawai?.namaPegawai || 'Pegawai').replace(/\s+/g, '_')}_${periode.namaBulan || 'Bulan'}_${periode.tahun || 'Tahun'}.xls`;
@@ -4813,7 +6785,7 @@ function renderIntegratedMonitoringUI() {
               <td class="text-center">${escapeHtml(p.unit || '-')}</td>
               <td class="text-right">${p.totalTarget || 0}</td>
               <td class="text-right font-bold" style="color: #047857;">${p.selesai || 0}</td>
-              <td class="text-right" style="color: #be123c;">${p.belum || 0}</td>
+              <td class="text-right font-bold" style="color: #be123c;">${p.belum || 0}</td>
               <td class="text-center font-bold">${p.persen || 0}%</td>
               <td class="${statusBadge}">${escapeHtml(p.status || '-')}</td>
             </tr>
@@ -4824,8 +6796,8 @@ function renderIntegratedMonitoringUI() {
           <table>
             <thead>
               <tr>
-                <th style="width: 40px;">No</th>
-                <th style="width: 220px;">Nama Pegawai</th>
+                <th style="width: 45px;">No</th>
+                <th style="width: 240px;">Nama Pegawai / Petugas</th>
                 <th style="width: 140px;">Unit Kerja</th>
                 <th style="width: 110px;">Target Tugas</th>
                 <th style="width: 110px;">Tugas Selesai</th>
@@ -4848,11 +6820,11 @@ function renderIntegratedMonitoringUI() {
           </table>
         `;
       } else {
-        // INDIVIDU
+        // INDIVIDU (Detail Tanggal 1..31)
         const days = periode.daysInMonth || 31;
         let dayHeaders = '';
         for (let day = 1; day <= days; day++) {
-          dayHeaders += `<th style="width: 30px;">${day}</th>`;
+          dayHeaders += `<th style="width: 32px;">${day}</th>`;
         }
 
         const rows = (d.items || []).map((it, idx) => {
@@ -4861,15 +6833,15 @@ function renderIntegratedMonitoringUI() {
           for (let day = 1; day <= days; day++) {
             const val = it.dailyStatus ? it.dailyStatus[day] : '-';
             let cellDisp = '-';
-            let cellStyle = 'color: #94a3b8;';
+            let cellStyle = 'color: #94a3b8; text-align: center;';
             if (val === '1' || val === 1 || val === true) {
               cellDisp = '&#10003;';
-              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5;';
+              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5; text-align: center;';
             } else if (val === '0' || val === 0 || val === false) {
               cellDisp = '&#10007;';
-              cellStyle = 'color: #e11d48; font-weight: bold; background-color: #fff1f2;';
+              cellStyle = 'color: #e11d48; font-weight: bold; background-color: #fff1f2; text-align: center;';
             }
-            dayCells += `<td class="text-center" style="${cellStyle}">${cellDisp}</td>`;
+            dayCells += `<td style="${cellStyle}">${cellDisp}</td>`;
           }
 
           return `
@@ -4880,7 +6852,7 @@ function renderIntegratedMonitoringUI() {
               ${dayCells}
               <td class="text-right font-bold">${it.target || 0}</td>
               <td class="text-right font-bold" style="color: #047857;">${it.selesai || 0}</td>
-              <td class="text-right" style="color: #be123c;">${it.belum || 0}</td>
+              <td class="text-right font-bold" style="color: #be123c;">${it.belum || 0}</td>
               <td class="text-center font-bold">${it.persen || 0}%</td>
             </tr>
           `;
@@ -4891,16 +6863,16 @@ function renderIntegratedMonitoringUI() {
             <thead>
               <tr>
                 <th style="width: 40px;" rowspan="2">No</th>
-                <th style="width: 140px;" rowspan="2">Ruangan / Pos</th>
-                <th style="width: 250px;" rowspan="2">Uraian Tugas / Kegiatan</th>
+                <th style="width: 150px;" rowspan="2">Ruangan / Pos</th>
+                <th style="width: 260px;" rowspan="2">Uraian Tugas / Kegiatan</th>
                 <th colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
                 <th colspan="4">Ringkasan Capaian</th>
               </tr>
               <tr>
                 ${dayHeaders}
-                <th style="width: 60px;">Target</th>
-                <th style="width: 60px;">Selesai</th>
-                <th style="width: 60px;">Belum</th>
+                <th style="width: 65px;">Target</th>
+                <th style="width: 65px;">Selesai</th>
+                <th style="width: 65px;">Belum</th>
                 <th style="width: 70px;">(%)</th>
               </tr>
             </thead>
@@ -4937,10 +6909,10 @@ function renderIntegratedMonitoringUI() {
           </xml>
           <![endif]-->
           <style>
-            body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1e293b; }
-            table { border-collapse: collapse; margin-top: 12px; }
-            th { background-color: #047857; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #94a3b8; padding: 7px 5px; font-size: 10pt; }
-            td { border: 1px solid #cbd5e1; padding: 6px 5px; font-size: 10pt; vertical-align: middle; }
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1e293b; }
+            table { border-collapse: collapse; margin-top: 14px; }
+            th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #94a3b8; padding: 8px 6px; font-size: 10pt; }
+            td { border: 1px solid #cbd5e1; padding: 6px 6px; font-size: 10pt; vertical-align: middle; }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
             .text-left { text-align: left; }
@@ -4953,30 +6925,51 @@ function renderIntegratedMonitoringUI() {
           </style>
         \x3C/head\x3E
         \x3Cbody>
-          <table style="border: none; margin-bottom: 8px;">
+          <table style="border: none; margin-bottom: 10px;">
             <tr>
-              <td colspan="6" style="border: none; font-size: 14pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
+              <td colspan="6" style="border: none; font-size: 15pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold; color: #047857;">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</td>
+              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">Jl. Sutan Syahrir No. 24/42, Pontianak 78116 | Telp: (0561) 732049 | Email: bps6100@bps.go.id</td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold;">
+              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold; color: #1e3a8a;">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="border: none; font-size: 12pt; font-weight: bold; padding-top: 6px;">
                 ${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : `LAPORAN DETAIL MONITORING & CHECKLIST TUGAS: ${escapeHtml(d.pegawai?.namaPegawai || '')}`}
               </td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">
+              <td colspan="6" style="border: none; font-size: 10pt; color: #334155;">
                 Periode: ${escapeHtml(periode.labelPeriode || '')} ${!isSemua ? ` | Unit: ${escapeHtml(d.pegawai?.unit || '')} | Peran: ${escapeHtml(d.pegawai?.role || '')}` : ''}
               </td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">
+              <td colspan="6" style="border: none; font-size: 10pt; color: #334155;">
                 Total Target: ${summary.totalTarget || 0} Tugas | Selesai: ${summary.totalSelesai || 0} (${summary.persen || 0}%) | Belum: ${summary.totalBelum || 0}
               </td>
             </tr>
           </table>
+
           ${tableHtml}
+
+          <table style="border: none; margin-top: 30px;">
+            <tr>
+              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
+                Mengetahui,<br><strong>Kasubbag Umum BPS Prov. Kalbar</strong><br><br><br><br>
+                <strong>( .................................................... )</strong><br>
+                NIP. ........................................
+              </td>
+              <td colspan="4" style="border: none;"></td>
+              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
+                Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
+                <strong>${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong><br><br><br><br>
+                <strong>( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</strong><br>
+                ${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}
+              </td>
+            </tr>
+          </table>
         \x3C/body\x3E
         \x3C/html\x3E
       `;
@@ -4999,7 +6992,7 @@ function renderIntegratedMonitoringUI() {
       const periode = d.periode || {};
       const summary = d.summary || {};
 
-      const printWindow = window.open('', '_blank', 'width=1050,height=850,scrollbars=yes,resizable=yes');
+      const printWindow = window.open('', '_blank', 'width=1150,height=850,scrollbars=yes,resizable=yes');
       if (!printWindow) {
         showToast('Pop-up jendela cetak diblokir browser. Harap izinkan pop-up untuk mencetak laporan.', 'warning');
         return;
@@ -5055,20 +7048,39 @@ function renderIntegratedMonitoringUI() {
           </table>
         `;
       } else {
-        // INDIVIDU
+        // INDIVIDU (Landscape dengan 31 hari & ringkasan)
+        const days = periode.daysInMonth || 31;
+        let dayHeaders = '';
+        for (let day = 1; day <= days; day++) {
+          dayHeaders += `<th style="width: 22px; font-size: 7.5pt; padding: 4px 1px;">${day}</th>`;
+        }
+
         const rows = (d.items || []).map((it, idx) => {
-          const statusBadge = it.persen >= 90 ? 'Optimal' : (it.persen >= 70 ? 'Cukup' : 'Kurang');
-          const statusColor = it.persen >= 90 ? 'color: #065f46;' : (it.persen >= 70 ? 'color: #92400e;' : 'color: #9f1239;');
+          let dayCells = '';
+          for (let day = 1; day <= days; day++) {
+            const val = it.dailyStatus ? it.dailyStatus[day] : '-';
+            let cellDisp = '-';
+            let cellStyle = 'color: #94a3b8; font-size: 8pt;';
+            if (val === '1' || val === 1 || val === true) {
+              cellDisp = '&#10003;';
+              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5; font-size: 9pt;';
+            } else if (val === '0' || val === 0 || val === false) {
+              cellDisp = '&#10007;';
+              cellStyle = 'color: #be123c; font-weight: bold; background-color: #fff1f2; font-size: 8pt;';
+            }
+            dayCells += `<td style="text-align: center; ${cellStyle}">${cellDisp}</td>`;
+          }
+
           return `
             <tr>
-              <td style="text-align: center;">${idx + 1}</td>
-              <td style="font-weight: 600;">${escapeHtml(it.ruangan || '-')}</td>
-              <td>${escapeHtml(it.kegiatan || '-')}</td>
-              <td style="text-align: right;">${it.target || 0}</td>
-              <td style="text-align: right; color: #047857; font-weight: bold;">${it.selesai || 0}</td>
-              <td style="text-align: right; color: #be123c;">${it.belum || 0}</td>
-              <td style="text-align: center; font-weight: bold;">${it.persen || 0}%</td>
-              <td style="text-align: center; font-weight: bold; ${statusColor}">${statusBadge}</td>
+              <td style="text-align: center; font-size: 8pt;">${idx + 1}</td>
+              <td style="font-weight: 600; font-size: 8pt;">${escapeHtml(it.ruangan || '-')}</td>
+              <td style="font-size: 8pt;">${escapeHtml(it.kegiatan || '-')}</td>
+              ${dayCells}
+              <td style="text-align: right; font-size: 8pt;">${it.target || 0}</td>
+              <td style="text-align: right; color: #047857; font-weight: bold; font-size: 8pt;">${it.selesai || 0}</td>
+              <td style="text-align: right; color: #be123c; font-size: 8pt;">${it.belum || 0}</td>
+              <td style="text-align: center; font-weight: bold; font-size: 8pt;">${it.persen || 0}%</td>
             </tr>
           `;
         }).join('');
@@ -5077,25 +7089,28 @@ function renderIntegratedMonitoringUI() {
           <table>
             <thead>
               <tr>
-                <th style="width: 35px;">No</th>
-                <th style="width: 150px;">Ruangan / Pos</th>
-                <th>Rincian Tugas / Kegiatan</th>
-                <th style="width: 85px;">Target</th>
-                <th style="width: 85px;">Selesai</th>
-                <th style="width: 85px;">Belum</th>
-                <th style="width: 85px;">Capaian</th>
-                <th style="width: 95px;">Status</th>
+                <th style="width: 28px;" rowspan="2">No</th>
+                <th style="width: 120px;" rowspan="2">Ruangan / Pos</th>
+                <th rowspan="2">Uraian Tugas / Kegiatan</th>
+                <th colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
+                <th colspan="4" style="width: 160px;">Ringkasan Capaian</th>
+              </tr>
+              <tr>
+                ${dayHeaders}
+                <th style="width: 38px; font-size: 7.5pt;">Target</th>
+                <th style="width: 38px; font-size: 7.5pt;">Selesai</th>
+                <th style="width: 38px; font-size: 7.5pt;">Belum</th>
+                <th style="width: 42px; font-size: 7.5pt;">(%)</th>
               </tr>
             </thead>
             <tbody>
               ${rows}
               <tr class="total-row">
-                <td colspan="3" style="text-align: center;">TOTAL CAPAIAN BULANAN</td>
+                <td colspan="${3 + days}" style="text-align: center;">TOTAL CAPAIAN BULAN INI</td>
                 <td style="text-align: right;">${summary.totalTarget || 0}</td>
                 <td style="text-align: right; color: #047857;">${summary.totalSelesai || 0}</td>
                 <td style="text-align: right; color: #be123c;">${summary.totalBelum || 0}</td>
                 <td style="text-align: center;">${summary.persen || 0}%</td>
-                <td style="text-align: center;">${summary.status || '-'}</td>
               </tr>
             </tbody>
           </table>
@@ -5113,41 +7128,41 @@ function renderIntegratedMonitoringUI() {
           <title>${isSemua ? 'Rekapitulasi Kinerja Pegawai' : `Laporan Tugas - ${escapeHtml(d.pegawai?.namaPegawai || '')}`} | BPS Kalbar</title>
           <style>
             @page {
-              size: A4 portrait;
-              margin: 15mm 15mm 15mm 15mm;
+              size: ${isSemua ? 'A4 portrait' : 'A4 landscape'};
+              margin: ${isSemua ? '12mm 15mm 12mm 15mm' : '10mm 12mm 10mm 12mm'};
             }
             * { box-sizing: border-box; }
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
               color: #1e293b;
               margin: 0;
-              padding: 20px;
+              padding: 16px;
               background-color: #ffffff;
-              font-size: 10pt;
-              line-height: 1.4;
+              font-size: ${isSemua ? '9.5pt' : '8.5pt'};
+              line-height: 1.35;
             }
             .no-print {
               background-color: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 10px;
-              padding: 12px 18px;
-              margin-bottom: 24px;
+              padding: 10px 16px;
+              margin-bottom: 20px;
               display: flex;
               align-items: center;
               justify-content: space-between;
               box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             }
             .btn {
-              padding: 7px 16px;
+              padding: 6px 15px;
               border-radius: 6px;
-              font-size: 9.5pt;
+              font-size: 9pt;
               font-weight: 600;
               cursor: pointer;
               border: none;
               transition: all 0.2s;
             }
-            .btn-primary { background-color: #047857; color: #ffffff; }
-            .btn-primary:hover { background-color: #065f46; }
+            .btn-primary { background-color: #1e3a8a; color: #ffffff; }
+            .btn-primary:hover { background-color: #1e40af; }
             .btn-close { background-color: #e2e8f0; color: #334155; }
             .btn-close:hover { background-color: #cbd5e1; }
             
@@ -5155,8 +7170,8 @@ function renderIntegratedMonitoringUI() {
             .kop-header {
               text-align: center;
               border-bottom: 3px double #1e293b;
-              padding-bottom: 12px;
-              margin-bottom: 20px;
+              padding-bottom: 10px;
+              margin-bottom: 16px;
             }
             .kop-instansi {
               font-size: 13pt;
@@ -5169,32 +7184,32 @@ function renderIntegratedMonitoringUI() {
             .kop-alamat {
               font-size: 8.5pt;
               color: #475569;
-              margin: 4px 0 0;
+              margin: 3px 0 0;
             }
             .kop-aplikasi {
-              margin-top: 6px;
+              margin-top: 5px;
               font-weight: bold;
-              font-size: 10pt;
-              color: #047857;
+              font-size: 9.5pt;
+              color: #1e3a8a;
               letter-spacing: 0.3px;
               text-transform: uppercase;
             }
 
             .doc-title {
               text-align: center;
-              margin: 16px 0 14px;
+              margin: 12px 0 12px;
             }
             .doc-title h2 {
               margin: 0;
-              font-size: 12pt;
+              font-size: 11pt;
               font-weight: 700;
               color: #0f172a;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
             .doc-title p {
-              margin: 3px 0 0;
-              font-size: 9.5pt;
+              margin: 2px 0 0;
+              font-size: 9pt;
               color: #475569;
             }
 
@@ -5202,50 +7217,49 @@ function renderIntegratedMonitoringUI() {
               background-color: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 8px;
-              padding: 10px 14px;
-              margin-bottom: 16px;
+              padding: 8px 12px;
+              margin-bottom: 14px;
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 8px;
-              font-size: 9pt;
+              gap: 6px;
+              font-size: 8.5pt;
             }
             .meta-item { display: flex; }
-            .meta-label { width: 130px; font-weight: 600; color: #475569; }
+            .meta-label { width: 120px; font-weight: 600; color: #475569; }
             .meta-val { font-weight: 700; color: #0f172a; }
 
             .kpi-row {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
-              gap: 10px;
-              margin-bottom: 18px;
+              gap: 8px;
+              margin-bottom: 14px;
             }
             .kpi-card {
               border: 1px solid #e2e8f0;
               border-radius: 8px;
-              padding: 10px;
+              padding: 8px;
               text-align: center;
               background: #ffffff;
             }
-            .kpi-num { font-size: 15pt; font-weight: 800; margin: 2px 0 0; }
-            .kpi-label { font-size: 8pt; color: #64748b; font-weight: 600; text-transform: uppercase; }
+            .kpi-num { font-size: 14pt; font-weight: 800; margin: 2px 0 0; }
+            .kpi-label { font-size: 7.5pt; color: #64748b; font-weight: 600; text-transform: uppercase; }
 
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 10px;
-              font-size: 9pt;
+              margin-top: 8px;
+              font-size: ${isSemua ? '8.5pt' : '8pt'};
             }
             th {
-              background-color: #047857;
+              background-color: #1e3a8a;
               color: #ffffff;
               font-weight: 700;
-              padding: 7px 6px;
-              border: 1px solid #047857;
+              padding: 6px 4px;
+              border: 1px solid #1e3a8a;
               text-align: center;
-              font-size: 8.5pt;
             }
             td {
-              padding: 6px 6px;
+              padding: 5px 4px;
               border: 1px solid #cbd5e1;
               vertical-align: middle;
             }
@@ -5257,7 +7271,7 @@ function renderIntegratedMonitoringUI() {
             }
 
             .sig-section {
-              margin-top: 36px;
+              margin-top: 30px;
               display: flex;
               justify-content: space-between;
               page-break-inside: avoid;
@@ -5265,23 +7279,23 @@ function renderIntegratedMonitoringUI() {
             .sig-box {
               width: 240px;
               text-align: center;
-              font-size: 9.5pt;
+              font-size: 9pt;
             }
-            .sig-space { height: 60px; }
+            .sig-space { height: 55px; }
             .sig-name {
               font-weight: 700;
               text-decoration: underline;
               margin: 0;
             }
             .sig-title {
-              font-size: 8.5pt;
+              font-size: 8pt;
               color: #64748b;
               margin-top: 2px;
             }
 
             @media print {
               .no-print { display: none !important; }
-              body { padding: 0; font-size: 9.5pt; }
+              body { padding: 0; }
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -5291,7 +7305,7 @@ function renderIntegratedMonitoringUI() {
           <div class="no-print">
             <div style="font-weight: 600; color: #334155;">
               <span>Dokumen Siap Dicetak</span> &bull; 
-              <span style="font-size: 8.5pt; color: #64748b;">Gunakan pilihan 'Save as PDF' di printer dialog browser untuk menyimpan PDF.</span>
+              <span style="font-size: 8.5pt; color: #64748b;">Pilih 'Save as PDF' di dialog printer browser untuk menyimpan file PDF.</span>
             </div>
             <div style="display: flex; gap: 8px;">
               <button onclick="window.close()" class="btn btn-close">Tutup</button>
@@ -5306,7 +7320,7 @@ function renderIntegratedMonitoringUI() {
           </div>
 
           <div class="doc-title">
-            <h2>${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & EVALUASI TUGAS'}</h2>
+            <h2>${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & EVALUASI TUGAS PEGAWAI'}</h2>
             <p>Periode: <strong>${escapeHtml(periode.labelPeriode || '')}</strong></p>
           </div>
 
@@ -5339,7 +7353,7 @@ function renderIntegratedMonitoringUI() {
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Tingkat Capaian</div>
-              <div class="kpi-num" style="color: #2563eb;">${summary.persen || 0}%</div>
+              <div class="kpi-num" style="color: #1e3a8a;">${summary.persen || 0}%</div>
             </div>
           </div>
 
@@ -5727,6 +7741,203 @@ async function submitSwapShift() {
 }
 
 // <<<<<<<<<< END MODUL JS: js/supervisor_shift.js <<<<<<<<<<
+
+
+// >>>>>>>>>> MODUL JS: js/supervisor_inspeksi.js >>>>>>>>>>
+
+/**
+ * ========================================================================
+ * SIMPEL-KU - INSPEKSI MUTU CONTROLLER (SUPERVISOR / ADMIN)
+ * ========================================================================
+ */
+
+async function loadInspeksiMutuData(unit = 'SEMUA', forceRefresh = false) {
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+      const cacheKey = `${bulan}_${tahun}_${unit}`;
+
+      if (!forceRefresh && window._managerDataCache.inspeksi[cacheKey]) {
+        cachedInspeksiData = window._managerDataCache.inspeksi[cacheKey];
+        renderInspeksiMutuUI(cachedInspeksiData);
+        return;
+      }
+
+      showLoader(true);
+      try {
+        const res = await callBackend('getInspeksiMutuData', { token: sessionToken, unit, bulan, tahun });
+        showLoader(false);
+        if (res && res.success) {
+          window._managerDataCache.inspeksi[cacheKey] = res.data;
+          cachedInspeksiData = res.data;
+          renderInspeksiMutuUI(res.data);
+        } else {
+          handleApiError(res);
+        }
+      } catch (err) {
+        showLoader(false);
+        showToast('Gagal memuat data inspeksi: ' + err.message, 'error');
+      }
+    }
+
+function filterInspeksiUnit(unit) {
+      document.querySelectorAll('.insp-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-unit') === unit) {
+          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm';
+        } else {
+          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600';
+        }
+      });
+      loadInspeksiMutuData(unit, true);
+    }
+
+    let inspCurrentUnitFilter = 'SEMUA';
+
+function filterInspeksiUnit(unit) {
+      inspCurrentUnitFilter = unit;
+      document.querySelectorAll('.insp-filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-unit') === unit) {
+          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm';
+        } else {
+          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600';
+        }
+      });
+      filterInspeksiTableRealtime(document.getElementById('searchInspeksiTable')?.value || '');
+    }
+
+function filterInspeksiTableRealtime(q) {
+      if (!cachedInspeksiData) return;
+      q = (q || '').toLowerCase().trim();
+      let list = cachedInspeksiData;
+
+      if (inspCurrentUnitFilter && inspCurrentUnitFilter !== 'SEMUA') {
+        list = list.filter(item => (item.unit || '').toUpperCase() === inspCurrentUnitFilter.toUpperCase());
+      }
+
+      if (q) {
+        list = list.filter(item =>
+          (item.unit || '').toLowerCase().includes(q) ||
+          (item.pegawaiArea || item.area || '').toLowerCase().includes(q) ||
+          (item.catatan || '').toLowerCase().includes(q) ||
+          (item.inspektor || '').toLowerCase().includes(q)
+        );
+      }
+
+      renderInspeksiMutuUI(list);
+    }
+
+function renderInspeksiMutuUI(list) {
+      const tbody = document.getElementById('inspeksiTableBody');
+      if (!tbody) return;
+      if (!list || !list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada data inspeksi yang sesuai.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(item => {
+        const score = Number(item.skorRataRata || 5).toFixed(1);
+        return `
+          <tr class="hover:bg-slate-50 transition border-t border-slate-100">
+            <td class="py-3 px-4 font-mono text-slate-500">${escapeHtml(item.tanggal || '-')}</td>
+            <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(item.unit || '-')}</td>
+            <td class="py-3 px-4 text-slate-600">${escapeHtml(item.pegawaiArea || item.area || '-')}</td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold text-xs">
+                <i class="fa-solid fa-star text-amber-500 text-[10px]"></i> ${score} / 5.0
+              </span>
+            </td>
+            <td class="py-3 px-4">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${item.statusRekomendasi === 'Sesuai Standar' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${escapeHtml(item.statusRekomendasi || 'Sesuai Standar')}
+              </span>
+            </td>
+            <td class="py-3 px-4 max-w-xs truncate text-slate-600" title="${escapeHtml(item.catatan || '')}">${escapeHtml(item.catatan || '-')}</td>
+            <td class="py-3 px-4 text-slate-500 font-semibold">${escapeHtml(item.inspektor || 'Supervisor')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+function openInspeksiMutuModal() {
+      openModal('modalInspeksiMutu');
+    }
+
+let _inspRatings = { 1: 5, 2: 5, 3: 5, 4: 5, 5: 5 };
+
+function setInspRating(paramNum, val) {
+  _inspRatings[paramNum] = Number(val) || 5;
+  const container = document.getElementById('starsParam' + paramNum);
+  if (container) {
+    const stars = container.querySelectorAll('i');
+    stars.forEach((s, idx) => {
+      if (idx < val) {
+        s.className = 'fa-solid fa-star';
+      } else {
+        s.className = 'fa-regular fa-star text-slate-300';
+      }
+    });
+  }
+}
+
+function onInspUnitInputChange() {
+  // Dynamic updates if needed
+}
+
+async function submitInspeksiMutu() {
+  const unit = document.getElementById('inspUnitInput')?.value || 'Kebersihan';
+  const ruangan = document.getElementById('inspRuanganInput')?.value || document.getElementById('inspAreaInput')?.value || '';
+  const tanggal = document.getElementById('inspTanggalInput')?.value || '';
+  const catatan = document.getElementById('inspCatatanInput')?.value || '';
+  const tindakLanjut = document.getElementById('inspTindakLanjutInput')?.value || '';
+
+  const bulan = document.getElementById('globalMonthSelect')?.value;
+  const tahun = document.getElementById('globalYearSelect')?.value;
+
+  if (!ruangan) {
+    showToast('Harap masukkan area atau ruangan yang diinspeksi.', 'error');
+    return;
+  }
+
+  const avg = ((_inspRatings[1] + _inspRatings[2] + _inspRatings[3] + _inspRatings[4] + _inspRatings[5]) / 5);
+  const statusRekomendasi = avg >= 4.0 ? 'Sesuai Standar' : (avg >= 3.0 ? 'Perlu Perbaikan Ringan' : 'Perlu Tindakan Korektif');
+
+  showLoader(true);
+  try {
+    const res = await callBackend('saveInspeksiMutu', {
+      token: sessionToken,
+      payload: {
+        unit: unit,
+        ruangan: ruangan,
+        pegawaiArea: ruangan,
+        tanggal: tanggal,
+        skorRataRata: avg,
+        param1: _inspRatings[1],
+        param2: _inspRatings[2],
+        param3: _inspRatings[3],
+        param4: _inspRatings[4],
+        param5: _inspRatings[5],
+        catatan: catatan,
+        tindakLanjut: tindakLanjut,
+        statusRekomendasi: statusRekomendasi,
+        bulan: bulan,
+        tahun: tahun
+      }
+    });
+    showLoader(false);
+    if (res && res.success) {
+      showToast(res.message || 'Audit inspeksi mutu berhasil disimpan!', 'success');
+      closeModal('modalInspeksiMutu');
+      clearManagerClientCache();
+      loadInspeksiMutuData('SEMUA', true);
+    } else {
+      handleApiError(res);
+    }
+  } catch (err) {
+    showLoader(false);
+    showToast('Gagal menyimpan inspeksi: ' + err.message, 'error');
+  }
+}
+
+// <<<<<<<<<< END MODUL JS: js/supervisor_inspeksi.js <<<<<<<<<<
 
   </script>
 </body>

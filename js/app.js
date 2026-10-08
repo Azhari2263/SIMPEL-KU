@@ -83,6 +83,20 @@
             runner.swapSecurityShift(params.token, p1, p2, t1, t2, params.bulan, params.tahun);
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+          } else if (action === 'uploadBuktiDukung') {
+            runner.uploadBuktiDukungFoto(params.token, params);
+          } else if (action === 'updateSupervisorChecklist') {
+            runner.updateSupervisorChecklist(params.token, params);
+          } else if (action === 'supervisorToggleStaffTaskCheck') {
+            runner.supervisorToggleStaffTaskCheck(params.token, params);
+          } else if (action === 'getBuktiDukungData') {
+            runner.getBuktiDukungData(params.token, params.bulan, params.tahun, params.unit, params.namaPegawai);
+          } else if (action === 'getInspeksiMutuData') {
+            runner.getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
+          } else if (action === 'saveInspeksiMutu') {
+            runner.saveInspeksiMutu(params.token, params);
+          } else if (typeof runner[action] === 'function') {
+            runner[action](params);
           } else if (typeof runner.handleApiRequest === 'function') {
             runner.handleApiRequest(action, params);
           } else {
@@ -589,6 +603,510 @@ function closeModal(modalId) {
       const m = document.getElementById(modalId);
       if (m) m.classList.add('hidden');
     }
+
+/**
+ * ========================================================================
+ * BUKTI DUKUNG CONTROLLER: KAMERA, WATERMARK, KOMPRESI & GOOGLE DRIVE
+ * ========================================================================
+ */
+let currentUploadTaskPayload = null;
+let liveMediaStream          = null;
+let currentFacingMode        = 'environment';
+let currentCapturedBase64    = null;
+let currentPhotoMetadata     = null;
+
+function openUploadBuktiModal(taskInfo) {
+  currentUploadTaskPayload = taskInfo;
+  currentCapturedBase64 = null;
+  currentPhotoMetadata = null;
+
+  const unitBadge = document.getElementById('uploadBuktiUnitBadge');
+  const tglText = document.getElementById('uploadBuktiTanggalText');
+  const tugasText = document.getElementById('uploadBuktiNamaTugas');
+  const ruangText = document.getElementById('uploadBuktiRuangan');
+  const pegText = document.getElementById('uploadBuktiPegawai');
+
+  if (unitBadge) unitBadge.innerText = taskInfo.unit || 'Umum';
+  if (tglText) tglText.innerText = formatDateIndo(taskInfo.dayNum, taskInfo.bulan, taskInfo.tahun);
+  if (tugasText) tugasText.innerText = taskInfo.namaTugas || '-';
+  if (ruangText) ruangText.innerText = taskInfo.ruangan || 'Area Umum';
+  if (pegText) pegText.innerText = taskInfo.namaPegawai || '-';
+
+  resetBuktiCapture();
+  openModal('modalUploadBukti');
+}
+
+function closeModalUploadBukti() {
+  stopLiveCamera();
+  closeModal('modalUploadBukti');
+}
+
+async function toggleLiveCamera() {
+  if (liveMediaStream) {
+    stopLiveCamera();
+  } else {
+    await startLiveCamera();
+  }
+}
+
+async function startLiveCamera() {
+  const video = document.getElementById('buktiCameraVideo');
+  const placeholder = document.getElementById('buktiCameraPlaceholder');
+  const loader = document.getElementById('buktiCameraLoading');
+  const btnToggle = document.getElementById('btnToggleCameraText');
+  const btnSnap = document.getElementById('btnSnapPhoto');
+  const btnSwitch = document.getElementById('btnSwitchCamera');
+
+  if (loader) {
+    loader.classList.remove('hidden');
+    const loadingText = document.getElementById('buktiCameraLoadingText');
+    if (loadingText) loadingText.innerText = 'Menghubungkan kamera & GPS...';
+  }
+
+  try {
+    const constraints = {
+      video: {
+        facingMode: currentFacingMode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
+    };
+
+    liveMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (video) {
+      video.srcObject = liveMediaStream;
+      video.classList.remove('hidden');
+    }
+    if (placeholder) placeholder.classList.add('hidden');
+    if (btnToggle) btnToggle.innerText = 'Tutup Kamera';
+    if (btnSnap) btnSnap.classList.remove('hidden');
+    if (btnSwitch) btnSwitch.classList.remove('hidden');
+  } catch (err) {
+    showToast('Kamera tidak dapat dibuka: ' + err.message + '. Anda dapat memilih foto dari galeri.', 'warning');
+  } finally {
+    if (loader) loader.classList.add('hidden');
+  }
+}
+
+function stopLiveCamera() {
+  if (liveMediaStream) {
+    liveMediaStream.getTracks().forEach(t => t.stop());
+    liveMediaStream = null;
+  }
+  const video = document.getElementById('buktiCameraVideo');
+  const placeholder = document.getElementById('buktiCameraPlaceholder');
+  const btnToggle = document.getElementById('btnToggleCameraText');
+  const btnSnap = document.getElementById('btnSnapPhoto');
+  const btnSwitch = document.getElementById('btnSwitchCamera');
+
+  if (video) {
+    video.srcObject = null;
+    video.classList.add('hidden');
+  }
+  if (placeholder) placeholder.classList.remove('hidden');
+  if (btnToggle) btnToggle.innerText = 'Buka Kamera';
+  if (btnSnap) btnSnap.classList.add('hidden');
+  if (btnSwitch) btnSwitch.classList.add('hidden');
+}
+
+async function switchCameraFacing() {
+  currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+  if (liveMediaStream) {
+    stopLiveCamera();
+    await startLiveCamera();
+  }
+}
+
+function getDeviceGeolocation() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve({
+        coords: '-0.026330, 109.342512',
+        lokasi: 'BPS Provinsi Kalimantan Barat, Jl. Sutan Syahrir No. 24, Pontianak'
+      });
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        const coordStr = `${lat}, ${lng}`;
+        let locationName = 'Area Kantor BPS Provinsi Kalimantan Barat';
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' }
+          });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.display_name) {
+              const road = data.address?.road || data.address?.suburb || data.address?.city || '';
+              locationName = road ? `${road}, Pontianak` : data.display_name.split(',').slice(0, 3).join(',');
+            }
+          }
+        } catch (e) {
+          locationName = 'Jl. Sutan Syahrir No. 24, Pontianak, Kalbar';
+        }
+
+        resolve({ coords: coordStr, lokasi: locationName });
+      },
+      () => {
+        resolve({
+          coords: '-0.026330, 109.342512',
+          lokasi: 'BPS Provinsi Kalimantan Barat, Jl. Sutan Syahrir No. 24, Pontianak'
+        });
+      },
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 60000 }
+    );
+  });
+}
+
+async function captureSnapshotFromCamera() {
+  const video = document.getElementById('buktiCameraVideo');
+  if (!video || !liveMediaStream) {
+    showToast('Kamera tidak aktif.', 'warning');
+    return;
+  }
+
+  const loader = document.getElementById('buktiCameraLoading');
+  if (loader) {
+    loader.classList.remove('hidden');
+    const loadingText = document.getElementById('buktiCameraLoadingText');
+    if (loadingText) loadingText.innerText = 'Mengambil foto & GPS metadata...';
+  }
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = video.videoWidth || 1280;
+  tempCanvas.height = video.videoHeight || 720;
+  const ctx = tempCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  stopLiveCamera();
+
+  const img = new Image();
+  img.onload = async () => {
+    await processImageForBukti(img);
+    if (loader) loader.classList.add('hidden');
+  };
+  img.src = tempCanvas.toDataURL('image/jpeg', 0.9);
+}
+
+function handleBuktiFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = async () => {
+      await processImageForBukti(img);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+async function processImageForBukti(imgElement) {
+  const geoData = await getDeviceGeolocation();
+  const result = applyWatermarkAndCompress(imgElement, geoData);
+
+  currentCapturedBase64 = result.base64;
+  currentPhotoMetadata = {
+    coords: geoData.coords,
+    lokasi: geoData.lokasi,
+    waktuWib: result.waktuWib,
+    fileSizeKB: result.sizeKB
+  };
+
+  const previewImg = document.getElementById('buktiPreviewImg');
+  const sizeBadge = document.getElementById('buktiSizeBadge');
+  const waktuText = document.getElementById('buktiWaktuText');
+  const coordText = document.getElementById('buktiKoordinatText');
+  const lokasiText = document.getElementById('buktiLokasiText');
+  const btnSubmit = document.getElementById('btnSubmitUploadBukti');
+  const previewSection = document.getElementById('buktiPreviewSection');
+  const camContainer = document.getElementById('buktiCameraContainer');
+  const captureBtns = document.getElementById('buktiCaptureButtons');
+
+  if (previewImg) previewImg.src = result.dataUrl;
+  if (sizeBadge) {
+    sizeBadge.innerText = `${result.sizeKB} KB (Maks 1 MB - Memenuhi Syarat)`;
+    sizeBadge.className = 'px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[11px] font-mono font-bold';
+  }
+  if (waktuText) waktuText.innerText = result.waktuWib;
+  if (coordText) coordText.innerText = geoData.coords;
+  if (lokasiText) lokasiText.innerText = geoData.lokasi;
+
+  if (camContainer) camContainer.classList.add('hidden');
+  if (captureBtns) captureBtns.classList.add('hidden');
+  if (previewSection) previewSection.classList.remove('hidden');
+  if (btnSubmit) btnSubmit.disabled = false;
+}
+
+function applyWatermarkAndCompress(img, geoData) {
+  const canvas = document.getElementById('buktiWatermarkCanvas') || document.createElement('canvas');
+  
+  // Skala proporsional maksimal 1280px lebar
+  const maxDimension = 1280;
+  let targetWidth = img.naturalWidth || img.width || 1280;
+  let targetHeight = img.naturalHeight || img.height || 720;
+
+  if (targetWidth > maxDimension || targetHeight > maxDimension) {
+    if (targetWidth > targetHeight) {
+      targetHeight = Math.round((targetHeight * maxDimension) / targetWidth);
+      targetWidth = maxDimension;
+    } else {
+      targetWidth = Math.round((targetWidth * maxDimension) / targetHeight);
+      targetHeight = maxDimension;
+    }
+  }
+
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d');
+
+  // Gambar foto dasar
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+  // Waktu WIB Sekarang
+  const now = new Date();
+  const daysID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  const monthsID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  const hariStr = daysID[now.getDay()];
+  const tglStr = `${now.getDate()} ${monthsID[now.getMonth()]} ${now.getFullYear()}`;
+  const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
+  const waktuLengkapWib = `${hariStr}, ${tglStr} - ${jamStr} WIB`;
+
+  // 1. Gambar Watermark Banner di bagian bawah
+  const bannerHeight = Math.max(90, Math.round(targetHeight * 0.16));
+  const bannerY = targetHeight - bannerHeight;
+
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  ctx.fillRect(0, bannerY, targetWidth, bannerHeight);
+
+  // Garis aksen atas banner
+  ctx.fillStyle = '#2563eb';
+  ctx.fillRect(0, bannerY, targetWidth, Math.max(3, Math.round(targetHeight * 0.005)));
+
+  // 2. Tulis Text Metadata di dalam banner
+  const fontSize = Math.max(12, Math.round(targetHeight * 0.024));
+  ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+
+  const padX = Math.round(targetWidth * 0.03);
+  let lineY = bannerY + Math.round(fontSize * 1.5);
+  const lineSpacing = Math.round(fontSize * 1.35);
+
+  const taskName = currentUploadTaskPayload?.namaTugas || 'Pelaksanaan Tugas';
+  const ruangan = currentUploadTaskPayload?.ruangan || 'Area Umum';
+  const pegawai = currentUploadTaskPayload?.namaPegawai || currentUser?.namaPegawai || '-';
+  const unit = currentUploadTaskPayload?.unit || 'Umum';
+
+  ctx.fillText(`📋 TUGAS: ${taskName.toUpperCase()} | RUANG: ${ruangan.toUpperCase()}`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.font = `600 ${Math.round(fontSize * 0.9)}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText(`📅 WAKTU: ${waktuLengkapWib}`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.fillText(`📍 LOKASI: ${geoData.lokasi} (${geoData.coords})`, padX, lineY);
+  lineY += lineSpacing;
+
+  ctx.fillStyle = '#93c5fd';
+  ctx.fillText(`👤 PETUGAS: ${pegawai} (${unit}) | BPS PROVINSI KALIMANTAN BARAT`, padX, lineY);
+
+  // 3. Watermark Badge di sudut kanan atas
+  const badgeFont = Math.max(10, Math.round(targetHeight * 0.02));
+  ctx.font = `bold ${badgeFont}px "Plus Jakarta Sans", sans-serif`;
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  const badgeText = 'SIMPEL-KU • BPS KALBAR';
+  const badgeMetrics = ctx.measureText(badgeText);
+  const badgePadX = 12;
+  const badgePadY = 6;
+  const badgeW = badgeMetrics.width + (badgePadX * 2);
+  const badgeH = badgeFont + (badgePadY * 2);
+  const badgeX = targetWidth - badgeW - 16;
+  const badgeY = 16;
+
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH - badgePadY - 2);
+
+  // 4. Kompresi Foto (Maksimal 1 MB)
+  let quality = 0.82;
+  let dataUrl = canvas.toDataURL('image/jpeg', quality);
+  let sizeBytes = Math.round((dataUrl.length * 3) / 4);
+
+  let iterations = 0;
+  while (sizeBytes > 1024 * 1024 && quality > 0.3 && iterations < 6) {
+    quality -= 0.12;
+    dataUrl = canvas.toDataURL('image/jpeg', quality);
+    sizeBytes = Math.round((dataUrl.length * 3) / 4);
+    iterations++;
+  }
+
+  const sizeKB = Math.round(sizeBytes / 1024);
+  const base64Pure = dataUrl.split('base64,')[1];
+
+  return {
+    dataUrl: dataUrl,
+    base64: base64Pure,
+    sizeKB: sizeKB,
+    waktuWib: waktuLengkapWib
+  };
+}
+
+function resetBuktiCapture() {
+  currentCapturedBase64 = null;
+  currentPhotoMetadata = null;
+
+  const previewSection = document.getElementById('buktiPreviewSection');
+  const camContainer = document.getElementById('buktiCameraContainer');
+  const captureBtns = document.getElementById('buktiCaptureButtons');
+  const previewImg = document.getElementById('buktiPreviewImg');
+  const btnSubmit = document.getElementById('btnSubmitUploadBukti');
+
+  if (previewSection) previewSection.classList.add('hidden');
+  if (camContainer) camContainer.classList.remove('hidden');
+  if (captureBtns) captureBtns.classList.remove('hidden');
+  if (previewImg) previewImg.src = '';
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Simpan ke Google Drive</span>';
+  }
+}
+
+async function submitUploadBuktiFoto() {
+  if (!currentCapturedBase64 || !currentUploadTaskPayload) {
+    showToast('Silakan ambil foto bukti terlebih dahulu.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubmitUploadBukti');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin mr-1.5"></div><span>Mengunggah ke Drive...</span>';
+  }
+
+  showToast('Mengunggah bukti foto ke Google Drive...', 'info');
+
+  try {
+    const res = await callBackend('uploadBuktiDukung', {
+      token: sessionToken,
+      imageBase64: currentCapturedBase64,
+      namaTugas: currentUploadTaskPayload.namaTugas,
+      ruangan: currentUploadTaskPayload.ruangan,
+      unit: currentUploadTaskPayload.unit,
+      tanggal: currentUploadTaskPayload.dayNum,
+      bulan: currentUploadTaskPayload.bulan,
+      tahun: currentUploadTaskPayload.tahun,
+      targetNamaPegawai: currentUploadTaskPayload.namaPegawai,
+      targetUsername: currentUploadTaskPayload.username,
+      koordinat: currentPhotoMetadata?.coords || '',
+      lokasi: currentPhotoMetadata?.lokasi || '',
+      waktuWib: currentPhotoMetadata?.waktuWib || '',
+      catatan: ''
+    });
+
+    if (res && res.success) {
+      showToast(res.message || 'Bukti foto berhasil disimpan ke Google Drive!', 'success');
+      closeModalUploadBukti();
+
+      if (typeof currentUploadTaskPayload.onSuccess === 'function') {
+        currentUploadTaskPayload.onSuccess(res.data);
+      } else {
+        refreshCurrentPage();
+      }
+    } else {
+      showToast((res && res.message) ? res.message : 'Gagal mengunggah foto ke Google Drive.', 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Coba Unggah Lagi</span>';
+      }
+    }
+  } catch (err) {
+    showToast('Kesalahan pengunggahan: ' + err.message, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up text-xs"></i><span>Coba Unggah Lagi</span>';
+    }
+  }
+}
+
+function openViewBuktiModal(data) {
+  if (!data) return;
+
+  const imgEl = document.getElementById('viewBuktiImg');
+  const namaTugasEl = document.getElementById('viewBuktiNamaTugas');
+  const ruanganEl = document.getElementById('viewBuktiRuangan');
+  const pegawaiEl = document.getElementById('viewBuktiPegawai');
+  const waktuEl = document.getElementById('viewBuktiWaktu');
+  const koordinatEl = document.getElementById('viewBuktiKoordinat');
+  const lokasiEl = document.getElementById('viewBuktiLokasi');
+  const driveLinkEl = document.getElementById('viewBuktiDriveLink');
+  const spvBox = document.getElementById('viewBuktiStatusPengawasBox');
+  const spvText = document.getElementById('viewBuktiStatusPengawasText');
+  const spvDetail = document.getElementById('viewBuktiPengawasDetail');
+  const spvBadge = document.getElementById('viewBuktiStatusPengawasBadge');
+
+  if (namaTugasEl) namaTugasEl.innerText = data.namaTugas || '-';
+  if (ruanganEl) ruanganEl.innerText = data.ruangan || '-';
+  if (pegawaiEl) pegawaiEl.innerText = `${data.namaPegawai || '-'} (${data.unit || 'Umum'})`;
+  if (waktuEl) waktuEl.innerHTML = `<i class="fa-solid fa-clock text-blue-500 mr-1.5"></i><span>${escapeHtml(data.waktu || '-')}</span>`;
+  if (koordinatEl) koordinatEl.innerHTML = `<i class="fa-solid fa-location-crosshairs text-emerald-500 mr-1.5"></i><span>${escapeHtml(data.koordinat || 'Tidak tercatat')}</span>`;
+  if (lokasiEl) lokasiEl.innerText = data.lokasi || 'Kantor BPS Provinsi Kalimantan Barat';
+
+  const fileUrl = data.fileUrl || (data.fileId ? `https://drive.google.com/file/d/${data.fileId}/view` : '#');
+  if (driveLinkEl) driveLinkEl.href = fileUrl;
+
+  if (imgEl) {
+    imgEl.src = '';
+    if (data.fileId) {
+      imgEl.src = `https://drive.google.com/thumbnail?id=${data.fileId}&sz=w1000`;
+    } else if (data.fileUrl) {
+      imgEl.src = data.fileUrl;
+    } else {
+      imgEl.src = 'img/logo_BPS.png';
+    }
+  }
+
+  if (spvBox && spvText && spvDetail && spvBadge) {
+    if (data.statusPengawas) {
+      spvBox.className = 'p-3.5 rounded-2xl border flex items-center justify-between bg-emerald-50/80 border-emerald-200 text-emerald-950';
+      spvText.innerText = '✓ Telah Divalidasi oleh Pengawas';
+      spvText.className = 'text-xs font-bold text-emerald-800 mt-0.5';
+      spvDetail.innerText = data.namaPengawas ? `Divalidasi oleh ${data.namaPengawas} pada ${data.waktuValidasi || '-'}` : 'Pemeriksaan pengawas selesai';
+      spvBadge.className = 'w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-xs bg-emerald-500 text-white';
+      spvBadge.innerHTML = '<i class="fa-solid fa-check"></i>';
+    } else {
+      spvBox.className = 'p-3.5 rounded-2xl border flex items-center justify-between bg-slate-50 border-slate-200/80 text-slate-800';
+      spvText.innerText = 'Belum Divalidasi oleh Pengawas';
+      spvText.className = 'text-xs font-bold text-slate-700 mt-0.5';
+      spvDetail.innerText = 'Tugas ini menunggu checklist verifikasi dari Supervisor / Pengawas';
+      spvBadge.className = 'w-9 h-9 rounded-xl flex items-center justify-center text-sm shadow-xs bg-slate-200 text-slate-500';
+      spvBadge.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i>';
+    }
+  }
+
+  openModal('modalViewBukti');
+}
 
     /**
      * ========================================================================

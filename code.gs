@@ -25,6 +25,8 @@
 
 // SPREADSHEET ID: Fallback jika tidak terikat ke container
 var SPREADSHEET_ID = "1c2XUeoYFt_UEqJruBSciKPAIiPEdNoJvTO9epLWVTqs";
+// GOOGLE DRIVE ROOT FOLDER ID: Folder Induk Penyimpanan Bukti Dukung Foto
+var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
 var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
 var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 
@@ -32,7 +34,8 @@ var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 var SHEET_NAMES = {
   USERS: 'Users',
   JADWAL_SECURITY: 'JadwalPiketSecurity',
-  INSPEKSI_MUTU: 'InspeksiMutu'
+  INSPEKSI_MUTU: 'InspeksiMutu',
+  BUKTI_DUKUNG: 'ValidasiDanBuktiDukung'
 };
 
 // Mapping Bulan Bahasa Indonesia
@@ -42,6 +45,12 @@ var MONTH_MAP_ID = {
   'AGUSTUS': 8, 'SEPTEMBER': 9, 'OKTOBER': 10,
   'NOPEMBER': 11, 'NOVEMBER': 11, 'DESEMBER': 12
 };
+
+// Array Nama Bulan Standar Bahasa Indonesia
+var MONTH_NAMES_ID = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
 
 // Daftar kata kunci header yang diabaikan saat pencarian nama pegawai
 var IGNORE_HEADER_WORDS = [
@@ -61,13 +70,13 @@ var SKIP_ROW_KEYWORDS = [
 
 // Role dan Kewenangan Akses
 var ROLE_PERMISSIONS = {
-  'Admin': { canManageUsers: true, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Supervisor': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Tim Umum dan Humas': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Koordinator Lapangan': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Petugas Kebersihan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false },
-  'Petugas Pelayanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false },
-  'Petugas Keamanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false }
+  'Admin': { canManageUsers: true, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Supervisor': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Tim Umum dan Humas': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Koordinator Lapangan': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Petugas Kebersihan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
+  'Petugas Pelayanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
+  'Petugas Keamanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false }
 };
 
 // <<<<<<<<<< END MODUL: config/Config.gs <<<<<<<<<<
@@ -1055,6 +1064,677 @@ function getAllUsersList(ss) {
 // <<<<<<<<<< END MODUL: backend/Auth.gs <<<<<<<<<<
 
 
+// >>>>>>>>>> MODUL: backend/BuktiDukung.gs >>>>>>>>>>
+
+/**
+ * ========================================================================
+ * SIMPEL-KU - BUKTI DUKUNG & SUPERVISOR CHECKLIST VALIDATION MODULE
+ * BPS Provinsi Kalimantan Barat
+ * ========================================================================
+ */
+
+/**
+ * Inisialisasi Sheet ValidasiDanBuktiDukung jika belum ada di Spreadsheet
+ */
+function setupBuktiDukungSheet(ss) {
+  if (!ss) ss = getDb();
+  if (!ss) return null;
+
+  var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
+  var sh = findSheet(ss, sheetName);
+  if (!sh) {
+    sh = ss.insertSheet(sheetName);
+    var headers = [
+      "TaskKey", "Timestamp", "Tahun", "Bulan", "BulanNama", "Tanggal", "Waktu",
+      "UnitKerja", "NamaPegawai", "Username", "Ruangan", "NamaTugas",
+      "StatusPetugas", "StatusPengawas", "NamaPengawas", "WaktuValidasiPengawas",
+      "AdaBuktiDukung", "FileIdDrive", "FileUrlDrive", "FileName",
+      "Koordinat", "Lokasi", "Catatan"
+    ];
+    sh.appendRow(headers);
+    sh.getRange(1, 1, 1, headers.length)
+      .setBackground("#1e40af")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+/**
+ * Menghasilkan kunci unik task untuk integrasi data checklist & bukti dukung
+ */
+function generateTaskKey(tahun, bulan, tanggal, namaPegawaiOrUsername, ruangan, namaTugas) {
+  var tThn = Number(tahun || 0);
+  var tBln = Number(bulan || 0);
+  var tTgl = Number(tanggal || 0);
+  var pAlpha = getAlphaOnly(namaPegawaiOrUsername || '');
+  var rAlpha = getAlphaOnly(ruangan || 'umum');
+  var kAlpha = getAlphaOnly(namaTugas || '');
+  return [tThn, tBln, tTgl, pAlpha, rAlpha, kAlpha].join('_');
+}
+
+/**
+ * Mendapatkan atau membuat folder anak di Google Drive (Mencegah duplikasi folder)
+ */
+function getOrCreateChildFolder(parentFolder, folderName) {
+  var nameClean = String(folderName || '').trim();
+  if (!nameClean) nameClean = 'Lainnya';
+
+  var folders = parentFolder.getFoldersByName(nameClean);
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+  return parentFolder.createFolder(nameClean);
+}
+
+/**
+ * Membaca seluruh data bukti dukung & status validasi pengawas pada bulan & tahun tertentu
+ */
+function getBuktiDukungMap(ss, bulan, tahun) {
+  if (!ss) ss = getDb();
+  if (!ss) return { map: {}, fallbackMap: {} };
+
+  var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
+  var sh = findSheet(ss, sheetName);
+  if (!sh) return { map: {}, fallbackMap: {} };
+
+  var values = sh.getDataRange().getValues();
+  if (values.length < 2) return { map: {}, fallbackMap: {} };
+
+  var map = {};
+  var fallbackMap = {};
+  var selMonth = bulan ? Number(bulan) : null;
+  var selYear = tahun ? Number(tahun) : null;
+
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var taskKey = String(row[0] || '').trim();
+    var rYear = Number(row[2] || 0);
+    var rMonth = Number(row[3] || 0);
+    var rDay = Number(row[5] || 0);
+
+    if (selYear && rYear && rYear !== selYear) continue;
+    if (selMonth && rMonth && rMonth !== selMonth) continue;
+
+    var record = {
+      rowIndex: r + 1,
+      taskKey: taskKey,
+      timestamp: row[1] ? new Date(row[1]).toISOString() : '',
+      tahun: rYear,
+      bulan: rMonth,
+      bulanNama: String(row[4] || ''),
+      tanggal: rDay,
+      waktu: String(row[6] || ''),
+      unitKerja: String(row[7] || ''),
+      namaPegawai: String(row[8] || ''),
+      username: String(row[9] || ''),
+      ruangan: String(row[10] || ''),
+      namaTugas: String(row[11] || ''),
+      statusPetugas: (row[12] === true || row[12] === 1 || String(row[12]).toUpperCase() === 'TRUE'),
+      statusPengawas: (row[13] === true || row[13] === 1 || String(row[13]).toUpperCase() === 'TRUE'),
+      namaPengawas: String(row[14] || ''),
+      waktuValidasiPengawas: String(row[15] || ''),
+      adaBuktiDukung: (row[16] === true || row[16] === 1 || String(row[16]).toUpperCase() === 'TRUE'),
+      fileIdDrive: String(row[17] || ''),
+      fileUrlDrive: String(row[18] || ''),
+      fileName: String(row[19] || ''),
+      koordinat: String(row[20] || ''),
+      lokasi: String(row[21] || ''),
+      catatan: String(row[22] || '')
+    };
+
+    if (taskKey) {
+      map[taskKey] = record;
+    }
+
+    // Fallback key: tanggal_namaPegawaiAlpha_tugasAlpha
+    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.namaTugas)].join('_');
+    fallbackMap[fKey] = record;
+  }
+
+  return { map: map, fallbackMap: fallbackMap };
+}
+
+/**
+ * Mengunggah Foto Bukti Dukung ke Google Drive dengan struktur folder otomatis & bebas duplikat
+ */
+function uploadBuktiDukungFoto(token, payload) {
+  try {
+    var session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
+    }
+
+    if (!payload || !payload.imageBase64) {
+      return { success: false, message: "Data foto bukti dukung tidak ditemukan." };
+    }
+
+    var ss = getDb();
+    if (!ss) {
+      return { success: false, message: "Koneksi spreadsheet gagal." };
+    }
+
+    var now = new Date();
+    var currentYear = now.getFullYear();
+    var currentMonth = now.getMonth() + 1;
+    var currentDay = now.getDate();
+
+    var targetTahun = payload.tahun ? Number(payload.tahun) : currentYear;
+    var targetBulan = payload.bulan ? Number(payload.bulan) : currentMonth;
+    var targetTanggal = payload.tanggal ? Number(payload.tanggal) : (payload.dayNum ? Number(payload.dayNum) : currentDay);
+
+    var empName = cleanStr(payload.targetNamaPegawai || payload.namaPegawai || session.namaPegawai || session.username);
+    var username = cleanStr(payload.targetUsername || payload.username || session.username);
+    var unitKerja = cleanStr(payload.unit || session.unit || 'Kebersihan');
+    var namaTugas = cleanStr(payload.namaTugas || payload.kegiatan || payload.item || 'Pelaksanaan Tugas');
+    var ruangan = cleanStr(payload.ruangan || 'Area Umum');
+
+    var monthNames = (typeof MONTH_NAMES_ID !== 'undefined' && MONTH_NAMES_ID) ? MONTH_NAMES_ID : [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    var namaBulanStr = monthNames[targetBulan] || ('Bulan_' + targetBulan);
+
+    // 1. Ekstrak dan Konversi Base64 ke Blob Foto
+    var base64Content = payload.imageBase64;
+    if (base64Content.indexOf('base64,') >= 0) {
+      base64Content = base64Content.split('base64,')[1];
+    }
+    var imageBytes = Utilities.base64Decode(base64Content);
+
+    // Format Nama File: [NamaTugas]_[YYYY-MM-DD]_[HH-mm].jpg
+    var cleanTaskSlug = namaTugas.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').substring(0, 30);
+    if (!cleanTaskSlug) cleanTaskSlug = 'Bukti_Tugas';
+
+    var datePart = targetTahun + '-' +
+      (targetBulan < 10 ? '0' + targetBulan : targetBulan) + '-' +
+      (targetTanggal < 10 ? '0' + targetTanggal : targetTanggal);
+
+    var timePart = '';
+    if (payload.waktuWib) {
+      var numsOnly = String(payload.waktuWib).replace(/[^0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 5);
+      if (numsOnly) timePart = numsOnly;
+    }
+    if (!timePart) {
+      timePart = Utilities.formatDate(now, "GMT+7", "HH-mm");
+    }
+
+    var fileName = cleanTaskSlug + '_' + datePart + '_' + timePart + '.jpg';
+    var imageBlob = Utilities.newBlob(imageBytes, 'image/jpeg', fileName);
+
+    // 2. Akses Folder Induk Google Drive
+    var rootFolderId = (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined' && GOOGLE_DRIVE_ROOT_FOLDER_ID)
+      ? GOOGLE_DRIVE_ROOT_FOLDER_ID
+      : "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
+
+    var rootFolder;
+    try {
+      rootFolder = DriveApp.getFolderById(rootFolderId);
+    } catch (eDrive) {
+      return {
+        success: false,
+        message: "Gagal mengakses Folder Induk Google Drive (ID: " + rootFolderId + "). Pastikan izin akses Drive diberikan."
+      };
+    }
+
+    // 3. Bangun Struktur Folder Secara Berjenjang Tanpa Duplikasi:
+    // Folder Induk -> [Tahun] -> [Unit Kerja] -> [Bulan] -> [Nama Pegawai]
+    var yearFolder = getOrCreateChildFolder(rootFolder, String(targetTahun));
+    var unitFolder = getOrCreateChildFolder(yearFolder, unitKerja);
+    var monthFolder = getOrCreateChildFolder(unitFolder, namaBulanStr);
+    var employeeFolder = getOrCreateChildFolder(monthFolder, empName);
+
+    // 4. Simpan File Foto ke Folder Pegawai
+    var driveFile = employeeFolder.createFile(imageBlob);
+    try {
+      driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (eShare) { /* abaikan jika pembatasan domain */ }
+
+    var fileId = driveFile.getId();
+    var fileUrl = driveFile.getUrl();
+
+    // 5. Simpan / Perbarui Record di Sheet ValidasiDanBuktiDukung
+    var sh = setupBuktiDukungSheet(ss);
+    var taskKey = generateTaskKey(targetTahun, targetBulan, targetTanggal, username || empName, ruangan, namaTugas);
+
+    var waktuStr = payload.waktuWib || (Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB");
+    var koordinatStr = cleanStr(payload.koordinat || '-');
+    var lokasiStr = cleanStr(payload.lokasi || '-');
+    var catatanStr = cleanStr(payload.catatan || '-');
+
+    var values = sh.getDataRange().getValues();
+    var existingRowIdx = -1;
+
+    for (var r = 1; r < values.length; r++) {
+      if (String(values[r][0] || '').trim() === taskKey) {
+        existingRowIdx = r + 1;
+        break;
+      }
+    }
+
+    var recordRow = [
+      taskKey,
+      now,
+      targetTahun,
+      targetBulan,
+      namaBulanStr,
+      targetTanggal,
+      waktuStr,
+      unitKerja,
+      empName,
+      username,
+      ruangan,
+      namaTugas,
+      true, // StatusPetugas = TRUE karena ada bukti pelaksanaan
+      existingRowIdx > 0 ? values[existingRowIdx - 1][13] : false, // StatusPengawas tetap
+      existingRowIdx > 0 ? values[existingRowIdx - 1][14] : '',    // NamaPengawas tetap
+      existingRowIdx > 0 ? values[existingRowIdx - 1][15] : '',    // WaktuValidasiPengawas tetap
+      true, // AdaBuktiDukung = TRUE
+      fileId,
+      fileUrl,
+      fileName,
+      koordinatStr,
+      lokasiStr,
+      catatanStr
+    ];
+
+    if (existingRowIdx > 0) {
+      sh.getRange(existingRowIdx, 1, 1, recordRow.length).setValues([recordRow]);
+    } else {
+      sh.appendRow(recordRow);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Invalidate script caches
+    clearScriptCacheKeys([
+      "cache_spv_dash_" + targetBulan + "_" + targetTahun,
+      "cache_rekap_terpadu_" + targetBulan + "_" + targetTahun
+    ]);
+    resetMemoryCache();
+
+    return {
+      success: true,
+      message: "Bukti dukung foto berhasil diunggah ke Google Drive!",
+      data: {
+        taskKey: taskKey,
+        fileId: fileId,
+        fileUrl: fileUrl,
+        fileName: fileName,
+        koordinat: koordinatStr,
+        lokasi: lokasiStr,
+        waktu: waktuStr,
+        tanggal: targetTanggal,
+        bulan: targetBulan,
+        tahun: targetTahun,
+        namaPegawai: empName,
+        namaTugas: namaTugas,
+        ruangan: ruangan,
+        unitKerja: unitKerja
+      }
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: "Gagal mengunggah bukti foto: " + err.message
+    };
+  }
+}
+
+/**
+ * Memperbarui Status Checklist / Validasi Pengawas (Bisa Centang & Uncheck)
+ */
+function updateSupervisorChecklist(token, payload) {
+  try {
+    var session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+
+    // Validasi Hak Akses Pengawas
+    var isManager = (session.role === 'Admin' ||
+                     session.role === 'Supervisor' ||
+                     session.role === 'Tim Umum dan Humas' ||
+                     session.role === 'Koordinator Lapangan');
+
+    if (!isManager) {
+      return { success: false, message: "Akses ditolak. Hanya Pengawas atau Admin yang dapat memvalidasi checklist tugas." };
+    }
+
+    if (!payload) {
+      return { success: false, message: "Data validasi tidak lengkap." };
+    }
+
+    var ss = getDb();
+    if (!ss) {
+      return { success: false, message: "Koneksi spreadsheet gagal." };
+    }
+
+    var now = new Date();
+    var targetTahun = payload.tahun ? Number(payload.tahun) : now.getFullYear();
+    var targetBulan = payload.bulan ? Number(payload.bulan) : (now.getMonth() + 1);
+    var targetTanggal = payload.tanggal ? Number(payload.tanggal) : (payload.dayNum ? Number(payload.dayNum) : now.getDate());
+
+    var empName = cleanStr(payload.namaPegawai || payload.pegawai || '');
+    var username = cleanStr(payload.username || '');
+    var ruangan = cleanStr(payload.ruangan || 'Area Umum');
+    var namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
+    var unitKerja = cleanStr(payload.unit || payload.unitKerja || 'Kebersihan');
+
+    var newStatus = (payload.newStatus === true || payload.newStatus === '1' || payload.newStatus === 1 || String(payload.newStatus).toUpperCase() === 'TRUE');
+
+    var taskKey = payload.taskKey || generateTaskKey(targetTahun, targetBulan, targetTanggal, username || empName, ruangan, namaTugas);
+
+    var sh = setupBuktiDukungSheet(ss);
+    var values = sh.getDataRange().getValues();
+    var existingRowIdx = -1;
+
+    for (var r = 1; r < values.length; r++) {
+      if (String(values[r][0] || '').trim() === taskKey) {
+        existingRowIdx = r + 1;
+        break;
+      }
+    }
+
+    // Jika belum ada row taskKey exact, cari fallback (tanggal + nama + tugas)
+    if (existingRowIdx === -1 && empName && namaTugas) {
+      var searchAlpha = [targetTanggal, getAlphaOnly(username || empName), getAlphaOnly(namaTugas)].join('_');
+      for (var r = 1; r < values.length; r++) {
+        var row = values[r];
+        var rDay = Number(row[5] || 0);
+        var rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        var rTugas = getAlphaOnly(String(row[11] || ''));
+        if (rDay === targetTanggal && rUser === getAlphaOnly(username || empName) && rTugas === getAlphaOnly(namaTugas)) {
+          existingRowIdx = r + 1;
+          break;
+        }
+      }
+    }
+
+    var supervisorName = session.namaPegawai || session.username || 'Pengawas';
+    var waktuValidasiStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy HH:mm:ss") + " WIB";
+
+    var monthNames = (typeof MONTH_NAMES_ID !== 'undefined' && MONTH_NAMES_ID) ? MONTH_NAMES_ID : [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    var namaBulanStr = monthNames[targetBulan] || ('Bulan_' + targetBulan);
+
+    var willCheckStaff = (newStatus && (payload.alsoCheckStaff === true || payload.statusPetugas === true));
+
+    if (existingRowIdx > 0) {
+      // Perbarui kolom status pengawas, nama pengawas, waktu validasi, dan timestamp
+      sh.getRange(existingRowIdx, 2).setValue(now); // Timestamp
+      sh.getRange(existingRowIdx, 14).setValue(newStatus); // StatusPengawas
+      sh.getRange(existingRowIdx, 15).setValue(newStatus ? supervisorName : ''); // NamaPengawas
+      sh.getRange(existingRowIdx, 16).setValue(newStatus ? waktuValidasiStr : ''); // WaktuValidasiPengawas
+      if (willCheckStaff) {
+        sh.getRange(existingRowIdx, 13).setValue(true); // StatusPetugas = TRUE
+      }
+      if (payload.catatan) {
+        sh.getRange(existingRowIdx, 23).setValue(payload.catatan);
+      }
+    } else {
+      // Buat row baru
+      var newRow = [
+        taskKey,
+        now,
+        targetTahun,
+        targetBulan,
+        namaBulanStr,
+        targetTanggal,
+        Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB",
+        unitKerja,
+        empName,
+        username,
+        ruangan,
+        namaTugas,
+        (willCheckStaff ? true : (payload.statusPetugas !== undefined ? Boolean(payload.statusPetugas) : false)), // StatusPetugas
+        newStatus, // StatusPengawas
+        newStatus ? supervisorName : '',
+        newStatus ? waktuValidasiStr : '',
+        false, // AdaBuktiDukung
+        '',    // FileIdDrive
+        '',    // FileUrlDrive
+        '',    // FileName
+        '',    // Koordinat
+        '',    // Lokasi
+        payload.catatan || '-'
+      ];
+      sh.appendRow(newRow);
+    }
+
+    // Jika willCheckStaff, perbarui juga sheet personal pegawai jika ada
+    if (willCheckStaff) {
+      try {
+        var empSheet = findEmployeeSheet(ss, payload.targetSheetName, empName, username);
+        if (empSheet) {
+          var rIdx = Number(payload.sheetRowIndex || 0);
+          var cIdx = Number(payload.colIndex || 0);
+          if (rIdx >= 1 && cIdx >= 1) {
+            empSheet.getRange(rIdx, cIdx).setValue(true);
+          }
+        }
+      } catch (eEmpSh) {}
+    }
+
+    SpreadsheetApp.flush();
+
+    // Invalidate script caches
+    clearScriptCacheKeys([
+      "cache_spv_dash_" + targetBulan + "_" + targetTahun,
+      "cache_rekap_terpadu_" + targetBulan + "_" + targetTahun
+    ]);
+    resetMemoryCache();
+
+    return {
+      success: true,
+      message: newStatus ? "Tugas berhasil divalidasi oleh Pengawas!" : "Checklist validasi Pengawas berhasil dibatalkan.",
+      data: {
+        taskKey: taskKey,
+        statusPengawas: newStatus,
+        namaPengawas: newStatus ? supervisorName : '',
+        waktuValidasiPengawas: newStatus ? waktuValidasiStr : '',
+        namaPegawai: empName,
+        namaTugas: namaTugas,
+        tanggal: targetTanggal,
+        bulan: targetBulan,
+        tahun: targetTahun
+      }
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: "Gagal memperbarui checklist pengawas: " + err.message
+    };
+  }
+}
+
+/**
+ * Mengambil data bukti dukung untuk tabel atau laporan
+ */
+function getBuktiDukungData(token, bulan, tahun, unit, namaPegawai) {
+  try {
+    var session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir." };
+    }
+
+    var ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    var bMap = getBuktiDukungMap(ss, bulan, tahun);
+    var list = Object.values(bMap.map);
+
+    if (unit && unit !== 'SEMUA') {
+      list = list.filter(function(item) {
+        return (item.unitKerja || '').toUpperCase() === unit.toUpperCase();
+      });
+    }
+
+    if (namaPegawai && namaPegawai !== 'SEMUA') {
+      var nAlpha = getAlphaOnly(namaPegawai);
+      list = list.filter(function(item) {
+        return getAlphaOnly(item.namaPegawai) === nAlpha || getAlphaOnly(item.username) === nAlpha;
+      });
+    }
+
+    list.sort(function(a, b) {
+      return (b.tanggal || 0) - (a.tanggal || 0);
+    });
+
+    return {
+      success: true,
+      data: list
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: "Gagal memuat data bukti dukung: " + err.message
+    };
+  }
+}
+
+// <<<<<<<<<< END MODUL: backend/BuktiDukung.gs <<<<<<<<<<
+
+
+// >>>>>>>>>> MODUL: backend/InspeksiMutu.gs >>>>>>>>>>
+
+/**
+ * ========================================================================
+ * SIMPEL-KU - INSPEKSI MUTU / QUALITY INSPECTION MODULE
+ * ========================================================================
+ */
+
+/**
+ * ========================================================================
+ * 7. AUDIT & INSPEKSI STANDAR MUTU LAYANAN
+ * ========================================================================
+ */
+function setupInspeksiMutuSheet(ss) {
+  if (!ss) ss = getDb();
+  let sh = findSheet(ss, "InspeksiMutu");
+  if (!sh) {
+    sh = ss.insertSheet("InspeksiMutu");
+    sh.appendRow([
+      "Timestamp", "Tanggal Inspeksi", "Bulan", "Tahun", "Unit", "Pegawai / Area",
+      "Kerapihan & Kebersihan (1-5)", "Ketepatan Waktu (1-5)", "Kepatuhan SOP (1-5)",
+      "Kelengkapan Atribut/Alat (1-5)", "Skor Rata-Rata", "Catatan Temuan",
+      "Status Rekomendasi", "Inspektor"
+    ]);
+    sh.getRange(1, 1, 1, 14).setBackground("#4f46e5").setFontColor("#ffffff").setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function getInspeksiMutuData(token, bulan, tahun, unit) {
+  try {
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
+
+    const sh = findSheet(ss, "InspeksiMutu");
+    if (!sh) return { success: true, data: [] };
+
+    const values = sh.getDataRange().getValues();
+    if (values.length < 2) return { success: true, data: [] };
+
+    const list = [];
+    const selectedMonth = bulan ? Number(bulan) : null;
+    const selectedYear = tahun ? Number(tahun) : null;
+
+    for (let r = 1; r < values.length; r++) {
+      const row = values[r];
+      const rowBulan = Number(row[2]);
+      const rowTahun = Number(row[3]);
+      const rowUnit = cleanStr(row[4]);
+
+      if (selectedMonth && rowBulan && rowBulan !== selectedMonth) continue;
+      if (selectedYear && rowTahun && rowTahun !== selectedYear) continue;
+      if (unit && unit !== 'SEMUA' && rowUnit && rowUnit.toUpperCase() !== unit.toUpperCase()) continue;
+
+      list.push({
+        rowIndex: r + 1,
+        timestamp: row[0] ? new Date(row[0]).toISOString() : '',
+        tanggal: row[1],
+        bulan: rowBulan,
+        tahun: rowTahun,
+        unit: rowUnit,
+        pegawaiArea: row[5],
+        skorKerapihan: Number(row[6] || 0),
+        skorKetepatan: Number(row[7] || 0),
+        skorKepatuhan: Number(row[8] || 0),
+        skorKelengkapan: Number(row[9] || 0),
+        skorRataRata: Number(row[10] || 0),
+        catatan: row[11] || '',
+        statusRekomendasi: row[12] || 'Sesuai Standar',
+        inspektor: row[13] || 'Supervisor'
+      });
+    }
+
+    list.reverse();
+    return { success: true, data: list };
+  } catch (err) {
+    return { success: false, message: "Gagal memuat data inspeksi: " + err.message };
+  }
+}
+
+function saveInspeksiMutu(token, payload) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) return { success: false, message: "Sesi telah berakhir." };
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
+
+    const sh = setupInspeksiMutuSheet(ss);
+    const now = new Date();
+    const bulan = payload.bulan || (now.getMonth() + 1);
+    const tahun = payload.tahun || now.getFullYear();
+    const tanggal = payload.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
+
+    const skor1 = Number(payload.skorKerapihan || 5);
+    const skor2 = Number(payload.skorKetepatan || 5);
+    const skor3 = Number(payload.skorKepatuhan || 5);
+    const skor4 = Number(payload.skorKelengkapan || 5);
+    const avg = Number(((skor1 + skor2 + skor3 + skor4) / 4).toFixed(2));
+
+    sh.appendRow([
+      now,
+      tanggal,
+      bulan,
+      tahun,
+      payload.unit || 'Kebersihan',
+      payload.pegawaiArea || 'Semua Area',
+      skor1,
+      skor2,
+      skor3,
+      skor4,
+      avg,
+      payload.catatan || '-',
+      payload.statusRekomendasi || 'Sesuai Standar',
+      session.namaPegawai || session.username || 'Supervisor'
+    ]);
+
+    clearScriptCacheKeys([
+      "cache_spv_dash_" + bulan + "_" + tahun,
+      "cache_rekap_terpadu_" + bulan + "_" + tahun
+    ]);
+    resetMemoryCache();
+
+    return { success: true, message: "Data inspeksi mutu berhasil disimpan!", skorRataRata: avg };
+  } catch (err) {
+    return { success: false, message: "Gagal menyimpan inspeksi: " + err.message };
+  }
+}
+
+// <<<<<<<<<< END MODUL: backend/InspeksiMutu.gs <<<<<<<<<<
+
+
 // >>>>>>>>>> MODUL: backend/StaffMonitoring.gs >>>>>>>>>>
 
 /**
@@ -1201,6 +1881,45 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
         return true;
       });
     }
+
+    const bMap = getBuktiDukungMap(ss, bulan, tahun);
+    filteredItems.forEach(item => {
+      item.dailyEvidence = {};
+      parsedData.activeDays.forEach(d => {
+        const tKey = generateTaskKey(tahun, bulan, d, session.username || session.namaPegawai, item.ruangan, item.kegiatan);
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.kegiatan)].join('_');
+        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+        if (rec) {
+          item.dailyEvidence[d] = {
+            adaBukti: rec.adaBuktiDukung,
+            fileId: rec.fileIdDrive,
+            fileUrl: rec.fileUrlDrive,
+            fileName: rec.fileName,
+            koordinat: rec.koordinat,
+            lokasi: rec.lokasi,
+            waktu: rec.waktu,
+            statusPengawas: rec.statusPengawas,
+            namaPengawas: rec.namaPengawas,
+            waktuValidasiPengawas: rec.waktuValidasiPengawas,
+            taskKey: rec.taskKey || tKey
+          };
+        } else {
+          item.dailyEvidence[d] = {
+            adaBukti: false,
+            fileId: '',
+            fileUrl: '',
+            fileName: '',
+            koordinat: '',
+            lokasi: '',
+            waktu: '',
+            statusPengawas: false,
+            namaPengawas: '',
+            waktuValidasiPengawas: '',
+            taskKey: tKey
+          };
+        }
+      });
+    });
 
     return {
       success: true,
@@ -1979,6 +2698,47 @@ function getJadwalKeamanan(token, bulan, tahun) {
       });
     }
 
+    const curYearNum = tahun ? Number(tahun) : new Date().getFullYear();
+    const bMap = getBuktiDukungMap(ss, selectedMonth, curYearNum);
+    taskItems.forEach(function(t) {
+      t.dailyEvidence = {};
+      schedCols.forEach(function(sc) {
+        const d = sc.tanggal;
+        const tKey = generateTaskKey(curYearNum, selectedMonth, d, session.username || session.namaPegawai, t.ruangan, t.kegiatan);
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.kegiatan)].join('_');
+        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+        if (rec) {
+          t.dailyEvidence[d] = {
+            adaBukti: rec.adaBuktiDukung,
+            fileId: rec.fileIdDrive,
+            fileUrl: rec.fileUrlDrive,
+            fileName: rec.fileName,
+            koordinat: rec.koordinat,
+            lokasi: rec.lokasi,
+            waktu: rec.waktu,
+            statusPengawas: rec.statusPengawas,
+            namaPengawas: rec.namaPengawas,
+            waktuValidasiPengawas: rec.waktuValidasiPengawas,
+            taskKey: rec.taskKey || tKey
+          };
+        } else {
+          t.dailyEvidence[d] = {
+            adaBukti: false,
+            fileId: '',
+            fileUrl: '',
+            fileName: '',
+            koordinat: '',
+            lokasi: '',
+            waktu: '',
+            statusPengawas: false,
+            namaPengawas: '',
+            waktuValidasiPengawas: '',
+            taskKey: tKey
+          };
+        }
+      });
+    });
+
     return {
       success: true,
       data: {
@@ -2662,6 +3422,9 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
                 shift: shiftKode,
                 namaShift: namaShift,
                 isDone: isDone,
+                sheetRowIndex: t.sheetRowIndex || null,
+                colIndex: (t.colMapping && t.colMapping[d]) ? t.colMapping[d] : (d + 1),
+                targetSheetName: emp.namaSheet || null,
                 updatedAt: isDone
                   ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} (Shift ${shiftKode})`
                   : `Shift ${shiftKode} (Belum)`
@@ -2715,6 +3478,9 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
                 dayNum: d,
                 weekNum: Math.min(5, Math.ceil(d / 7)),
                 isDone: isDone,
+                sheetRowIndex: it.sheetRowIndex || null,
+                colIndex: (it.colMapping && it.colMapping[d]) ? it.colMapping[d] : (d + 1),
+                targetSheetName: emp.namaSheet || null,
                 updatedAt: isDone
                   ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00`
                   : '-'
@@ -2722,6 +3488,39 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
             });
           });
         }
+      }
+    });
+
+    // Perkaya data dengan status bukti dukung foto & checklist pengawas
+    const bMap = getBuktiDukungMap(ss, selectedMonth, selectedYear);
+    aggregatedItems.forEach(it => {
+      const tKey = generateTaskKey(selectedYear, selectedMonth, it.dayNum, it.username || it.pegawai, it.ruangan, it.item);
+      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.item)].join('_');
+      const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+      if (rec) {
+        it.taskKey = rec.taskKey || tKey;
+        it.statusPengawas = rec.statusPengawas;
+        it.namaPengawas = rec.namaPengawas;
+        it.waktuValidasi = rec.waktuValidasiPengawas;
+        it.adaBukti = rec.adaBuktiDukung;
+        it.fileId = rec.fileIdDrive;
+        it.fileUrl = rec.fileUrlDrive;
+        it.fileName = rec.fileName;
+        it.koordinat = rec.koordinat;
+        it.lokasi = rec.lokasi;
+        it.waktuPelaksanaan = rec.waktu;
+      } else {
+        it.taskKey = tKey;
+        it.statusPengawas = false;
+        it.namaPengawas = '';
+        it.waktuValidasi = '';
+        it.adaBukti = false;
+        it.fileId = '';
+        it.fileUrl = '';
+        it.fileName = '';
+        it.koordinat = '';
+        it.lokasi = '';
+        it.waktuPelaksanaan = '';
       }
     });
 
@@ -2733,6 +3532,10 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
       aggregatedItems = aggregatedItems.filter(it => {
         if (filterStatus === 'SELESAI') return it.isDone;
         if (filterStatus === 'BELUM') return !it.isDone;
+        if (filterStatus === 'VALID' || filterStatus === 'TERVALIDASI') return it.statusPengawas === true;
+        if (filterStatus === 'BELUM_VALID' || filterStatus === 'BELUM_TERVALIDASI') return it.statusPengawas !== true;
+        if (filterStatus === 'ADA_BUKTI') return it.adaBukti === true;
+        if (filterStatus === 'TANPA_BUKTI') return it.adaBukti !== true;
         return true;
       });
     }
@@ -3386,6 +4189,159 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
   }
 }
 
+/**
+ * ========================================================================
+ * 7. FITUR PENGAWAS MENCENTANG TUGAS PEGAWAI (YANG BELUM DICEKLIST PEGAWAI)
+ * ========================================================================
+ */
+function supervisorToggleStaffTaskCheck(token, payload) {
+  try {
+    const session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
+    }
+
+    const isManager = (session.role === 'Admin' ||
+                       session.role === 'Supervisor' ||
+                       session.role === 'Tim Umum dan Humas' ||
+                       session.role === 'Koordinator Lapangan');
+
+    if (!isManager) {
+      return { success: false, message: "Akses ditolak. Hanya Pengawas atau Admin yang dapat mencentang tugas pegawai." };
+    }
+
+    if (!payload) {
+      return { success: false, message: "Data checklist tidak lengkap." };
+    }
+
+    const ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    const targetUsername = cleanStr(payload.username || '');
+    const targetNamaPegawai = cleanStr(payload.namaPegawai || payload.pegawai || '');
+    const targetSheetName = cleanStr(payload.targetSheetName || '');
+    const dayNum = Number(payload.dayNum || payload.tanggal || new Date().getDate());
+    const monthNum = Number(payload.bulan || (new Date().getMonth() + 1));
+    const yearNum = Number(payload.tahun || new Date().getFullYear());
+    const newStatus = (payload.newStatus === true || payload.newStatus === 1 || payload.newStatus === '1' || String(payload.newStatus).toUpperCase() === 'TRUE');
+    let rIdx = Number(payload.sheetRowIndex || 0);
+    let cIdx = Number(payload.colIndex || 0);
+    const namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
+    const ruangan = cleanStr(payload.ruangan || 'Area Umum');
+    const unitKerja = cleanStr(payload.unit || 'Kebersihan');
+
+    // 1. Temukan sheet pegawai & perbarui cell jika sheet personal ada
+    let sheetUpdated = false;
+    let empSheet = null;
+    if (targetSheetName) empSheet = findSheet(ss, targetSheetName);
+    if (!empSheet) empSheet = findEmployeeSheet(ss, targetSheetName, targetNamaPegawai, targetUsername);
+
+    if (empSheet) {
+      if (!rIdx || rIdx < 1 || !cIdx || cIdx < 1) {
+        const parsed = readSheetMonitoring(empSheet, monthNum, yearNum);
+        if (parsed && parsed.items) {
+          const found = parsed.items.find(i => i.kegiatan === namaTugas || getAlphaOnly(i.kegiatan) === getAlphaOnly(namaTugas));
+          if (found) {
+            rIdx = found.sheetRowIndex;
+            cIdx = (found.colMapping && found.colMapping[dayNum]) ? found.colMapping[dayNum] : (dayNum + 1);
+          }
+        }
+      }
+
+      if (rIdx >= 1 && cIdx >= 1) {
+        empSheet.getRange(rIdx, cIdx).setValue(newStatus);
+        sheetUpdated = true;
+      }
+    }
+
+    // 2. Simpan / Perbarui statusPetugas di sheet ValidasiDanBuktiDukung
+    const sh = setupBuktiDukungSheet(ss);
+    const taskKey = payload.taskKey || generateTaskKey(yearNum, monthNum, dayNum, targetUsername || targetNamaPegawai, ruangan, namaTugas);
+    const values = sh.getDataRange().getValues();
+    let existingRowIdx = -1;
+
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][0] || '').trim() === taskKey) {
+        existingRowIdx = r + 1;
+        break;
+      }
+    }
+
+    if (existingRowIdx === -1 && targetNamaPegawai && namaTugas) {
+      for (let r = 1; r < values.length; r++) {
+        const row = values[r];
+        const rDay = Number(row[5] || 0);
+        const rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        const rTugas = getAlphaOnly(String(row[11] || ''));
+        if (rDay === dayNum && rUser === getAlphaOnly(targetUsername || targetNamaPegawai) && rTugas === getAlphaOnly(namaTugas)) {
+          existingRowIdx = r + 1;
+          break;
+        }
+      }
+    }
+
+    const now = new Date();
+    const supervisorName = session.namaPegawai || session.username || 'Pengawas';
+
+    if (existingRowIdx > 0) {
+      sh.getRange(existingRowIdx, 2).setValue(now); // Timestamp
+      sh.getRange(existingRowIdx, 13).setValue(newStatus); // StatusPetugas
+      if (!values[existingRowIdx - 1][14] && newStatus) {
+        sh.getRange(existingRowIdx, 23).setValue('Diceklist oleh Pengawas (' + supervisorName + ')');
+      }
+    } else {
+      const NAMA_BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const newRow = [
+        taskKey,
+        now,
+        yearNum,
+        monthNum,
+        NAMA_BULAN[monthNum] || ('Bulan_' + monthNum),
+        dayNum,
+        Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB",
+        unitKerja,
+        targetNamaPegawai,
+        targetUsername,
+        ruangan,
+        namaTugas,
+        newStatus, // StatusPetugas
+        false,     // StatusPengawas
+        '',        // NamaPengawas
+        '',        // WaktuValidasiPengawas
+        false,     // AdaBuktiDukung
+        '', '', '', '', '',
+        'Checklist diisi oleh Pengawas (' + supervisorName + ')'
+      ];
+      sh.appendRow(newRow);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Invalidate script caches
+    clearScriptCacheKeys([
+      "cache_spv_dash_" + monthNum + "_" + yearNum,
+      "cache_rekap_terpadu_" + monthNum + "_" + yearNum,
+      empSheet ? ("cache_m_" + empSheet.getName() + "_" + monthNum + "_" + yearNum) : null
+    ]);
+    resetMemoryCache();
+
+    return {
+      success: true,
+      message: newStatus ? "Tugas pegawai berhasil dicentang selesai oleh Pengawas!" : "Centang tugas pegawai berhasil dibatalkan.",
+      data: {
+        taskKey: taskKey,
+        isDone: newStatus,
+        sheetUpdated: sheetUpdated,
+        namaPegawai: targetNamaPegawai,
+        namaTugas: namaTugas,
+        dayNum: dayNum
+      }
+    };
+  } catch (err) {
+    return { success: false, message: "Gagal memperbarui status tugas pegawai: " + err.message };
+  }
+}
+
 // <<<<<<<<<< END MODUL: backend/Supervisor.gs <<<<<<<<<<
 
 
@@ -3509,6 +4465,18 @@ function handleApiRequest(params) {
       );
     } else if (action === 'getExportLaporanData') {
       result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+    } else if (action === 'uploadBuktiDukung') {
+      result = uploadBuktiDukungFoto(params.token, params);
+    } else if (action === 'updateSupervisorChecklist') {
+      result = updateSupervisorChecklist(params.token, params);
+    } else if (action === 'supervisorToggleStaffTaskCheck') {
+      result = supervisorToggleStaffTaskCheck(params.token, params);
+    } else if (action === 'getBuktiDukungData') {
+      result = getBuktiDukungData(params.token, params.bulan, params.tahun, params.unit, params.namaPegawai);
+    } else if (action === 'getInspeksiMutuData') {
+      result = getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
+    } else if (action === 'saveInspeksiMutu') {
+      result = saveInspeksiMutu(params.token, params);
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {

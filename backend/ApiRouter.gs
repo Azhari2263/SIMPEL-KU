@@ -116,6 +116,18 @@ function handleApiRequest(params) {
       );
     } else if (action === 'getExportLaporanData') {
       result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+    } else if (action === 'uploadBuktiDukung') {
+      result = uploadBuktiDukungFoto(params.token, params);
+    } else if (action === 'updateSupervisorChecklist') {
+      result = updateSupervisorChecklist(params.token, params);
+    } else if (action === 'supervisorToggleStaffTaskCheck') {
+      result = supervisorToggleStaffTaskCheck(params.token, params);
+    } else if (action === 'getBuktiDukungData') {
+      result = getBuktiDukungData(params.token, params.bulan, params.tahun, params.unit, params.namaPegawai);
+    } else if (action === 'getInspeksiMutuData') {
+      result = getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
+    } else if (action === 'saveInspeksiMutu') {
+      result = saveInspeksiMutu(params.token, params);
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {

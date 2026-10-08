@@ -462,37 +462,20 @@ function renderMonitoringView() {
               </div>
             </div>
 
-            <div class="space-y-2 pt-1">
+            <div class="space-y-3 pt-1">
         `;
 
         roomItems.forEach(item => {
           const st = item.dailyStatus ? item.dailyStatus[dayNum] : '-';
           const colIndex = (item.colMapping && item.colMapping[dayNum]) ? item.colMapping[dayNum] : (dayNum + 1);
+          const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+          const hasEvidence = (ev.adaBukti === true);
+          const isSupervisorValid = (ev.statusPengawas === true);
 
           if (st === '1') {
-            if (isToday) {
-              html += `
-                <div onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, false, ${dayNum})"
-                  title="Klik untuk membatalkan centang (TRUE -> FALSE)"
-                  class="group flex items-center justify-between p-3.5 rounded-xl border border-emerald-300 bg-emerald-50/70 hover:bg-rose-50/80 hover:border-rose-300 cursor-pointer transition-all active:scale-[0.99] shadow-2xs">
-                  <div class="flex items-center space-x-3 min-w-0 pr-2">
-                    <div class="w-7 h-7 rounded-lg bg-emerald-500 group-hover:bg-rose-500 text-white flex items-center justify-center text-xs flex-shrink-0 transition-colors shadow-xs">
-                      <i class="fa-solid fa-check group-hover:hidden"></i>
-                      <i class="fa-solid fa-xmark hidden group-hover:inline"></i>
-                    </div>
-                    <span class="text-xs font-semibold text-slate-800 line-through group-hover:no-underline decoration-slate-400 truncate">
-                      ${escapeHtml(item.kegiatan)}
-                    </span>
-                  </div>
-                  <span class="px-2.5 py-1 rounded-lg bg-emerald-100 group-hover:bg-rose-100 text-emerald-800 group-hover:text-rose-700 text-[10px] font-bold flex-shrink-0 transition-colors">
-                    <span class="group-hover:hidden">✓ TRUE (Bisa Batal)</span>
-                    <span class="hidden group-hover:inline">Batalkan Centang</span>
-                  </span>
-                </div>
-              `;
-            } else {
-              html += `
-                <div class="flex items-center justify-between p-3.5 rounded-xl border border-emerald-200/80 bg-emerald-50/40 cursor-not-allowed transition-all opacity-95">
+            html += `
+              <div class="p-3.5 rounded-2xl border ${isToday ? 'border-emerald-300 bg-emerald-50/40' : 'border-emerald-200/80 bg-emerald-50/20'} space-y-2.5 shadow-2xs">
+                <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center space-x-3 min-w-0 pr-2">
                     <div class="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs flex-shrink-0 shadow-xs">
                       <i class="fa-solid fa-check"></i>
@@ -501,29 +484,121 @@ function renderMonitoringView() {
                       ${escapeHtml(item.kegiatan)}
                     </span>
                   </div>
-                  <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold flex-shrink-0 flex items-center gap-1">
-                    <i class="fa-solid fa-lock text-[9px]"></i>
-                    <span>🔒 TRUE (Dikunci)</span>
-                  </span>
+
+                  ${isToday ? `
+                    <button onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, false, ${dayNum})"
+                      title="Klik untuk membatalkan checklist hari ini"
+                      class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold flex-shrink-0 transition-colors cursor-pointer active:scale-95">
+                      Batalkan Centang
+                    </button>
+                  ` : `
+                    <span class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-[10px] font-bold flex-shrink-0 flex items-center gap-1">
+                      <i class="fa-solid fa-lock text-[9px]"></i>
+                      <span>Terkunci</span>
+                    </span>
+                  `}
                 </div>
-              `;
-            }
+
+                <!-- Toolbar Bukti Dukung & Status Pengawas -->
+                <div class="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer" title="Upload ulang foto bukti">
+                        <i class="fa-solid fa-camera-rotate text-[10px] text-slate-500"></i>
+                        <span>Ganti</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold" title="Divalidasi oleh ${escapeHtml(ev.namaPengawas || 'Pengawas')} (${escapeHtml(ev.waktuValidasiPengawas || '')})">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas ${ev.namaPengawas ? '(' + escapeHtml(ev.namaPengawas) + ')' : ''}</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi Pengawas</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `;
           } else if (st === '0') {
             html += `
-              <div onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, true, ${dayNum})"
-                class="group flex items-center justify-between p-3.5 rounded-xl border-2 border-rose-200 bg-rose-50/40 hover:border-emerald-500 hover:bg-emerald-50/40 cursor-pointer transition-all active:scale-[0.99] shadow-2xs">
-                <div class="flex items-center space-x-3 min-w-0 pr-2">
-                  <div class="w-7 h-7 rounded-lg border-2 border-rose-400 group-hover:border-emerald-500 bg-white flex items-center justify-center text-xs text-transparent group-hover:text-emerald-600 flex-shrink-0 transition-all">
-                    <i class="fa-solid fa-check"></i>
+              <div class="p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/30 space-y-2.5 shadow-2xs">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center space-x-3 min-w-0 pr-2">
+                    <div class="w-7 h-7 rounded-lg border-2 border-rose-400 bg-white flex items-center justify-center text-xs text-transparent flex-shrink-0">
+                      <i class="fa-solid fa-check"></i>
+                    </div>
+                    <span class="text-xs font-medium text-slate-900 leading-snug">
+                      ${escapeHtml(item.kegiatan)}
+                    </span>
                   </div>
-                  <span class="text-xs font-medium text-slate-900 group-hover:text-emerald-900 leading-snug">
-                    ${escapeHtml(item.kegiatan)}
-                  </span>
+                  <button onclick="toggleCheck(${item.sheetRowIndex}, ${colIndex}, true, ${dayNum})" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-emerald-600 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 flex-shrink-0 shadow-xs cursor-pointer active:scale-95">
+                    <span>Centang Selesai</span>
+                    <i class="fa-solid fa-check text-[10px]"></i>
+                  </button>
                 </div>
-                <button class="px-3 py-1.5 rounded-lg bg-rose-600 group-hover:bg-emerald-600 text-white text-[11px] font-bold transition-all flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>Centang Selesai</span>
-                  <i class="fa-solid fa-check text-[10px]"></i>
-                </button>
+
+                <!-- Toolbar Bukti Dukung & Status Pengawas -->
+                <div class="pt-2 border-t border-rose-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiStaff(${item.sheetRowIndex}, ${dayNum})" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi</span>
+                      </span>
+                    `}
+                  </div>
+                </div>
               </div>
             `;
           } else {
@@ -757,4 +832,64 @@ function renderMonitoringView() {
         showToast("Kesalahan server: " + err.message, "error");
         refreshCurrentPage();
       }
+    }
+
+    /**
+     * Membuka modal upload bukti dukung untuk staf kebersihan / pelayanan
+     */
+    function triggerUploadBuktiStaff(sheetRowIndex, dayNum) {
+      if (!cachedMonitoringData || !cachedMonitoringData.items) return;
+      const item = cachedMonitoringData.items.find(i => i.sheetRowIndex === sheetRowIndex);
+      if (!item) return;
+
+      const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+      const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+      openUploadBuktiModal({
+        sheetRowIndex: sheetRowIndex,
+        ruangan: item.ruangan || 'Area Umum',
+        namaTugas: item.kegiatan,
+        unit: cachedMonitoringData.jenis || 'Kebersihan',
+        namaPegawai: cachedMonitoringData.namaPegawai || currentUser?.namaPegawai,
+        username: currentUser?.username,
+        dayNum: dayNum,
+        bulan: currentBulan,
+        tahun: currentTahun,
+        onSuccess: function() {
+          loadMonitoringData(cachedMonitoringData.jenis || 'Kebersihan');
+        }
+      });
+    }
+
+    /**
+     * Membuka viewer bukti foto untuk staf
+     */
+    function openBuktiPhotoViewerStaff(sheetRowIndex, dayNum) {
+      if (!cachedMonitoringData || !cachedMonitoringData.items) return;
+      const item = cachedMonitoringData.items.find(i => i.sheetRowIndex === sheetRowIndex);
+      if (!item) return;
+
+      const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+      const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+      const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+      openViewBuktiModal({
+        namaTugas: item.kegiatan,
+        ruangan: item.ruangan,
+        namaPegawai: cachedMonitoringData.namaPegawai || currentUser?.namaPegawai,
+        unit: cachedMonitoringData.jenis || 'Kebersihan',
+        tanggal: dayNum,
+        bulan: currentBulan,
+        tahun: currentTahun,
+        waktu: ev.waktu || '-',
+        koordinat: ev.koordinat || '',
+        lokasi: ev.lokasi || '',
+        fileId: ev.fileId || '',
+        fileUrl: ev.fileUrl || '',
+        fileName: ev.fileName || '',
+        statusPengawas: ev.statusPengawas,
+        namaPengawas: ev.namaPengawas,
+        waktuValidasi: ev.waktuValidasiPengawas,
+        statusPetugas: item.dailyStatus && (item.dailyStatus[dayNum] === '1')
+      });
     }

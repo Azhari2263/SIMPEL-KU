@@ -257,35 +257,246 @@ function renderIntegratedMonitoringUI() {
 
       if (countBadge) countBadge.innerText = `${filtered.length} Item Checklist`;
 
+      window._currentFilteredSupervisorItems = filtered;
+
       if (!filtered.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada data checklist yang cocok dengan kriteria pencarian / filter.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-400 font-medium">Tidak ada data checklist yang cocok dengan kriteria pencarian / filter.</td></tr>';
         return;
       }
 
       tbody.innerHTML = filtered.map((it, idx) => {
         const isDone = it.isDone;
+        const isPengawasValid = (it.statusPengawas === true);
+        const hasEvidence = (it.adaBukti === true);
+
         return `
           <tr class="hover:bg-slate-50 transition border-t border-slate-100">
-            <td class="py-3 px-4 font-semibold text-slate-400">${idx + 1}</td>
-            <td class="py-3 px-4 font-semibold text-slate-700">
+            <td class="py-3 px-3 font-semibold text-slate-400">${idx + 1}</td>
+            <td class="py-3 px-3 font-semibold text-slate-700">
               <span class="inline-flex items-center gap-1.5 flex-wrap">
                 <span>${escapeHtml(it.unit || '-')}</span>
                 ${it.shift ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full ${it.shift === 'P' ? 'bg-blue-100 text-blue-700 border border-blue-200' : it.shift === 'S' ? 'bg-amber-100 text-amber-700 border border-amber-200' : it.shift === 'M' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-600'}">Shift ${escapeHtml(it.namaShift || it.shift)}</span>` : ''}
               </span>
             </td>
-            <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(it.pegawai || '-')}</td>
-            <td class="py-3 px-4 text-slate-600">${escapeHtml(it.ruangan || '-')}</td>
-            <td class="py-3 px-4 text-slate-800">${escapeHtml(it.item || '-')}</td>
-            <td class="py-3 px-4">
-              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${isDone ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}">
-                <i class="fa-solid ${isDone ? 'fa-circle-check text-emerald-600' : 'fa-circle-xmark text-rose-600'}"></i>
-                ${isDone ? 'Selesai' : 'Belum'}
-              </span>
+            <td class="py-3 px-3 font-bold text-slate-800">${escapeHtml(it.pegawai || '-')}</td>
+            <td class="py-3 px-3 text-slate-600">${escapeHtml(it.ruangan || '-')}</td>
+            <td class="py-3 px-4 text-slate-800 font-medium">${escapeHtml(it.item || '-')}</td>
+            
+            <!-- Kolom Status Petugas (Interaktif: Pengawas Dapat Mencetak Centang Selesai Jika Pegawai Belum Centang) -->
+            <td class="py-3 px-3 text-center">
+              ${isDone ? `
+                <div class="flex flex-col items-center gap-1">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                    <span>Selesai</span>
+                  </span>
+                  <button onclick="toggleStaffTaskCheckFromSupervisor(${idx}, false)" title="Batalkan checklist tugas pegawai ini" class="text-[10px] text-slate-400 hover:text-rose-600 font-medium transition-colors cursor-pointer">
+                    Batal Centang
+                  </button>
+                </div>
+              ` : `
+                <div class="flex flex-col items-center gap-1">
+                  <button onclick="toggleStaffTaskCheckFromSupervisor(${idx}, true)" title="Pengawas mencentang tugas pegawai ini yang belum diceklist pegawai" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-blue-600 hover:bg-emerald-600 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-check text-xs"></i>
+                    <span>Centang Selesai</span>
+                  </button>
+                  <span class="text-[10px] text-rose-500 font-semibold">Belum Diceklist</span>
+                </div>
+              `}
             </td>
-            <td class="py-3 px-4 text-slate-400 font-mono text-[11px] text-right">${escapeHtml(it.updatedAt || '-')}</td>
+
+            <!-- Kolom Bukti Dukung Foto -->
+            <td class="py-3 px-3 text-center">
+              ${hasEvidence ? `
+                <button onclick="openBuktiPhotoViewerFromRow(${idx})" title="Lihat Bukti Foto" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-2xs transition cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-camera text-emerald-600"></i>
+                  <span>Tersedia</span>
+                </button>
+              ` : `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-slate-100 text-slate-400 border border-slate-200/60">
+                  <i class="fa-solid fa-minus text-[9px]"></i>
+                  <span>Belum Ada</span>
+                </span>
+              `}
+            </td>
+
+            <!-- Kolom Validasi Pengawas (Interactive Checklist & Uncheck) -->
+            <td class="py-3 px-3 text-center">
+              ${isPengawasValid ? `
+                <div class="flex flex-col items-center">
+                  <button onclick="toggleSupervisorValidationFromRow(${idx}, false)" title="Klik untuk membatalkan checklist validasi pengawas (Uncheck)" class="group inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-rose-600 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-check group-hover:hidden text-xs"></i>
+                    <i class="fa-solid fa-xmark hidden group-hover:inline text-xs"></i>
+                    <span class="group-hover:hidden">Tervalidasi</span>
+                    <span class="hidden group-hover:inline">Batalkan</span>
+                  </button>
+                  <span class="text-[10px] text-slate-500 mt-1 max-w-[130px] truncate text-center" title="Divalidasi oleh ${escapeHtml(it.namaPengawas || 'Pengawas')} (${escapeHtml(it.waktuValidasi || '')})">
+                    ${escapeHtml(it.namaPengawas ? 'Oleh ' + it.namaPengawas : 'Tervalidasi')}
+                  </span>
+                </div>
+              ` : `
+                <div class="flex flex-col items-center">
+                  <button onclick="toggleSupervisorValidationFromRow(${idx}, true)" title="Berikan checklist validasi terhadap tugas ini" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-xs transition-all cursor-pointer active:scale-95">
+                    <i class="fa-solid fa-clipboard-check text-xs"></i>
+                    <span>Validasi</span>
+                  </button>
+                  <span class="text-[10px] text-slate-400 mt-1">Belum Valid</span>
+                </div>
+              `}
+            </td>
+
+            <td class="py-3 px-3 text-slate-400 font-mono text-[11px] text-right">
+              ${escapeHtml(it.waktuValidasi || it.updatedAt || '-')}
+            </td>
           </tr>
         `;
       }).join('');
+    }
+
+    /**
+     * Pengawas mencentang / membatalkan tugas pegawai yang belum diceklist pegawai
+     */
+    async function toggleStaffTaskCheckFromSupervisor(idx, newStatus) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      // Optimistic update
+      const oldDone = it.isDone;
+      it.isDone = newStatus;
+      it.updatedAt = newStatus ? `${tahun}-${String(bulan).padStart(2, '0')}-${String(it.dayNum).padStart(2, '0')} (Diceklist Pengawas)` : '-';
+      renderIntegratedMonitoringUI();
+
+      showToast(newStatus ? 'Mencatat checklist tugas pegawai...' : 'Membatalkan centang tugas pegawai...', 'info');
+
+      try {
+        const res = await callBackend('supervisorToggleStaffTaskCheck', {
+          token: sessionToken,
+          taskKey: it.taskKey,
+          sheetRowIndex: it.sheetRowIndex,
+          colIndex: it.colIndex,
+          targetSheetName: it.targetSheetName,
+          namaPegawai: it.pegawai || it.namaPegawai,
+          username: it.username,
+          unit: it.unit,
+          ruangan: it.ruangan,
+          namaTugas: it.item,
+          dayNum: it.dayNum,
+          bulan: bulan,
+          tahun: tahun,
+          newStatus: newStatus
+        });
+
+        if (res && res.success) {
+          showToast(res.message || (newStatus ? 'Tugas pegawai berhasil dicentang selesai oleh Pengawas!' : 'Centang tugas dibatalkan.'), 'success');
+          if (res.data && res.data.taskKey) {
+            it.taskKey = res.data.taskKey;
+          }
+          renderIntegratedMonitoringUI();
+        } else {
+          it.isDone = oldDone;
+          renderIntegratedMonitoringUI();
+          showToast((res && res.message) ? res.message : 'Gagal memperbarui status tugas pegawai.', 'error');
+        }
+      } catch (err) {
+        it.isDone = oldDone;
+        renderIntegratedMonitoringUI();
+        showToast('Kesalahan server: ' + err.message, 'error');
+      }
+    }
+
+    async function toggleSupervisorValidationFromRow(idx, newStatus) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+
+      const bulan = document.getElementById('globalMonthSelect').value;
+      const tahun = document.getElementById('globalYearSelect').value;
+
+      // Optimistic update
+      it.statusPengawas = newStatus;
+      it.namaPengawas = newStatus ? (currentUser?.namaPegawai || currentUser?.username || 'Pengawas') : '';
+      it.waktuValidasi = newStatus ? (new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB') : '';
+
+      // Jika memvalidasi tugas yang belum selesai, otomatis centang selesai tugas pegawai juga!
+      const alsoCheckStaff = (!it.isDone && newStatus);
+      if (alsoCheckStaff) {
+        it.isDone = true;
+      }
+
+      renderIntegratedMonitoringUI();
+
+      showToast(newStatus ? (alsoCheckStaff ? 'Memvalidasi & mencentang tugas pegawai...' : 'Memvalidasi tugas...') : 'Membatalkan checklist validasi...', 'info');
+
+      try {
+        const res = await callBackend('updateSupervisorChecklist', {
+          token: sessionToken,
+          taskKey: it.taskKey,
+          sheetRowIndex: it.sheetRowIndex,
+          colIndex: it.colIndex,
+          targetSheetName: it.targetSheetName,
+          namaPegawai: it.pegawai || it.namaPegawai,
+          username: it.username,
+          unit: it.unit,
+          ruangan: it.ruangan,
+          namaTugas: it.item,
+          tanggal: it.dayNum,
+          bulan: bulan,
+          tahun: tahun,
+          newStatus: newStatus,
+          statusPetugas: it.isDone,
+          alsoCheckStaff: alsoCheckStaff
+        });
+
+        if (res && res.success) {
+          showToast(res.message || (newStatus ? 'Tugas berhasil divalidasi!' : 'Validasi pengawas dibatalkan!'), 'success');
+          if (res.data) {
+            it.taskKey = res.data.taskKey || it.taskKey;
+            it.statusPengawas = res.data.statusPengawas;
+            it.namaPengawas = res.data.namaPengawas;
+            it.waktuValidasi = res.data.waktuValidasiPengawas;
+          }
+          renderIntegratedMonitoringUI();
+        } else {
+          it.statusPengawas = !newStatus;
+          if (alsoCheckStaff) it.isDone = false;
+          renderIntegratedMonitoringUI();
+          showToast((res && res.message) ? res.message : 'Gagal memperbarui validasi pengawas.', 'error');
+        }
+      } catch (err) {
+        it.statusPengawas = !newStatus;
+        if (alsoCheckStaff) it.isDone = false;
+        renderIntegratedMonitoringUI();
+        showToast('Kesalahan server: ' + err.message, 'error');
+      }
+    }
+
+    function openBuktiPhotoViewerFromRow(idx) {
+      const list = window._currentFilteredSupervisorItems || [];
+      const it = list[idx];
+      if (!it) return;
+      openViewBuktiModal({
+        namaTugas: it.item,
+        ruangan: it.ruangan,
+        namaPegawai: it.pegawai || it.namaPegawai,
+        unit: it.unit,
+        tanggal: it.dayNum,
+        bulan: document.getElementById('globalMonthSelect').value,
+        tahun: document.getElementById('globalYearSelect').value,
+        waktu: it.waktuPelaksanaan || it.updatedAt,
+        koordinat: it.koordinat,
+        lokasi: it.lokasi,
+        fileId: it.fileId,
+        fileUrl: it.fileUrl,
+        fileName: it.fileName,
+        statusPengawas: it.statusPengawas,
+        namaPengawas: it.namaPengawas,
+        waktuValidasi: it.waktuValidasi,
+        statusPetugas: it.isDone
+      });
     }
 
 /**
@@ -344,9 +555,11 @@ function renderIntegratedMonitoringUI() {
 
     /**
      * ========================================================================
-     * 5. FITUR EXPORT LAPORAN (EXCEL & CETAK/PDF)
+     * 5. FITUR EXPORT LAPORAN (EXCEL & CETAK/PDF DENGAN LIVE PREVIEW)
      * ========================================================================
      */
+    let _lastExportReportData = null;
+
     function openExportModal(defaultEmpUsername = null) {
       const curMonth = document.getElementById('globalMonthSelect')?.value || 
                        document.getElementById('adminFilterBulan')?.value || 
@@ -388,6 +601,10 @@ function renderIntegratedMonitoringUI() {
       }
 
       openModal('modalExportLaporan');
+      // Trigger live preview begitu modal terbuka
+      setTimeout(() => {
+        triggerLiveExportPreview();
+      }, 50);
     }
 
     function onExportScopeChange() {
@@ -401,6 +618,7 @@ function renderIntegratedMonitoringUI() {
           empWrapper.classList.add('hidden');
         }
       }
+      triggerLiveExportPreview();
     }
 
     function populateExportEmployeeSelect(selectedUsername = null) {
@@ -452,6 +670,271 @@ function renderIntegratedMonitoringUI() {
       }).join('');
     }
 
+    /**
+     * Muat dan perbarui pratinjau langsung di dalam modal export
+     */
+    async function triggerLiveExportPreview() {
+      const previewArea = document.getElementById('modalExportPreviewArea');
+      if (!previewArea) return;
+
+      const role = (currentUser?.role || '').toLowerCase();
+      const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
+      let scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'semua';
+      if (!isManager) scope = 'individu';
+
+      const bulan = document.getElementById('exportMonthSelect')?.value || (new Date().getMonth() + 1);
+      const tahun = document.getElementById('exportYearSelect')?.value || new Date().getFullYear();
+
+      let targetUser = '';
+      if (scope === 'individu') {
+        if (isManager) {
+          targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+        } else {
+          targetUser = currentUser?.username;
+        }
+      }
+
+      previewArea.innerHTML = `
+        <div class="text-center py-10 text-slate-400">
+          <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <span class="text-xs font-medium">Memuat pratinjau lembar laporan BPS...</span>
+        </div>
+      `;
+
+      try {
+        const res = await callBackend('getExportLaporanData', {
+          token: sessionToken,
+          tipe: scope,
+          bulan: bulan,
+          tahun: tahun,
+          targetUsername: targetUser
+        });
+
+        if (res && res.success && res.data) {
+          _lastExportReportData = res.data;
+          previewArea.innerHTML = renderLaporanPreviewHtml(res.data);
+        } else {
+          previewArea.innerHTML = `
+            <div class="p-6 text-center text-xs text-rose-500 font-medium">
+              <i class="fa-solid fa-circle-exclamation mr-1"></i>${escapeHtml(res?.message || 'Gagal memuat pratinjau laporan.')}
+            </div>
+          `;
+        }
+      } catch (err) {
+        previewArea.innerHTML = `
+          <div class="p-6 text-center text-xs text-rose-500 font-medium">
+            Kesalahan: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Render dokumen laporan resmi berformat HTML bersih untuk preview inline & modal
+     */
+    function renderLaporanPreviewHtml(d) {
+      if (!d) return '<div class="p-4 text-center text-slate-400 text-xs">Data tidak tersedia.</div>';
+      const isSemua = (d.tipe === 'semua');
+      const periode = d.periode || {};
+      const summary = d.summary || {};
+
+      let tableHtml = '';
+      if (isSemua) {
+        const rows = (d.rekapPegawai || []).map((p, idx) => {
+          const badgeClass = p.persen >= 90
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : (p.persen >= 70 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
+          return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+              <td class="p-2.5 text-center text-slate-400 font-medium text-xs">${idx + 1}</td>
+              <td class="p-2.5 font-bold text-slate-800 text-xs">${escapeHtml(p.namaPegawai)}</td>
+              <td class="p-2.5 text-center text-xs text-slate-600">${escapeHtml(p.unit || '-')}</td>
+              <td class="p-2.5 text-right font-medium text-slate-700 text-xs">${p.totalTarget || 0}</td>
+              <td class="p-2.5 text-right font-bold text-emerald-600 text-xs">${p.selesai || 0}</td>
+              <td class="p-2.5 text-right font-bold text-rose-600 text-xs">${p.belum || 0}</td>
+              <td class="p-2.5 text-center font-black text-xs ${p.persen >= 90 ? 'text-emerald-600' : (p.persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${p.persen || 0}%</td>
+              <td class="p-2.5 text-center text-xs">
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeClass}">${escapeHtml(p.status || '-')}</span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tableHtml = `
+          <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-900 text-white text-[11px] font-bold uppercase tracking-wider">
+                  <th class="p-2.5 text-center w-10">No</th>
+                  <th class="p-2.5">Nama Pegawai / Petugas</th>
+                  <th class="p-2.5 text-center w-28">Unit Kerja</th>
+                  <th class="p-2.5 text-right w-24">Target</th>
+                  <th class="p-2.5 text-right w-24">Selesai</th>
+                  <th class="p-2.5 text-right w-24">Belum</th>
+                  <th class="p-2.5 text-center w-24">Capaian</th>
+                  <th class="p-2.5 text-center w-32">Status Kinerja</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr class="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs">
+                  <td colspan="3" class="p-2.5 text-center uppercase text-slate-900 font-extrabold tracking-wider">TOTAL KESELURUHAN</td>
+                  <td class="p-2.5 text-right text-slate-900 font-bold">${summary.totalTarget || 0}</td>
+                  <td class="p-2.5 text-right text-emerald-700 font-black">${summary.totalSelesai || 0}</td>
+                  <td class="p-2.5 text-right text-rose-700 font-black">${summary.totalBelum || 0}</td>
+                  <td class="p-2.5 text-center text-brand-700 font-black">${summary.persen || 0}%</td>
+                  <td class="p-2.5 text-center font-bold text-slate-700">${summary.persen >= 90 ? 'Optimal' : (summary.persen >= 70 ? 'Cukup' : 'Perlu Perhatian')}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        // INDIVIDU (Detail per tanggal 1..31)
+        const days = periode.daysInMonth || 31;
+        let dayHeaders = '';
+        for (let d = 1; d <= days; d++) {
+          dayHeaders += `<th class="p-1 text-center font-bold text-[10px] w-6 border border-slate-700/60">${d}</th>`;
+        }
+
+        const rows = (d.items || []).map((it, idx) => {
+          let dayCells = '';
+          for (let d = 1; d <= days; d++) {
+            const val = it.dailyStatus ? it.dailyStatus[d] : '-';
+            let cellDisp = '-';
+            let cellClass = 'text-slate-300';
+            if (val === '1' || val === 1 || val === true) {
+              cellDisp = '✓';
+              cellClass = 'text-emerald-600 font-black bg-emerald-50/70';
+            } else if (val === '0' || val === 0 || val === false) {
+              cellDisp = '✗';
+              cellClass = 'text-rose-600 font-black bg-rose-50/70';
+            }
+            dayCells += `<td class="p-1 text-center text-[10px] border border-slate-200 ${cellClass}">${cellDisp}</td>`;
+          }
+
+          return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+              <td class="p-2 text-center text-slate-400 font-medium text-xs border border-slate-200">${idx + 1}</td>
+              <td class="p-2 font-bold text-slate-800 text-xs border border-slate-200 whitespace-nowrap">${escapeHtml(it.ruangan || '-')}</td>
+              <td class="p-2 text-slate-700 text-xs border border-slate-200 min-w-[200px]">${escapeHtml(it.kegiatan || '-')}</td>
+              ${dayCells}
+              <td class="p-2 text-right font-medium text-slate-700 text-xs border border-slate-200">${it.target || 0}</td>
+              <td class="p-2 text-right font-bold text-emerald-600 text-xs border border-slate-200">${it.selesai || 0}</td>
+              <td class="p-2 text-right font-bold text-rose-600 text-xs border border-slate-200">${it.belum || 0}</td>
+              <td class="p-2 text-center font-black text-xs border border-slate-200 ${it.persen >= 90 ? 'text-emerald-600' : (it.persen >= 70 ? 'text-amber-600' : 'text-rose-600')}">${it.persen || 0}%</td>
+            </tr>
+          `;
+        }).join('');
+
+        tableHtml = `
+          <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider">
+                  <th class="p-2 text-center w-8 border border-slate-700" rowspan="2">No</th>
+                  <th class="p-2 w-32 border border-slate-700" rowspan="2">Ruangan / Pos</th>
+                  <th class="p-2 border border-slate-700" rowspan="2">Uraian Tugas / Kegiatan</th>
+                  <th class="p-1.5 text-center border border-slate-700" colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
+                  <th class="p-1.5 text-center border border-slate-700" colspan="4">Ringkasan Capaian</th>
+                </tr>
+                <tr class="bg-slate-800 text-slate-200 text-[10px]">
+                  ${dayHeaders}
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Target</th>
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Selesai</th>
+                  <th class="p-1.5 text-right w-14 border border-slate-700">Belum</th>
+                  <th class="p-1.5 text-center w-14 border border-slate-700">(%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+                <tr class="bg-slate-100 font-bold border-t-2 border-slate-300 text-xs">
+                  <td colspan="${3 + days}" class="p-2 text-center uppercase text-slate-900 font-extrabold tracking-wider border border-slate-200">TOTAL CAPAIAN BULAN INI</td>
+                  <td class="p-2 text-right text-slate-900 font-bold border border-slate-200">${summary.totalTarget || 0}</td>
+                  <td class="p-2 text-right text-emerald-700 font-black border border-slate-200">${summary.totalSelesai || 0}</td>
+                  <td class="p-2 text-right text-rose-700 font-black border border-slate-200">${summary.totalBelum || 0}</td>
+                  <td class="p-2 text-center text-brand-700 font-black border border-slate-200">${summary.persen || 0}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="space-y-4 font-sans bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <!-- KOP SURAT RESMI BPS KALBAR -->
+          <div class="text-center pb-3 border-b-2 border-slate-900">
+            <h2 class="text-base sm:text-lg font-black tracking-wide text-slate-900 uppercase">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</h2>
+            <p class="text-[11px] text-slate-600 mt-0.5">Jl. Sutan Syahrir No. 24/42, Pontianak 78116 | Telp: (0561) 732049 | Email: bps6100@bps.go.id</p>
+            <div class="mt-1 font-bold text-xs text-brand-700 uppercase tracking-wider">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</div>
+          </div>
+
+          <!-- JUDUL LAPORAN -->
+          <div class="text-center py-1">
+            <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+              ${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & CHECKLIST TUGAS PEGAWAI'}
+            </h3>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Periode: <strong class="text-slate-800">${escapeHtml(periode.labelPeriode || '')}</strong></p>
+          </div>
+
+          <!-- META INFORMASI -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            ${isSemua ? `
+              <div><span class="text-slate-500 font-medium">Total Petugas:</span> <strong class="text-slate-900">${summary.totalPegawai || 0} Orang</strong></div>
+              <div><span class="text-slate-500 font-medium">Bulan Pelaporan:</span> <strong class="text-slate-900">${escapeHtml(periode.labelPeriode || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Status Kepatuhan:</span> <strong class="text-emerald-700">${summary.persen || 0}% Terpenuhi</strong></div>
+              <div><span class="text-slate-500 font-medium">Format Dokumen:</span> <strong class="text-slate-900">Rekap Gabungan</strong></div>
+            ` : `
+              <div><span class="text-slate-500 font-medium">Nama Petugas:</span> <strong class="text-slate-900">${escapeHtml(d.pegawai?.namaPegawai || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Unit Kerja:</span> <strong class="text-slate-900">${escapeHtml(d.pegawai?.unit || '')} (${escapeHtml(d.pegawai?.role || '')})</strong></div>
+              <div><span class="text-slate-500 font-medium">Akun Pengguna:</span> <strong class="text-slate-700">@${escapeHtml(d.pegawai?.username || '')}</strong></div>
+              <div><span class="text-slate-500 font-medium">Bulan Pelaporan:</span> <strong class="text-slate-900">${escapeHtml(periode.labelPeriode || '')}</strong></div>
+            `}
+          </div>
+
+          <!-- KARTU RINGKASAN KPI -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+              <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Target</span>
+              <span class="text-base font-black text-slate-800">${summary.totalTarget || 0}</span>
+            </div>
+            <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-center">
+              <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Tugas Selesai</span>
+              <span class="text-base font-black text-emerald-700">${summary.totalSelesai || 0}</span>
+            </div>
+            <div class="p-3 bg-rose-50/70 rounded-xl border border-rose-200/80 text-center">
+              <span class="block text-[10px] font-bold text-rose-500 uppercase tracking-wider">Belum Selesai</span>
+              <span class="text-base font-black text-rose-700">${summary.totalBelum || 0}</span>
+            </div>
+            <div class="p-3 bg-blue-50/70 rounded-xl border border-blue-200/80 text-center">
+              <span class="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">Capaian (%)</span>
+              <span class="text-base font-black text-blue-700">${summary.persen || 0}%</span>
+            </div>
+          </div>
+
+          <!-- TABEL DATA -->
+          ${tableHtml}
+
+          <!-- LEMBAR PENGESAHAN TANDA TANGAN -->
+          <div class="pt-6 grid grid-cols-2 gap-4 text-xs text-center border-t border-slate-200 mt-6">
+            <div>
+              <p class="font-medium text-slate-600">Mengetahui,<br><strong class="text-slate-900">Kasubbag Umum BPS Prov. Kalbar</strong></p>
+              <div class="h-16"></div>
+              <p class="font-bold underline text-slate-900">( .................................................... )</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">NIP. ........................................</p>
+            </div>
+            <div>
+              <p class="font-medium text-slate-600">Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br><strong class="text-slate-900">${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong></p>
+              <div class="h-16"></div>
+              <p class="font-bold underline text-slate-900">( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function runExportLaporan(format) {
       const role = (currentUser?.role || '').toLowerCase();
       const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
@@ -470,6 +953,21 @@ function renderIntegratedMonitoringUI() {
         }
       }
 
+      // Jika data pratinjau terakhir sudah sama persis, gunakan langsung tanpa round-trip tambahan
+      if (_lastExportReportData && 
+          _lastExportReportData.tipe === scope && 
+          _lastExportReportData.periode?.bulan == bulan && 
+          _lastExportReportData.periode?.tahun == tahun && 
+          (scope !== 'individu' || _lastExportReportData.pegawai?.username === targetUser)) {
+        closeModal('modalExportLaporan');
+        if (format === 'excel') {
+          downloadExcelReport(_lastExportReportData);
+        } else {
+          printPdfReport(_lastExportReportData);
+        }
+        return;
+      }
+
       showLoader(true, 'Menyiapkan berkas laporan...');
       try {
         const res = await callBackend('getExportLaporanData', {
@@ -482,6 +980,7 @@ function renderIntegratedMonitoringUI() {
         showLoader(false);
 
         if (res && res.success && res.data) {
+          _lastExportReportData = res.data;
           closeModal('modalExportLaporan');
           if (format === 'excel') {
             downloadExcelReport(res.data);
@@ -503,7 +1002,7 @@ function renderIntegratedMonitoringUI() {
       const periode = d.periode || {};
       const summary = d.summary || {};
 
-      let sheetName = isSemua ? 'Rekap_Semua' : 'Laporan_Individu';
+      let sheetName = isSemua ? 'Rekap_Semua_Pegawai' : 'Detail_Tugas_Individu';
       let fileName = isSemua 
         ? `SIMPELKU_Rekap_Semua_Pegawai_${periode.namaBulan || 'Bulan'}_${periode.tahun || 'Tahun'}.xls`
         : `SIMPELKU_Laporan_${(d.pegawai?.namaPegawai || 'Pegawai').replace(/\s+/g, '_')}_${periode.namaBulan || 'Bulan'}_${periode.tahun || 'Tahun'}.xls`;
@@ -521,7 +1020,7 @@ function renderIntegratedMonitoringUI() {
               <td class="text-center">${escapeHtml(p.unit || '-')}</td>
               <td class="text-right">${p.totalTarget || 0}</td>
               <td class="text-right font-bold" style="color: #047857;">${p.selesai || 0}</td>
-              <td class="text-right" style="color: #be123c;">${p.belum || 0}</td>
+              <td class="text-right font-bold" style="color: #be123c;">${p.belum || 0}</td>
               <td class="text-center font-bold">${p.persen || 0}%</td>
               <td class="${statusBadge}">${escapeHtml(p.status || '-')}</td>
             </tr>
@@ -532,8 +1031,8 @@ function renderIntegratedMonitoringUI() {
           <table>
             <thead>
               <tr>
-                <th style="width: 40px;">No</th>
-                <th style="width: 220px;">Nama Pegawai</th>
+                <th style="width: 45px;">No</th>
+                <th style="width: 240px;">Nama Pegawai / Petugas</th>
                 <th style="width: 140px;">Unit Kerja</th>
                 <th style="width: 110px;">Target Tugas</th>
                 <th style="width: 110px;">Tugas Selesai</th>
@@ -556,11 +1055,11 @@ function renderIntegratedMonitoringUI() {
           </table>
         `;
       } else {
-        // INDIVIDU
+        // INDIVIDU (Detail Tanggal 1..31)
         const days = periode.daysInMonth || 31;
         let dayHeaders = '';
         for (let day = 1; day <= days; day++) {
-          dayHeaders += `<th style="width: 30px;">${day}</th>`;
+          dayHeaders += `<th style="width: 32px;">${day}</th>`;
         }
 
         const rows = (d.items || []).map((it, idx) => {
@@ -569,15 +1068,15 @@ function renderIntegratedMonitoringUI() {
           for (let day = 1; day <= days; day++) {
             const val = it.dailyStatus ? it.dailyStatus[day] : '-';
             let cellDisp = '-';
-            let cellStyle = 'color: #94a3b8;';
+            let cellStyle = 'color: #94a3b8; text-align: center;';
             if (val === '1' || val === 1 || val === true) {
               cellDisp = '&#10003;';
-              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5;';
+              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5; text-align: center;';
             } else if (val === '0' || val === 0 || val === false) {
               cellDisp = '&#10007;';
-              cellStyle = 'color: #e11d48; font-weight: bold; background-color: #fff1f2;';
+              cellStyle = 'color: #e11d48; font-weight: bold; background-color: #fff1f2; text-align: center;';
             }
-            dayCells += `<td class="text-center" style="${cellStyle}">${cellDisp}</td>`;
+            dayCells += `<td style="${cellStyle}">${cellDisp}</td>`;
           }
 
           return `
@@ -588,7 +1087,7 @@ function renderIntegratedMonitoringUI() {
               ${dayCells}
               <td class="text-right font-bold">${it.target || 0}</td>
               <td class="text-right font-bold" style="color: #047857;">${it.selesai || 0}</td>
-              <td class="text-right" style="color: #be123c;">${it.belum || 0}</td>
+              <td class="text-right font-bold" style="color: #be123c;">${it.belum || 0}</td>
               <td class="text-center font-bold">${it.persen || 0}%</td>
             </tr>
           `;
@@ -599,16 +1098,16 @@ function renderIntegratedMonitoringUI() {
             <thead>
               <tr>
                 <th style="width: 40px;" rowspan="2">No</th>
-                <th style="width: 140px;" rowspan="2">Ruangan / Pos</th>
-                <th style="width: 250px;" rowspan="2">Uraian Tugas / Kegiatan</th>
+                <th style="width: 150px;" rowspan="2">Ruangan / Pos</th>
+                <th style="width: 260px;" rowspan="2">Uraian Tugas / Kegiatan</th>
                 <th colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
                 <th colspan="4">Ringkasan Capaian</th>
               </tr>
               <tr>
                 ${dayHeaders}
-                <th style="width: 60px;">Target</th>
-                <th style="width: 60px;">Selesai</th>
-                <th style="width: 60px;">Belum</th>
+                <th style="width: 65px;">Target</th>
+                <th style="width: 65px;">Selesai</th>
+                <th style="width: 65px;">Belum</th>
                 <th style="width: 70px;">(%)</th>
               </tr>
             </thead>
@@ -645,10 +1144,10 @@ function renderIntegratedMonitoringUI() {
           </xml>
           <![endif]-->
           <style>
-            body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1e293b; }
-            table { border-collapse: collapse; margin-top: 12px; }
-            th { background-color: #047857; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #94a3b8; padding: 7px 5px; font-size: 10pt; }
-            td { border: 1px solid #cbd5e1; padding: 6px 5px; font-size: 10pt; vertical-align: middle; }
+            body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1e293b; }
+            table { border-collapse: collapse; margin-top: 14px; }
+            th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; text-align: center; border: 1px solid #94a3b8; padding: 8px 6px; font-size: 10pt; }
+            td { border: 1px solid #cbd5e1; padding: 6px 6px; font-size: 10pt; vertical-align: middle; }
             .text-center { text-align: center; }
             .text-right { text-align: right; }
             .text-left { text-align: left; }
@@ -661,30 +1160,51 @@ function renderIntegratedMonitoringUI() {
           </style>
         \x3C/head\x3E
         \x3Cbody>
-          <table style="border: none; margin-bottom: 8px;">
+          <table style="border: none; margin-bottom: 10px;">
             <tr>
-              <td colspan="6" style="border: none; font-size: 14pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
+              <td colspan="6" style="border: none; font-size: 15pt; font-weight: bold; color: #0f172a;">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold; color: #047857;">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</td>
+              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">Jl. Sutan Syahrir No. 24/42, Pontianak 78116 | Telp: (0561) 732049 | Email: bps6100@bps.go.id</td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold;">
+              <td colspan="6" style="border: none; font-size: 11pt; font-weight: bold; color: #1e3a8a;">SISTEM MONITORING OPERASIONAL (SIMPEL-KU)</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="border: none; font-size: 12pt; font-weight: bold; padding-top: 6px;">
                 ${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : `LAPORAN DETAIL MONITORING & CHECKLIST TUGAS: ${escapeHtml(d.pegawai?.namaPegawai || '')}`}
               </td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">
+              <td colspan="6" style="border: none; font-size: 10pt; color: #334155;">
                 Periode: ${escapeHtml(periode.labelPeriode || '')} ${!isSemua ? ` | Unit: ${escapeHtml(d.pegawai?.unit || '')} | Peran: ${escapeHtml(d.pegawai?.role || '')}` : ''}
               </td>
             </tr>
             <tr>
-              <td colspan="6" style="border: none; font-size: 10pt; color: #475569;">
+              <td colspan="6" style="border: none; font-size: 10pt; color: #334155;">
                 Total Target: ${summary.totalTarget || 0} Tugas | Selesai: ${summary.totalSelesai || 0} (${summary.persen || 0}%) | Belum: ${summary.totalBelum || 0}
               </td>
             </tr>
           </table>
+
           ${tableHtml}
+
+          <table style="border: none; margin-top: 30px;">
+            <tr>
+              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
+                Mengetahui,<br><strong>Kasubbag Umum BPS Prov. Kalbar</strong><br><br><br><br>
+                <strong>( .................................................... )</strong><br>
+                NIP. ........................................
+              </td>
+              <td colspan="4" style="border: none;"></td>
+              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
+                Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
+                <strong>${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong><br><br><br><br>
+                <strong>( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</strong><br>
+                ${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}
+              </td>
+            </tr>
+          </table>
         \x3C/body\x3E
         \x3C/html\x3E
       `;
@@ -707,7 +1227,7 @@ function renderIntegratedMonitoringUI() {
       const periode = d.periode || {};
       const summary = d.summary || {};
 
-      const printWindow = window.open('', '_blank', 'width=1050,height=850,scrollbars=yes,resizable=yes');
+      const printWindow = window.open('', '_blank', 'width=1150,height=850,scrollbars=yes,resizable=yes');
       if (!printWindow) {
         showToast('Pop-up jendela cetak diblokir browser. Harap izinkan pop-up untuk mencetak laporan.', 'warning');
         return;
@@ -763,20 +1283,39 @@ function renderIntegratedMonitoringUI() {
           </table>
         `;
       } else {
-        // INDIVIDU
+        // INDIVIDU (Landscape dengan 31 hari & ringkasan)
+        const days = periode.daysInMonth || 31;
+        let dayHeaders = '';
+        for (let day = 1; day <= days; day++) {
+          dayHeaders += `<th style="width: 22px; font-size: 7.5pt; padding: 4px 1px;">${day}</th>`;
+        }
+
         const rows = (d.items || []).map((it, idx) => {
-          const statusBadge = it.persen >= 90 ? 'Optimal' : (it.persen >= 70 ? 'Cukup' : 'Kurang');
-          const statusColor = it.persen >= 90 ? 'color: #065f46;' : (it.persen >= 70 ? 'color: #92400e;' : 'color: #9f1239;');
+          let dayCells = '';
+          for (let day = 1; day <= days; day++) {
+            const val = it.dailyStatus ? it.dailyStatus[day] : '-';
+            let cellDisp = '-';
+            let cellStyle = 'color: #94a3b8; font-size: 8pt;';
+            if (val === '1' || val === 1 || val === true) {
+              cellDisp = '&#10003;';
+              cellStyle = 'color: #047857; font-weight: bold; background-color: #ecfdf5; font-size: 9pt;';
+            } else if (val === '0' || val === 0 || val === false) {
+              cellDisp = '&#10007;';
+              cellStyle = 'color: #be123c; font-weight: bold; background-color: #fff1f2; font-size: 8pt;';
+            }
+            dayCells += `<td style="text-align: center; ${cellStyle}">${cellDisp}</td>`;
+          }
+
           return `
             <tr>
-              <td style="text-align: center;">${idx + 1}</td>
-              <td style="font-weight: 600;">${escapeHtml(it.ruangan || '-')}</td>
-              <td>${escapeHtml(it.kegiatan || '-')}</td>
-              <td style="text-align: right;">${it.target || 0}</td>
-              <td style="text-align: right; color: #047857; font-weight: bold;">${it.selesai || 0}</td>
-              <td style="text-align: right; color: #be123c;">${it.belum || 0}</td>
-              <td style="text-align: center; font-weight: bold;">${it.persen || 0}%</td>
-              <td style="text-align: center; font-weight: bold; ${statusColor}">${statusBadge}</td>
+              <td style="text-align: center; font-size: 8pt;">${idx + 1}</td>
+              <td style="font-weight: 600; font-size: 8pt;">${escapeHtml(it.ruangan || '-')}</td>
+              <td style="font-size: 8pt;">${escapeHtml(it.kegiatan || '-')}</td>
+              ${dayCells}
+              <td style="text-align: right; font-size: 8pt;">${it.target || 0}</td>
+              <td style="text-align: right; color: #047857; font-weight: bold; font-size: 8pt;">${it.selesai || 0}</td>
+              <td style="text-align: right; color: #be123c; font-size: 8pt;">${it.belum || 0}</td>
+              <td style="text-align: center; font-weight: bold; font-size: 8pt;">${it.persen || 0}%</td>
             </tr>
           `;
         }).join('');
@@ -785,25 +1324,28 @@ function renderIntegratedMonitoringUI() {
           <table>
             <thead>
               <tr>
-                <th style="width: 35px;">No</th>
-                <th style="width: 150px;">Ruangan / Pos</th>
-                <th>Rincian Tugas / Kegiatan</th>
-                <th style="width: 85px;">Target</th>
-                <th style="width: 85px;">Selesai</th>
-                <th style="width: 85px;">Belum</th>
-                <th style="width: 85px;">Capaian</th>
-                <th style="width: 95px;">Status</th>
+                <th style="width: 28px;" rowspan="2">No</th>
+                <th style="width: 120px;" rowspan="2">Ruangan / Pos</th>
+                <th rowspan="2">Uraian Tugas / Kegiatan</th>
+                <th colspan="${days}">Tanggal (Bulan ${escapeHtml(periode.namaBulan || '')})</th>
+                <th colspan="4" style="width: 160px;">Ringkasan Capaian</th>
+              </tr>
+              <tr>
+                ${dayHeaders}
+                <th style="width: 38px; font-size: 7.5pt;">Target</th>
+                <th style="width: 38px; font-size: 7.5pt;">Selesai</th>
+                <th style="width: 38px; font-size: 7.5pt;">Belum</th>
+                <th style="width: 42px; font-size: 7.5pt;">(%)</th>
               </tr>
             </thead>
             <tbody>
               ${rows}
               <tr class="total-row">
-                <td colspan="3" style="text-align: center;">TOTAL CAPAIAN BULANAN</td>
+                <td colspan="${3 + days}" style="text-align: center;">TOTAL CAPAIAN BULAN INI</td>
                 <td style="text-align: right;">${summary.totalTarget || 0}</td>
                 <td style="text-align: right; color: #047857;">${summary.totalSelesai || 0}</td>
                 <td style="text-align: right; color: #be123c;">${summary.totalBelum || 0}</td>
                 <td style="text-align: center;">${summary.persen || 0}%</td>
-                <td style="text-align: center;">${summary.status || '-'}</td>
               </tr>
             </tbody>
           </table>
@@ -821,41 +1363,41 @@ function renderIntegratedMonitoringUI() {
           <title>${isSemua ? 'Rekapitulasi Kinerja Pegawai' : `Laporan Tugas - ${escapeHtml(d.pegawai?.namaPegawai || '')}`} | BPS Kalbar</title>
           <style>
             @page {
-              size: A4 portrait;
-              margin: 15mm 15mm 15mm 15mm;
+              size: ${isSemua ? 'A4 portrait' : 'A4 landscape'};
+              margin: ${isSemua ? '12mm 15mm 12mm 15mm' : '10mm 12mm 10mm 12mm'};
             }
             * { box-sizing: border-box; }
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
               color: #1e293b;
               margin: 0;
-              padding: 20px;
+              padding: 16px;
               background-color: #ffffff;
-              font-size: 10pt;
-              line-height: 1.4;
+              font-size: ${isSemua ? '9.5pt' : '8.5pt'};
+              line-height: 1.35;
             }
             .no-print {
               background-color: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 10px;
-              padding: 12px 18px;
-              margin-bottom: 24px;
+              padding: 10px 16px;
+              margin-bottom: 20px;
               display: flex;
               align-items: center;
               justify-content: space-between;
               box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             }
             .btn {
-              padding: 7px 16px;
+              padding: 6px 15px;
               border-radius: 6px;
-              font-size: 9.5pt;
+              font-size: 9pt;
               font-weight: 600;
               cursor: pointer;
               border: none;
               transition: all 0.2s;
             }
-            .btn-primary { background-color: #047857; color: #ffffff; }
-            .btn-primary:hover { background-color: #065f46; }
+            .btn-primary { background-color: #1e3a8a; color: #ffffff; }
+            .btn-primary:hover { background-color: #1e40af; }
             .btn-close { background-color: #e2e8f0; color: #334155; }
             .btn-close:hover { background-color: #cbd5e1; }
             
@@ -863,8 +1405,8 @@ function renderIntegratedMonitoringUI() {
             .kop-header {
               text-align: center;
               border-bottom: 3px double #1e293b;
-              padding-bottom: 12px;
-              margin-bottom: 20px;
+              padding-bottom: 10px;
+              margin-bottom: 16px;
             }
             .kop-instansi {
               font-size: 13pt;
@@ -877,32 +1419,32 @@ function renderIntegratedMonitoringUI() {
             .kop-alamat {
               font-size: 8.5pt;
               color: #475569;
-              margin: 4px 0 0;
+              margin: 3px 0 0;
             }
             .kop-aplikasi {
-              margin-top: 6px;
+              margin-top: 5px;
               font-weight: bold;
-              font-size: 10pt;
-              color: #047857;
+              font-size: 9.5pt;
+              color: #1e3a8a;
               letter-spacing: 0.3px;
               text-transform: uppercase;
             }
 
             .doc-title {
               text-align: center;
-              margin: 16px 0 14px;
+              margin: 12px 0 12px;
             }
             .doc-title h2 {
               margin: 0;
-              font-size: 12pt;
+              font-size: 11pt;
               font-weight: 700;
               color: #0f172a;
               text-transform: uppercase;
               letter-spacing: 0.5px;
             }
             .doc-title p {
-              margin: 3px 0 0;
-              font-size: 9.5pt;
+              margin: 2px 0 0;
+              font-size: 9pt;
               color: #475569;
             }
 
@@ -910,50 +1452,49 @@ function renderIntegratedMonitoringUI() {
               background-color: #f8fafc;
               border: 1px solid #e2e8f0;
               border-radius: 8px;
-              padding: 10px 14px;
-              margin-bottom: 16px;
+              padding: 8px 12px;
+              margin-bottom: 14px;
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 8px;
-              font-size: 9pt;
+              gap: 6px;
+              font-size: 8.5pt;
             }
             .meta-item { display: flex; }
-            .meta-label { width: 130px; font-weight: 600; color: #475569; }
+            .meta-label { width: 120px; font-weight: 600; color: #475569; }
             .meta-val { font-weight: 700; color: #0f172a; }
 
             .kpi-row {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
-              gap: 10px;
-              margin-bottom: 18px;
+              gap: 8px;
+              margin-bottom: 14px;
             }
             .kpi-card {
               border: 1px solid #e2e8f0;
               border-radius: 8px;
-              padding: 10px;
+              padding: 8px;
               text-align: center;
               background: #ffffff;
             }
-            .kpi-num { font-size: 15pt; font-weight: 800; margin: 2px 0 0; }
-            .kpi-label { font-size: 8pt; color: #64748b; font-weight: 600; text-transform: uppercase; }
+            .kpi-num { font-size: 14pt; font-weight: 800; margin: 2px 0 0; }
+            .kpi-label { font-size: 7.5pt; color: #64748b; font-weight: 600; text-transform: uppercase; }
 
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 10px;
-              font-size: 9pt;
+              margin-top: 8px;
+              font-size: ${isSemua ? '8.5pt' : '8pt'};
             }
             th {
-              background-color: #047857;
+              background-color: #1e3a8a;
               color: #ffffff;
               font-weight: 700;
-              padding: 7px 6px;
-              border: 1px solid #047857;
+              padding: 6px 4px;
+              border: 1px solid #1e3a8a;
               text-align: center;
-              font-size: 8.5pt;
             }
             td {
-              padding: 6px 6px;
+              padding: 5px 4px;
               border: 1px solid #cbd5e1;
               vertical-align: middle;
             }
@@ -965,7 +1506,7 @@ function renderIntegratedMonitoringUI() {
             }
 
             .sig-section {
-              margin-top: 36px;
+              margin-top: 30px;
               display: flex;
               justify-content: space-between;
               page-break-inside: avoid;
@@ -973,23 +1514,23 @@ function renderIntegratedMonitoringUI() {
             .sig-box {
               width: 240px;
               text-align: center;
-              font-size: 9.5pt;
+              font-size: 9pt;
             }
-            .sig-space { height: 60px; }
+            .sig-space { height: 55px; }
             .sig-name {
               font-weight: 700;
               text-decoration: underline;
               margin: 0;
             }
             .sig-title {
-              font-size: 8.5pt;
+              font-size: 8pt;
               color: #64748b;
               margin-top: 2px;
             }
 
             @media print {
               .no-print { display: none !important; }
-              body { padding: 0; font-size: 9.5pt; }
+              body { padding: 0; }
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
@@ -999,7 +1540,7 @@ function renderIntegratedMonitoringUI() {
           <div class="no-print">
             <div style="font-weight: 600; color: #334155;">
               <span>Dokumen Siap Dicetak</span> &bull; 
-              <span style="font-size: 8.5pt; color: #64748b;">Gunakan pilihan 'Save as PDF' di printer dialog browser untuk menyimpan PDF.</span>
+              <span style="font-size: 8.5pt; color: #64748b;">Pilih 'Save as PDF' di dialog printer browser untuk menyimpan file PDF.</span>
             </div>
             <div style="display: flex; gap: 8px;">
               <button onclick="window.close()" class="btn btn-close">Tutup</button>
@@ -1014,7 +1555,7 @@ function renderIntegratedMonitoringUI() {
           </div>
 
           <div class="doc-title">
-            <h2>${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & EVALUASI TUGAS'}</h2>
+            <h2>${isSemua ? 'REKAPITULASI CAPAIAN KINERJA OPERASIONAL PEGAWAI' : 'LAPORAN DETAIL MONITORING & EVALUASI TUGAS PEGAWAI'}</h2>
             <p>Periode: <strong>${escapeHtml(periode.labelPeriode || '')}</strong></p>
           </div>
 
@@ -1047,7 +1588,7 @@ function renderIntegratedMonitoringUI() {
             </div>
             <div class="kpi-card">
               <div class="kpi-label">Tingkat Capaian</div>
-              <div class="kpi-num" style="color: #2563eb;">${summary.persen || 0}%</div>
+              <div class="kpi-num" style="color: #1e3a8a;">${summary.persen || 0}%</div>
             </div>
           </div>
 
@@ -1084,3 +1625,4 @@ function renderIntegratedMonitoringUI() {
         } catch (e) {}
       }, 500);
     }
+

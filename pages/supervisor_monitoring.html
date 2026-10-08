@@ -54,11 +54,15 @@
 
       <!-- Filter Status -->
       <div>
-        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Status Pengerjaan</label>
+        <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">Status Pengerjaan & Validasi</label>
         <select id="adminFilterStatus" onchange="filterAdminMonitoringRealtime()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200/90 bg-slate-50/70 text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white font-medium transition cursor-pointer">
           <option value="SEMUA">Semua Status</option>
-          <option value="SELESAI">Sudah Selesai</option>
-          <option value="BELUM">Belum Selesai</option>
+          <option value="SELESAI">Selesai (Petugas)</option>
+          <option value="BELUM">Belum Selesai (Petugas)</option>
+          <option value="VALID">✓ Sudah Divalidasi Pengawas</option>
+          <option value="BELUM_VALID">Belum Divalidasi Pengawas</option>
+          <option value="ADA_BUKTI">📸 Memiliki Bukti Foto</option>
+          <option value="TANPA_BUKTI">Belum Ada Bukti Foto</option>
         </select>
       </div>
 
@@ -99,18 +103,20 @@
       <table class="w-full text-left text-xs text-slate-600 border-collapse table-modern">
         <thead class="bg-slate-50/90 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200/70">
           <tr>
-            <th class="py-3 px-4">No</th>
-            <th class="py-3 px-4">Unit</th>
-            <th class="py-3 px-4">Pegawai</th>
-            <th class="py-3 px-4">Area / Ruangan</th>
+            <th class="py-3 px-3">No</th>
+            <th class="py-3 px-3">Unit</th>
+            <th class="py-3 px-3">Pegawai</th>
+            <th class="py-3 px-3">Area / Ruangan</th>
             <th class="py-3 px-4">Tugas / Item Monitoring</th>
-            <th class="py-3 px-4">Status</th>
-            <th class="py-3 px-4 text-right">Terakhir Update</th>
+            <th class="py-3 px-3 text-center">Status Petugas</th>
+            <th class="py-3 px-3 text-center">Bukti Dukung</th>
+            <th class="py-3 px-3 text-center">Validasi Pengawas</th>
+            <th class="py-3 px-3 text-right">Log Update</th>
           </tr>
         </thead>
         <tbody id="adminMonitoringTableBody" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="7" class="py-8 text-center text-slate-400 font-medium">Klik 'Terapkan Filter' untuk memuat data.</td>
+            <td colspan="9" class="py-8 text-center text-slate-400 font-medium">Klik 'Terapkan Filter' untuk memuat data.</td>
           </tr>
         </tbody>
       </table>

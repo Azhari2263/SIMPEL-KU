@@ -243,17 +243,73 @@ function renderJadwalKeamananUI() {
           grouped[grpName].forEach(item => {
             const isChecked = item.dailyStatus && (item.dailyStatus[selectedKeamananDay] === '1' || item.dailyStatus[selectedKeamananDay] === 1);
             const colIndex  = (item.colMapping && item.colMapping[selectedKeamananDay]) ? item.colMapping[selectedKeamananDay] : (selectedKeamananDay + 1);
+            const ev = (item.dailyEvidence && item.dailyEvidence[selectedKeamananDay]) ? item.dailyEvidence[selectedKeamananDay] : {};
+            const hasEvidence = (ev.adaBukti === true);
+            const isSupervisorValid = (ev.statusPengawas === true);
 
             taskHtml += `
-              <div onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
-                class="group flex items-start space-x-3.5 p-3.5 rounded-xl border transition-all cursor-pointer ${isChecked ? 'bg-emerald-50/60 border-emerald-200/80' : 'bg-white border-slate-200/80 hover:border-brand-400'}">
-                <div class="w-6 h-6 rounded-lg ${isChecked ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-300 text-transparent'} flex-shrink-0 flex items-center justify-center text-xs mt-0.5">
-                  <i class="fa-solid fa-check text-[10px]"></i>
+              <div class="p-3.5 rounded-xl border transition-all ${isChecked ? 'bg-emerald-50/50 border-emerald-200/80 shadow-2xs' : 'bg-white border-slate-200/80 hover:border-indigo-300'} space-y-2.5">
+                <div class="flex items-start justify-between gap-3">
+                  <div onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
+                    class="flex items-start space-x-3 flex-1 min-w-0 cursor-pointer select-none">
+                    <div class="w-6 h-6 rounded-lg ${isChecked ? 'bg-emerald-500 text-white shadow-xs' : 'bg-white border-2 border-slate-300 text-transparent'} flex-shrink-0 flex items-center justify-center text-xs mt-0.5 transition-colors">
+                      <i class="fa-solid fa-check text-[10px]"></i>
+                    </div>
+                    <p class="text-xs font-medium ${isChecked ? 'text-slate-700 line-through decoration-slate-400' : 'text-slate-800'} leading-relaxed">
+                      ${escapeHtml(item.kegiatan)}
+                    </p>
+                  </div>
+                  <button onclick="toggleKeamananTaskCheck(${item.sheetRowIndex}, ${colIndex}, ${!isChecked}, ${selectedKeamananDay})"
+                    class="px-2.5 py-1 rounded-lg text-[10px] font-bold flex-shrink-0 transition-colors cursor-pointer active:scale-95 ${
+                      isChecked
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200'
+                    }">
+                    ${isChecked ? 'Batal Centang' : 'Tandai Selesai'}
+                  </button>
                 </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-xs font-medium ${isChecked ? 'text-slate-700 line-through decoration-slate-400' : 'text-slate-800'} leading-relaxed">
-                    ${escapeHtml(item.kegiatan)}
-                  </p>
+
+                <!-- Toolbar Bukti Dukung & Status Validasi Pengawas -->
+                <div class="pt-2 border-t ${isChecked ? 'border-emerald-200/60' : 'border-slate-100'} flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    ${hasEvidence ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                        <i class="fa-solid fa-camera text-emerald-600"></i>
+                        <span>Bukti Dukung Tersedia</span>
+                      </span>
+                      <button onclick="openBuktiPhotoViewerSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                        <i class="fa-solid fa-eye text-[10px]"></i>
+                        <span>Buka Foto</span>
+                      </button>
+                      <button onclick="triggerUploadBuktiSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer" title="Upload ulang foto bukti">
+                        <i class="fa-solid fa-camera-rotate text-[10px] text-slate-500"></i>
+                        <span>Ganti</span>
+                      </button>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-medium border border-slate-200/60">
+                        <i class="fa-solid fa-camera text-slate-400"></i>
+                        <span>Belum ada bukti dukung</span>
+                      </span>
+                      <button onclick="triggerUploadBuktiSecurity(${item.sheetRowIndex}, ${selectedKeamananDay})" class="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95">
+                        <i class="fa-solid fa-camera text-xs"></i>
+                        <span>Upload Bukti Foto</span>
+                      </button>
+                    `}
+                  </div>
+
+                  <div class="flex items-center">
+                    ${isSupervisorValid ? `
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-bold" title="Divalidasi oleh ${escapeHtml(ev.namaPengawas || 'Pengawas')} (${escapeHtml(ev.waktuValidasiPengawas || '')})">
+                        <i class="fa-solid fa-shield-check text-blue-600"></i>
+                        <span>Tervalidasi Pengawas ${ev.namaPengawas ? '(' + escapeHtml(ev.namaPengawas) + ')' : ''}</span>
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100/80 text-slate-400 text-[10px] font-medium border border-slate-200/50">
+                        <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+                        <span>Belum Divalidasi Pengawas</span>
+                      </span>
+                    `}
+                  </div>
                 </div>
               </div>
             `;
@@ -301,3 +357,63 @@ async function toggleKeamananTaskCheck(sheetRowIndex, colIndex, newStatus, dayNu
         refreshCurrentPage();
       }
     }
+
+/**
+ * Membuka modal upload bukti dukung untuk staf keamanan
+ */
+function triggerUploadBuktiSecurity(sheetRowIndex, dayNum) {
+  if (!cachedKeamananData || !cachedKeamananData.taskItems) return;
+  const item = cachedKeamananData.taskItems.find(i => i.sheetRowIndex === sheetRowIndex);
+  if (!item) return;
+
+  const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+  const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+  openUploadBuktiModal({
+    sheetRowIndex: sheetRowIndex,
+    ruangan: item.ruangan || 'Pos Keamanan',
+    namaTugas: item.kegiatan,
+    unit: 'Keamanan',
+    namaPegawai: cachedKeamananData.namaPegawai || currentUser?.namaPegawai,
+    username: currentUser?.username,
+    dayNum: dayNum,
+    bulan: currentBulan,
+    tahun: currentTahun,
+    onSuccess: function() {
+      loadJadwalKeamanan();
+    }
+  });
+}
+
+/**
+ * Membuka viewer bukti foto untuk staf keamanan
+ */
+function openBuktiPhotoViewerSecurity(sheetRowIndex, dayNum) {
+  if (!cachedKeamananData || !cachedKeamananData.taskItems) return;
+  const item = cachedKeamananData.taskItems.find(i => i.sheetRowIndex === sheetRowIndex);
+  if (!item) return;
+
+  const ev = (item.dailyEvidence && item.dailyEvidence[dayNum]) ? item.dailyEvidence[dayNum] : {};
+  const currentBulan = Number(document.getElementById('globalMonthSelect').value);
+  const currentTahun = Number(document.getElementById('globalYearSelect').value);
+
+  openViewBuktiModal({
+    namaTugas: item.kegiatan,
+    ruangan: item.ruangan || 'Pos Keamanan',
+    namaPegawai: cachedKeamananData.namaPegawai || currentUser?.namaPegawai,
+    unit: 'Keamanan',
+    tanggal: dayNum,
+    bulan: currentBulan,
+    tahun: currentTahun,
+    waktu: ev.waktu || '-',
+    koordinat: ev.koordinat || '',
+    lokasi: ev.lokasi || '',
+    fileId: ev.fileId || '',
+    fileUrl: ev.fileUrl || '',
+    fileName: ev.fileName || '',
+    statusPengawas: ev.statusPengawas,
+    namaPengawas: ev.namaPengawas,
+    waktuValidasi: ev.waktuValidasiPengawas,
+    statusPetugas: item.dailyStatus && (item.dailyStatus[dayNum] === '1' || item.dailyStatus[dayNum] === 1)
+  });
+}

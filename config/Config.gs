@@ -8,6 +8,8 @@
 
 // SPREADSHEET ID: Fallback jika tidak terikat ke container
 var SPREADSHEET_ID = "1c2XUeoYFt_UEqJruBSciKPAIiPEdNoJvTO9epLWVTqs";
+// GOOGLE DRIVE ROOT FOLDER ID: Folder Induk Penyimpanan Bukti Dukung Foto
+var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
 var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
 var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 
@@ -15,7 +17,8 @@ var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
 var SHEET_NAMES = {
   USERS: 'Users',
   JADWAL_SECURITY: 'JadwalPiketSecurity',
-  INSPEKSI_MUTU: 'InspeksiMutu'
+  INSPEKSI_MUTU: 'InspeksiMutu',
+  BUKTI_DUKUNG: 'ValidasiDanBuktiDukung'
 };
 
 // Mapping Bulan Bahasa Indonesia
@@ -25,6 +28,12 @@ var MONTH_MAP_ID = {
   'AGUSTUS': 8, 'SEPTEMBER': 9, 'OKTOBER': 10,
   'NOPEMBER': 11, 'NOVEMBER': 11, 'DESEMBER': 12
 };
+
+// Array Nama Bulan Standar Bahasa Indonesia
+var MONTH_NAMES_ID = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
 
 // Daftar kata kunci header yang diabaikan saat pencarian nama pegawai
 var IGNORE_HEADER_WORDS = [
@@ -44,11 +53,11 @@ var SKIP_ROW_KEYWORDS = [
 
 // Role dan Kewenangan Akses
 var ROLE_PERMISSIONS = {
-  'Admin': { canManageUsers: true, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Supervisor': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Tim Umum dan Humas': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Koordinator Lapangan': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true },
-  'Petugas Kebersihan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false },
-  'Petugas Pelayanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false },
-  'Petugas Keamanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false }
+  'Admin': { canManageUsers: true, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Supervisor': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Tim Umum dan Humas': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Koordinator Lapangan': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
+  'Petugas Kebersihan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
+  'Petugas Pelayanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
+  'Petugas Keamanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false }
 };

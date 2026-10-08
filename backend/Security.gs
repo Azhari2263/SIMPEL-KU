@@ -314,6 +314,47 @@ function getJadwalKeamanan(token, bulan, tahun) {
       });
     }
 
+    const curYearNum = tahun ? Number(tahun) : new Date().getFullYear();
+    const bMap = getBuktiDukungMap(ss, selectedMonth, curYearNum);
+    taskItems.forEach(function(t) {
+      t.dailyEvidence = {};
+      schedCols.forEach(function(sc) {
+        const d = sc.tanggal;
+        const tKey = generateTaskKey(curYearNum, selectedMonth, d, session.username || session.namaPegawai, t.ruangan, t.kegiatan);
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.kegiatan)].join('_');
+        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+        if (rec) {
+          t.dailyEvidence[d] = {
+            adaBukti: rec.adaBuktiDukung,
+            fileId: rec.fileIdDrive,
+            fileUrl: rec.fileUrlDrive,
+            fileName: rec.fileName,
+            koordinat: rec.koordinat,
+            lokasi: rec.lokasi,
+            waktu: rec.waktu,
+            statusPengawas: rec.statusPengawas,
+            namaPengawas: rec.namaPengawas,
+            waktuValidasiPengawas: rec.waktuValidasiPengawas,
+            taskKey: rec.taskKey || tKey
+          };
+        } else {
+          t.dailyEvidence[d] = {
+            adaBukti: false,
+            fileId: '',
+            fileUrl: '',
+            fileName: '',
+            koordinat: '',
+            lokasi: '',
+            waktu: '',
+            statusPengawas: false,
+            namaPengawas: '',
+            waktuValidasiPengawas: '',
+            taskKey: tKey
+          };
+        }
+      });
+    });
+
     return {
       success: true,
       data: {

@@ -143,6 +143,45 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
       });
     }
 
+    const bMap = getBuktiDukungMap(ss, bulan, tahun);
+    filteredItems.forEach(item => {
+      item.dailyEvidence = {};
+      parsedData.activeDays.forEach(d => {
+        const tKey = generateTaskKey(tahun, bulan, d, session.username || session.namaPegawai, item.ruangan, item.kegiatan);
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.kegiatan)].join('_');
+        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
+        if (rec) {
+          item.dailyEvidence[d] = {
+            adaBukti: rec.adaBuktiDukung,
+            fileId: rec.fileIdDrive,
+            fileUrl: rec.fileUrlDrive,
+            fileName: rec.fileName,
+            koordinat: rec.koordinat,
+            lokasi: rec.lokasi,
+            waktu: rec.waktu,
+            statusPengawas: rec.statusPengawas,
+            namaPengawas: rec.namaPengawas,
+            waktuValidasiPengawas: rec.waktuValidasiPengawas,
+            taskKey: rec.taskKey || tKey
+          };
+        } else {
+          item.dailyEvidence[d] = {
+            adaBukti: false,
+            fileId: '',
+            fileUrl: '',
+            fileName: '',
+            koordinat: '',
+            lokasi: '',
+            waktu: '',
+            statusPengawas: false,
+            namaPengawas: '',
+            waktuValidasiPengawas: '',
+            taskKey: tKey
+          };
+        }
+      });
+    });
+
     return {
       success: true,
       data: {
