@@ -1333,8 +1333,8 @@ function getBuktiDukungMap(ss, bulan, tahun) {
       map[taskKey] = record;
     }
 
-    // Fallback key: tanggal_namaPegawaiAlpha_tugasAlpha
-    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.namaTugas)].join('_');
+    // Fallback key: tanggal_namaPegawaiAlpha_ruanganAlpha_tugasAlpha
+    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
     fallbackMap[fKey] = record;
   }
 
@@ -2146,7 +2146,7 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
       item.dailyEvidence = {};
       parsedData.activeDays.forEach(d => {
         const tKey = generateTaskKey(tahun, bulan, d, session.username || session.namaPegawai, item.ruangan, item.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.kegiatan)].join('_');
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.ruangan), getAlphaOnly(item.kegiatan)].join('_');
         const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
         if (rec) {
           item.dailyEvidence[d] = {
@@ -2984,7 +2984,7 @@ function getJadwalKeamanan(token, bulan, tahun) {
       schedCols.forEach(function(sc) {
         const d = sc.tanggal;
         const tKey = generateTaskKey(curYearNum, selectedMonth, d, session.username || session.namaPegawai, t.ruangan, t.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.kegiatan)].join('_');
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.ruangan), getAlphaOnly(t.kegiatan)].join('_');
         const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
         if (rec) {
           t.dailyEvidence[d] = {
@@ -3774,7 +3774,7 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
     const bMap = getBuktiDukungMap(ss, selectedMonth, selectedYear);
     aggregatedItems.forEach(it => {
       const tKey = generateTaskKey(selectedYear, selectedMonth, it.dayNum, it.username || it.pegawai, it.ruangan, it.item);
-      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.item)].join('_');
+      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.ruangan), getAlphaOnly(it.item)].join('_');
       const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
       if (rec) {
         it.taskKey = rec.taskKey || tKey;

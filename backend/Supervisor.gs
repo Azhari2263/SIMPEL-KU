@@ -417,7 +417,7 @@ function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPega
     const bMap = getBuktiDukungMap(ss, selectedMonth, selectedYear);
     aggregatedItems.forEach(it => {
       const tKey = generateTaskKey(selectedYear, selectedMonth, it.dayNum, it.username || it.pegawai, it.ruangan, it.item);
-      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.item)].join('_');
+      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.ruangan), getAlphaOnly(it.item)].join('_');
       const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
       if (rec) {
         it.taskKey = rec.taskKey || tKey;

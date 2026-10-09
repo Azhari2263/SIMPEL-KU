@@ -148,7 +148,7 @@ function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStat
       item.dailyEvidence = {};
       parsedData.activeDays.forEach(d => {
         const tKey = generateTaskKey(tahun, bulan, d, session.username || session.namaPegawai, item.ruangan, item.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.kegiatan)].join('_');
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.ruangan), getAlphaOnly(item.kegiatan)].join('_');
         const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
         if (rec) {
           item.dailyEvidence[d] = {

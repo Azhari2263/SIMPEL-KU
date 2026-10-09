@@ -262,8 +262,8 @@ function getBuktiDukungMap(ss, bulan, tahun) {
       map[taskKey] = record;
     }
 
-    // Fallback key: tanggal_namaPegawaiAlpha_tugasAlpha
-    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.namaTugas)].join('_');
+    // Fallback key: tanggal_namaPegawaiAlpha_ruanganAlpha_tugasAlpha
+    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
     fallbackMap[fKey] = record;
   }
 

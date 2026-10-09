@@ -321,7 +321,7 @@ function getJadwalKeamanan(token, bulan, tahun) {
       schedCols.forEach(function(sc) {
         const d = sc.tanggal;
         const tKey = generateTaskKey(curYearNum, selectedMonth, d, session.username || session.namaPegawai, t.ruangan, t.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.kegiatan)].join('_');
+        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.ruangan), getAlphaOnly(t.kegiatan)].join('_');
         const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
         if (rec) {
           t.dailyEvidence[d] = {
