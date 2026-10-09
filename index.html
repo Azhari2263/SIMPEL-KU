@@ -4816,7 +4816,7 @@ function renderMonitoringView() {
         sheetRowIndex: sheetRowIndex,
         ruangan: item.ruangan || 'Area Umum',
         namaTugas: item.kegiatan,
-        unit: cachedMonitoringData.jenis || 'Kebersihan',
+        unit: cachedMonitoringData.jenis || currentUser?.unit || 'Kebersihan',
         namaPegawai: cachedMonitoringData.namaPegawai || currentUser?.namaPegawai,
         username: currentUser?.username,
         dayNum: dayNum,

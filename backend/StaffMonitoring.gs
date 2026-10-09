@@ -452,10 +452,30 @@ function readSheetMonitoring(sheet, bulan, tahun) {
 
   if (jenis === 'Kebersihan' && sheet) {
     const sNameUpper = String(sheet.getName() || '').toUpperCase();
+    const sNameAlpha = getAlphaOnly(sNameUpper);
     if (sNameUpper.includes('PELAYANAN') || sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PST')) {
       jenis = 'Pelayanan';
     } else if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) {
       jenis = 'Keamanan';
+    } else {
+      const pelayananNames = ['mawardi', 'ardi', 'ranianailahusna', 'rania', 'alfianaayuni', 'alfiana'];
+      for (let p = 0; p < pelayananNames.length; p++) {
+        const pAlpha = getAlphaOnly(pelayananNames[p]);
+        if (sNameAlpha === pAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(pAlpha) >= 0 || pAlpha.indexOf(sNameAlpha) >= 0))) {
+          jenis = 'Pelayanan';
+          break;
+        }
+      }
+      if (jenis === 'Kebersihan') {
+        const securityNames = ['eddysuryadi', 'eddy', 'syarifrezanopriadrianalkadri', 'syarifreza', 'syreza', 'reza', 'feriyustami', 'feri', 'rizkifadil', 'rizki', 'ekoprasetyo', 'eko', 'agustetriansyah', 'agus'];
+        for (let s = 0; s < securityNames.length; s++) {
+          const sAlpha = getAlphaOnly(securityNames[s]);
+          if (sNameAlpha === sAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(sAlpha) >= 0 || sAlpha.indexOf(sNameAlpha) >= 0))) {
+            jenis = 'Keamanan';
+            break;
+          }
+        }
+      }
     }
   }
 

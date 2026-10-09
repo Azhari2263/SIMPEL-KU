@@ -1118,6 +1118,59 @@ function generateTaskKey(tahun, bulan, tanggal, namaPegawaiOrUsername, ruangan, 
 }
 
 /**
+ * Resolves the precise Unit Kerja ('Kebersihan', 'Pelayanan', 'Keamanan') for an officer
+ * based on officer name, username, payload unit, and session.
+ */
+function resolveUnitKerja(payloadUnit, empName, username, session) {
+  var nameCheck = getAlphaOnly(empName || username || (session ? (session.namaPegawai || session.username) : ''));
+
+  // 1. Cek daftar definitif Petugas Pelayanan / Resepsionis
+  var pelayananNames = ['mawardi', 'ardi', 'ranianailahusna', 'rania', 'alfianaayuni', 'alfiana'];
+  for (var i = 0; i < pelayananNames.length; i++) {
+    var pAlpha = getAlphaOnly(pelayananNames[i]);
+    if (nameCheck === pAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(pAlpha) >= 0 || pAlpha.indexOf(nameCheck) >= 0))) {
+      return 'Pelayanan';
+    }
+  }
+
+  // 2. Cek daftar definitif Petugas Keamanan / Satpam
+  var securityNames = ['eddysuryadi', 'eddy', 'syarifrezanopriadrianalkadri', 'syarifreza', 'syreza', 'reza', 'feriyustami', 'feri', 'rizkifadil', 'rizki', 'ekoprasetyo', 'eko', 'agustetriansyah', 'agus'];
+  for (var j = 0; j < securityNames.length; j++) {
+    var sAlpha = getAlphaOnly(securityNames[j]);
+    if (nameCheck === sAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(sAlpha) >= 0 || sAlpha.indexOf(nameCheck) >= 0))) {
+      return 'Keamanan';
+    }
+  }
+
+  // 3. Cek daftar definitif Petugas Kebersihan
+  var kebersihanNames = ['yunijuniarti', 'yuni', 'slametriyadi', 'slamet', 'nurramadhanial', 'dede', 'muhammadsyukri', 'msyukri', 'syukri', 'ramadhan', 'rama'];
+  for (var k = 0; k < kebersihanNames.length; k++) {
+    var kAlpha = getAlphaOnly(kebersihanNames[k]);
+    if (nameCheck === kAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(kAlpha) >= 0 || kAlpha.indexOf(nameCheck) >= 0))) {
+      return 'Kebersihan';
+    }
+  }
+
+  // 4. Jika payloadUnit diberikan secara eksplisit dan valid
+  if (payloadUnit) {
+    var pLower = String(payloadUnit).toLowerCase().trim();
+    if (pLower === 'pelayanan' || pLower.includes('resepsionis') || pLower.includes('pst')) return 'Pelayanan';
+    if (pLower === 'keamanan' || pLower.includes('security') || pLower.includes('satpam')) return 'Keamanan';
+    if (pLower === 'kebersihan') return 'Kebersihan';
+  }
+
+  // 5. Cek session.unit
+  if (session && session.unit) {
+    var sLower = String(session.unit).toLowerCase().trim();
+    if (sLower === 'pelayanan' || sLower.includes('resepsionis') || sLower.includes('pst')) return 'Pelayanan';
+    if (sLower === 'keamanan' || sLower.includes('security') || sLower.includes('satpam')) return 'Keamanan';
+    if (sLower === 'kebersihan') return 'Kebersihan';
+  }
+
+  return 'Kebersihan';
+}
+
+/**
  * Mendapatkan atau membuat folder anak di Google Drive (Mencegah duplikasi folder)
  */
 function getOrCreateChildFolder(parentFolder, folderName) {
@@ -1318,7 +1371,7 @@ function uploadBuktiDukungFoto(token, payload) {
 
     var empName = cleanStr(payload.targetNamaPegawai || payload.namaPegawai || session.namaPegawai || session.username);
     var username = cleanStr(payload.targetUsername || payload.username || session.username);
-    var unitKerja = cleanStr(payload.unit || session.unit || 'Kebersihan');
+    var unitKerja = resolveUnitKerja(payload.unit, empName, username, session);
     var namaTugas = cleanStr(payload.namaTugas || payload.kegiatan || payload.item || 'Pelaksanaan Tugas');
     var ruangan = cleanStr(payload.ruangan || 'Area Umum');
 
@@ -1518,7 +1571,7 @@ function updateSupervisorChecklist(token, payload) {
     var username = cleanStr(payload.username || '');
     var ruangan = cleanStr(payload.ruangan || 'Area Umum');
     var namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
-    var unitKerja = cleanStr(payload.unit || payload.unitKerja || 'Kebersihan');
+    var unitKerja = resolveUnitKerja(payload.unit || payload.unitKerja, empName, username, session);
 
     var newStatus = (payload.newStatus === true || payload.newStatus === '1' || payload.newStatus === 1 || String(payload.newStatus).toUpperCase() === 'TRUE');
 
@@ -2397,10 +2450,30 @@ function readSheetMonitoring(sheet, bulan, tahun) {
 
   if (jenis === 'Kebersihan' && sheet) {
     const sNameUpper = String(sheet.getName() || '').toUpperCase();
+    const sNameAlpha = getAlphaOnly(sNameUpper);
     if (sNameUpper.includes('PELAYANAN') || sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PST')) {
       jenis = 'Pelayanan';
     } else if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) {
       jenis = 'Keamanan';
+    } else {
+      const pelayananNames = ['mawardi', 'ardi', 'ranianailahusna', 'rania', 'alfianaayuni', 'alfiana'];
+      for (let p = 0; p < pelayananNames.length; p++) {
+        const pAlpha = getAlphaOnly(pelayananNames[p]);
+        if (sNameAlpha === pAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(pAlpha) >= 0 || pAlpha.indexOf(sNameAlpha) >= 0))) {
+          jenis = 'Pelayanan';
+          break;
+        }
+      }
+      if (jenis === 'Kebersihan') {
+        const securityNames = ['eddysuryadi', 'eddy', 'syarifrezanopriadrianalkadri', 'syarifreza', 'syreza', 'reza', 'feriyustami', 'feri', 'rizkifadil', 'rizki', 'ekoprasetyo', 'eko', 'agustetriansyah', 'agus'];
+        for (let s = 0; s < securityNames.length; s++) {
+          const sAlpha = getAlphaOnly(securityNames[s]);
+          if (sNameAlpha === sAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(sAlpha) >= 0 || sAlpha.indexOf(sNameAlpha) >= 0))) {
+            jenis = 'Keamanan';
+            break;
+          }
+        }
+      }
     }
   }
 
