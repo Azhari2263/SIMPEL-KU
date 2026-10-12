@@ -3348,6 +3348,71 @@ async function processImageForBukti(imgElement) {
   if (btnSubmit) btnSubmit.disabled = false;
 }
 
+/**
+ * Memecah teks ke beberapa baris agar pas dengan batas maxWidth pada Canvas 2D.
+ * Mendukung indentasi elegan untuk baris lanjutan (hanging indent) jika teks panjang.
+ */
+function wrapCanvasText(ctx, text, maxWidth, indentWidth = 0) {
+  if (!text) return [];
+  const words = text.trim().split(/\s+/);
+  const lines = [];
+  let currentLine = '';
+  let isContinuation = false;
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    if (!word) continue;
+
+    const limit = isContinuation ? (maxWidth - indentWidth) : maxWidth;
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (ctx.measureText(testLine).width <= limit) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) {
+        lines.push({ text: currentLine, isContinuation });
+        isContinuation = true;
+
+        const contLimit = maxWidth - indentWidth;
+        if (ctx.measureText(word).width <= contLimit) {
+          currentLine = word;
+        } else {
+          // Jika satu kata melebihi lebar batas, potong per karakter
+          let chunk = '';
+          for (const ch of word) {
+            if (ctx.measureText(chunk + ch).width <= contLimit) {
+              chunk += ch;
+            } else {
+              if (chunk) lines.push({ text: chunk, isContinuation: true });
+              chunk = ch;
+            }
+          }
+          currentLine = chunk;
+        }
+      } else {
+        // Kata pertama itu sendiri sudah melebihi batas
+        let chunk = '';
+        for (const ch of word) {
+          if (ctx.measureText(chunk + ch).width <= limit) {
+            chunk += ch;
+          } else {
+            if (chunk) lines.push({ text: chunk, isContinuation });
+            isContinuation = true;
+            chunk = ch;
+          }
+        }
+        currentLine = chunk;
+      }
+    }
+  }
+
+  if (currentLine) {
+    lines.push({ text: currentLine, isContinuation });
+  }
+
+  return lines;
+}
+
 function applyWatermarkAndCompress(img, geoData) {
   const canvas = document.getElementById('buktiWatermarkCanvas') || document.createElement('canvas');
   
@@ -3382,70 +3447,200 @@ function applyWatermarkAndCompress(img, geoData) {
   const jamStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
   const waktuLengkapWib = `${hariStr}, ${tglStr} - ${jamStr} WIB`;
 
-  // 1. Gambar Watermark Banner di bagian bawah
-  const bannerHeight = Math.max(90, Math.round(targetHeight * 0.16));
+  // Ukuran font responsif berdasarkan dimensi terkecil (agar proporsional di foto portrait & landscape)
+  const baseDim = Math.min(targetWidth, targetHeight);
+  const fontSize = Math.max(12, Math.min(22, Math.round(baseDim * 0.024)));
+  const fontTitle = `bold ${fontSize}px "Plus Jakarta Sans", sans-serif`;
+  const fontBody = `600 ${Math.round(fontSize * 0.92)}px "Plus Jakarta Sans", sans-serif`;
+  const fontSub = `600 ${Math.round(fontSize * 0.86)}px "Plus Jakarta Sans", sans-serif`;
+  const lineSpacing = Math.round(fontSize * 1.38);
+  const padX = Math.max(14, Math.round(targetWidth * 0.032));
+  const maxTextWidth = targetWidth - (padX * 2);
+  const indentWidth = Math.round(fontSize * 1.6); // Indentasi baris lanjutan agar rapi
+
+  // Susun data metadata yang akan dicetak
+  const taskName = (currentUploadTaskPayload?.namaTugas || 'Pelaksanaan Tugas').trim();
+  const ruangan = (currentUploadTaskPayload?.ruangan || '').trim();
+  const pegawai = (currentUploadTaskPayload?.namaPegawai || currentUser?.namaPegawai || '-').trim();
+  const unit = (currentUploadTaskPayload?.unit || 'Umum').trim();
+  const instansi = 'BPS PROVINSI KALIMANTAN BARAT';
+
+  const items = [];
+
+  // 1. Data Tugas & Ruangan
+  const taskUpper = taskName.toUpperCase();
+  const ruangUpper = ruangan.toUpperCase();
+  const hasRuang = Boolean(ruangUpper && ruangUpper !== '-' && ruangUpper !== 'AREA UMUM');
+
+  if (hasRuang) {
+    const combinedTaskRuang = `📋 TUGAS: ${taskUpper} • RUANG: ${ruangUpper}`;
+    ctx.font = fontTitle;
+    if (ctx.measureText(combinedTaskRuang).width <= maxTextWidth) {
+      items.push({
+        text: combinedTaskRuang,
+        color: '#ffffff',
+        font: fontTitle,
+        indent: indentWidth
+      });
+    } else {
+      // Jika terlalu panjang untuk 1 baris, pisahkan menjadi Tugas & Ruang tersendiri agar tidak berdesakan
+      items.push({
+        text: `📋 TUGAS: ${taskUpper}`,
+        color: '#ffffff',
+        font: fontTitle,
+        indent: indentWidth
+      });
+      items.push({
+        text: `🏢 RUANG: ${ruangUpper}`,
+        color: '#93c5fd', // aksen biru muda yang kontras & rapi
+        font: fontBody,
+        indent: indentWidth
+      });
+    }
+  } else {
+    items.push({
+      text: `📋 TUGAS: ${taskUpper}`,
+      color: '#ffffff',
+      font: fontTitle,
+      indent: indentWidth
+    });
+  }
+
+  // 2. Data Waktu
+  items.push({
+    text: `📅 WAKTU: ${waktuLengkapWib}`,
+    color: '#f8fafc',
+    font: fontBody,
+    indent: indentWidth
+  });
+
+  // 3. Data Lokasi & Koordinat
+  const coordsPart = geoData && geoData.coords ? ` (${geoData.coords})` : '';
+  const lokasiPart = (geoData && geoData.lokasi) ? geoData.lokasi : 'Lokasi Kantor';
+  items.push({
+    text: `📍 LOKASI: ${lokasiPart}${coordsPart}`,
+    color: '#f8fafc',
+    font: fontBody,
+    indent: indentWidth
+  });
+
+  // 4. Data Petugas & Instansi
+  const petugasStr = `👤 PETUGAS: ${pegawai} (${unit})`;
+  const combinedPetugas = `${petugasStr} | ${instansi}`;
+  ctx.font = fontBody;
+  if (ctx.measureText(combinedPetugas).width <= maxTextWidth) {
+    items.push({
+      text: combinedPetugas,
+      color: '#93c5fd',
+      font: fontBody,
+      indent: indentWidth
+    });
+  } else {
+    items.push({
+      text: petugasStr,
+      color: '#93c5fd',
+      font: fontBody,
+      indent: indentWidth
+    });
+    items.push({
+      text: `🏛️ SATKER: ${instansi}`,
+      color: '#bfdbfe',
+      font: fontSub,
+      indent: indentWidth
+    });
+  }
+
+  // Pecah seluruh item menjadi baris-baris nyata yang tidak akan pernah terpotong
+  const renderedLines = [];
+  items.forEach(item => {
+    ctx.font = item.font;
+    const wrapped = wrapCanvasText(ctx, item.text, maxTextWidth, item.indent);
+    wrapped.forEach(wl => {
+      renderedLines.push({
+        text: wl.text,
+        color: item.color,
+        font: item.font,
+        isContinuation: wl.isContinuation,
+        indent: item.indent
+      });
+    });
+  });
+
+  // Hitung tinggi banner secara dinamis berdasarkan total baris aktual
+  const accentHeight = Math.max(3, Math.round(targetHeight * 0.005));
+  const padYTop = Math.max(10, Math.round(fontSize * 0.85));
+  const padYBottom = Math.max(10, Math.round(fontSize * 0.85));
+  const totalTextHeight = renderedLines.length * lineSpacing;
+  const bannerHeight = totalTextHeight + padYTop + padYBottom + accentHeight;
   const bannerY = targetHeight - bannerHeight;
 
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  // Gambar background banner (gradien semi-transparan slate gelap elegan)
+  const bgGrad = ctx.createLinearGradient(0, bannerY, 0, targetHeight);
+  bgGrad.addColorStop(0, 'rgba(15, 23, 42, 0.90)');
+  bgGrad.addColorStop(1, 'rgba(15, 23, 42, 0.97)');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(0, bannerY, targetWidth, bannerHeight);
 
-  // Garis aksen atas banner
-  ctx.fillStyle = '#2563eb';
-  ctx.fillRect(0, bannerY, targetWidth, Math.max(3, Math.round(targetHeight * 0.005)));
+  // Garis aksen atas banner (gradien biru khas SIMPEL-KU / BPS)
+  const accentGrad = ctx.createLinearGradient(0, bannerY, targetWidth, bannerY);
+  accentGrad.addColorStop(0, '#2563eb');
+  accentGrad.addColorStop(0.5, '#3b82f6');
+  accentGrad.addColorStop(1, '#1d4ed8');
+  ctx.fillStyle = accentGrad;
+  ctx.fillRect(0, bannerY, targetWidth, accentHeight);
 
-  // 2. Tulis Text Metadata di dalam banner
-  const fontSize = Math.max(12, Math.round(targetHeight * 0.024));
-  ctx.font = `bold ${fontSize}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillStyle = '#ffffff';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  // Render teks metadata dengan drop shadow tajam untuk keterbacaan optimal
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
   ctx.shadowBlur = 4;
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
+  ctx.textBaseline = 'alphabetic';
 
-  const padX = Math.round(targetWidth * 0.03);
-  let lineY = bannerY + Math.round(fontSize * 1.5);
-  const lineSpacing = Math.round(fontSize * 1.35);
+  let currentY = bannerY + accentHeight + padYTop + Math.round(fontSize * 0.85);
+  renderedLines.forEach(line => {
+    ctx.font = line.font;
+    ctx.fillStyle = line.color;
+    const x = padX + (line.isContinuation ? line.indent : 0);
+    ctx.fillText(line.text, x, currentY);
+    currentY += lineSpacing;
+  });
 
-  const taskName = currentUploadTaskPayload?.namaTugas || 'Pelaksanaan Tugas';
-  const ruangan = currentUploadTaskPayload?.ruangan || 'Area Umum';
-  const pegawai = currentUploadTaskPayload?.namaPegawai || currentUser?.namaPegawai || '-';
-  const unit = currentUploadTaskPayload?.unit || 'Umum';
-
-  ctx.fillText(`📋 TUGAS: ${taskName.toUpperCase()} | RUANG: ${ruangan.toUpperCase()}`, padX, lineY);
-  lineY += lineSpacing;
-
-  ctx.font = `600 ${Math.round(fontSize * 0.9)}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText(`📅 WAKTU: ${waktuLengkapWib}`, padX, lineY);
-  lineY += lineSpacing;
-
-  ctx.fillText(`📍 LOKASI: ${geoData.lokasi} (${geoData.coords})`, padX, lineY);
-  lineY += lineSpacing;
-
-  ctx.fillStyle = '#93c5fd';
-  ctx.fillText(`👤 PETUGAS: ${pegawai} (${unit}) | BPS PROVINSI KALIMANTAN BARAT`, padX, lineY);
-
-  // 3. Watermark Badge di sudut kanan atas
-  const badgeFont = Math.max(10, Math.round(targetHeight * 0.02));
-  ctx.font = `bold ${badgeFont}px "Plus Jakarta Sans", sans-serif`;
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+  // Reset shadow sebelum menggambar badge
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  // 3. Watermark Badge di sudut kanan atas (Badge Kapsul SIMPEL-KU)
+  const badgeFont = Math.max(10, Math.min(16, Math.round(baseDim * 0.02)));
+  ctx.font = `bold ${badgeFont}px "Plus Jakarta Sans", sans-serif`;
   const badgeText = 'SIMPEL-KU • BPS KALBAR';
   const badgeMetrics = ctx.measureText(badgeText);
-  const badgePadX = 12;
-  const badgePadY = 6;
+  const badgePadX = Math.round(badgeFont * 0.9);
+  const badgePadY = Math.round(badgeFont * 0.45);
   const badgeW = badgeMetrics.width + (badgePadX * 2);
   const badgeH = badgeFont + (badgePadY * 2);
-  const badgeX = targetWidth - badgeW - 16;
-  const badgeY = 16;
+  const badgeMargin = Math.max(12, Math.round(targetWidth * 0.02));
+  const badgeX = targetWidth - badgeW - badgeMargin;
+  const badgeY = badgeMargin;
 
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
   ctx.beginPath();
-  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8);
+  if (ctx.roundRect) {
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 6);
+  } else {
+    ctx.rect(badgeX, badgeY, badgeW, badgeH);
+  }
   ctx.fill();
 
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(badgeText, badgeX + badgePadX, badgeY + badgeH - badgePadY - 2);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(badgeText, badgeX + badgePadX, badgeY + (badgeH / 2));
+  ctx.textBaseline = 'alphabetic';
 
   // 4. Kompresi Foto (Maksimal 1 MB)
   let quality = 0.82;
