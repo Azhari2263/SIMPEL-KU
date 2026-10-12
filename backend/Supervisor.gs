@@ -846,6 +846,78 @@ function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
  * 6. FITUR EXPORT LAPORAN (SEMUA PEGAWAI / INDIVIDU SETIAP BULAN)
  * ========================================================================
  */
+/**
+ * Mengambil seluruh data bukti dukung foto dari sheet ValidasiDanBuktiDukung untuk periode laporan
+ */
+function getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, tipe) {
+  try {
+    var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
+    var sheetBukti = findSheet(ss, sheetName);
+    if (!sheetBukti) return [];
+
+    var bValues = sheetBukti.getDataRange().getValues();
+    if (!bValues || bValues.length < 2) return [];
+
+    var buktiList = [];
+    var targetAlpha = targetUser ? getAlphaOnly(targetUser.namaPegawai || targetUser.username || '') : '';
+    var targetUserClean = (targetUser && targetUser.username) ? String(targetUser.username).toLowerCase().trim() : '';
+
+    for (var i = 1; i < bValues.length; i++) {
+      var bRow = bValues[i];
+      var bYear = Number(bRow[2] || 0);
+      var bMonth = Number(bRow[3] || 0);
+      if (selectedYear && bYear && bYear !== selectedYear) continue;
+      if (selectedMonth && bMonth && bMonth !== selectedMonth) continue;
+
+      var fileId = String(bRow[17] || '').trim();
+      var fileUrl = String(bRow[18] || '').trim();
+      var adaBukti = (bRow[16] === true || bRow[16] === 1 || String(bRow[16]).toUpperCase() === 'TRUE' || Boolean(fileId) || Boolean(fileUrl));
+      if (!adaBukti) continue;
+
+      var bUsername = String(bRow[9] || '').trim();
+      var bNamaPegawai = String(bRow[8] || '').trim();
+
+      if (tipe === 'individu' && targetUser) {
+        var uMatch = targetUserClean && (bUsername.toLowerCase() === targetUserClean);
+        var nMatch = targetAlpha && (getAlphaOnly(bNamaPegawai) === targetAlpha || getAlphaOnly(bUsername) === targetAlpha);
+        if (!uMatch && !nMatch) continue;
+      }
+
+      var thumbUrl = fileId ? ("https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1000") : (fileUrl || '');
+
+      buktiList.push({
+        taskKey: String(bRow[0] || ''),
+        tanggal: Number(bRow[5] || 0),
+        waktu: String(bRow[6] || ''),
+        unitKerja: String(bRow[7] || ''),
+        namaPegawai: bNamaPegawai,
+        username: bUsername,
+        ruangan: String(bRow[10] || '-'),
+        namaTugas: String(bRow[11] || '-'),
+        statusPetugas: (bRow[12] === true || bRow[12] === 1 || String(bRow[12]).toUpperCase() === 'TRUE'),
+        statusPengawas: (bRow[13] === true || bRow[13] === 1 || String(bRow[13]).toUpperCase() === 'TRUE'),
+        namaPengawas: String(bRow[14] || ''),
+        waktuValidasiPengawas: String(bRow[15] || ''),
+        fileId: fileId,
+        fileUrl: fileUrl || (fileId ? ("https://drive.google.com/file/d/" + fileId + "/view") : ''),
+        fileName: String(bRow[19] || ''),
+        koordinat: String(bRow[20] || ''),
+        lokasi: String(bRow[21] || ''),
+        catatan: String(bRow[22] || ''),
+        thumbnailUrl: thumbUrl
+      });
+    }
+
+    buktiList.sort(function(a, b) {
+      return (a.tanggal || 0) - (b.tanggal || 0);
+    });
+
+    return buktiList;
+  } catch (e) {
+    return [];
+  }
+}
+
 function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
   try {
     const session = getSessionUser(token);
@@ -965,7 +1037,8 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
             totalBelum: Math.max(0, totalSemua - selesaiSemua),
             persen: persenSemua
           },
-          rekapPegawai: rekapPegawai
+          rekapPegawai: rekapPegawai,
+          buktiDukung: getBuktiDukungForExport(ss, selectedMonth, selectedYear, null, 'semua')
         }
       };
     } else {
@@ -1102,7 +1175,8 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
             status: persen >= 90 ? 'Optimal' : (persen >= 70 ? 'Cukup' : 'Perlu Perhatian')
           },
           jadwalShift: jadwalSatpam,
-          items: itemsList
+          items: itemsList,
+          buktiDukung: getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, 'individu')
         }
       };
     }

@@ -730,6 +730,330 @@ function renderIntegratedMonitoringUI() {
     }
 
     /**
+     * Mengelompokkan daftar bukti dukung berdasarkan nama tugas
+     */
+    function groupBuktiDukungByTask(buktiList) {
+      if (!buktiList || !Array.isArray(buktiList) || buktiList.length === 0) return {};
+      const groups = {};
+      buktiList.forEach(it => {
+        const taskName = (it.namaTugas || 'Tugas Operasional').trim();
+        if (!groups[taskName]) groups[taskName] = [];
+        groups[taskName].push(it);
+      });
+      return groups;
+    }
+
+    /**
+     * Render lampiran dokumentasi foto bukti dukung untuk pratinjau inline / modal
+     */
+    function renderLampiranHtmlForPreview(buktiList, periode) {
+      if (!buktiList || !Array.isArray(buktiList) || buktiList.length === 0) {
+        return `
+          <div class="pt-6 border-t border-slate-200 mt-6 text-center py-6 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-500">
+            <i class="fa-solid fa-camera text-slate-400 text-lg mb-1 block"></i>
+            <span>Belum ada foto bukti dukung yang diunggah pada periode ini.</span>
+          </div>
+        `;
+      }
+
+      const groups = groupBuktiDukungByTask(buktiList);
+      const taskNames = Object.keys(groups);
+
+      const groupsHtml = taskNames.map((taskName, gIdx) => {
+        const items = groups[taskName];
+        const cards = items.map(it => {
+          const imgUrl = it.thumbnailUrl || it.fileUrl || '';
+          const statusBadge = it.statusPengawas
+            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">✓ Validasi Pengawas</span>'
+            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-[10px] font-medium">⏳ Menunggu Validasi</span>';
+
+          return `
+            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs hover:shadow-xs transition flex flex-col">
+              <div class="relative bg-slate-950 flex items-center justify-center h-48 overflow-hidden">
+                ${imgUrl ? `
+                  <img src="${imgUrl}" alt="Bukti ${escapeHtml(it.namaTugas)}" class="w-full h-full object-contain mx-auto" loading="lazy" onerror="this.onerror=null; this.src='img/logo_simpelku.png';">
+                ` : `
+                  <div class="text-slate-400 text-xs flex flex-col items-center"><i class="fa-solid fa-image text-2xl mb-1"></i>Foto tidak tersedia</div>
+                `}
+                <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/85 text-white text-[10px] font-bold backdrop-blur-xs">
+                  Tgl ${it.tanggal || '-'}
+                </span>
+              </div>
+              <div class="p-3 text-[11px] space-y-1.5 flex-1 flex flex-col justify-between">
+                <div class="space-y-1 text-slate-600">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="font-bold text-slate-900 flex items-center gap-1">
+                      <i class="fa-solid fa-clock text-blue-600"></i> ${escapeHtml(it.waktu || '-')} WIB
+                    </span>
+                    ${statusBadge}
+                  </div>
+                  <div class="flex items-start gap-1">
+                    <i class="fa-solid fa-door-open text-slate-400 mt-0.5 w-3 text-center"></i>
+                    <span class="font-medium text-slate-800">${escapeHtml(it.ruangan || '-')}</span>
+                  </div>
+                  <div class="flex items-start gap-1">
+                    <i class="fa-solid fa-user text-slate-400 mt-0.5 w-3 text-center"></i>
+                    <span>${escapeHtml(it.namaPegawai || '-')}</span>
+                  </div>
+                  ${it.lokasi ? `
+                    <div class="text-[10px] text-slate-500 flex items-start gap-1">
+                      <i class="fa-solid fa-location-dot text-rose-500 mt-0.5 w-3 text-center"></i>
+                      <span class="truncate">${escapeHtml(it.lokasi)} ${it.koordinat ? `(${escapeHtml(it.koordinat)})` : ''}</span>
+                    </div>
+                  ` : ''}
+                  ${it.catatan ? `
+                    <div class="text-[10px] text-slate-500 italic mt-1">
+                      Catatan: "${escapeHtml(it.catatan)}"
+                    </div>
+                  ` : ''}
+                </div>
+                ${it.fileUrl ? `
+                  <div class="pt-2 border-t border-slate-100 mt-2">
+                    <a href="${it.fileUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 text-[10px]">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Foto di Google Drive
+                    </a>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+            <div class="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white px-4 py-3 flex items-center justify-between">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  ${gIdx + 1}
+                </span>
+                <div class="min-w-0">
+                  <h5 class="text-xs font-bold truncate uppercase tracking-wide text-white">
+                    📋 TUGAS: ${escapeHtml(taskName)}
+                  </h5>
+                  <p class="text-[10px] text-slate-300">
+                    ${escapeHtml(items[0]?.ruangan || 'Area Operasional')} &bull; ${items.length} Foto Bukti
+                  </p>
+                </div>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-[10px] font-bold border border-blue-400/30 flex-shrink-0">
+                ${items.length} Dokumentasi
+              </span>
+            </div>
+            <div class="p-3.5 bg-slate-50/50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              ${cards}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="pt-6 border-t-2 border-dashed border-slate-300 mt-6 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-2 border-b border-slate-200">
+            <div>
+              <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-bold uppercase tracking-wider mb-1">
+                <i class="fa-solid fa-paperclip"></i>
+                <span>Lampiran Dokumen</span>
+              </div>
+              <h4 class="text-sm font-extrabold text-slate-900 uppercase tracking-tight">
+                Dokumentasi Foto Bukti Dukung Pelaksanaan Tugas
+              </h4>
+              <p class="text-xs text-slate-500">
+                Dikelompokkan berdasarkan tugas yang dikerjakan &bull; Total <strong>${buktiList.length}</strong> foto bukti terverifikasi
+              </p>
+            </div>
+          </div>
+          <div class="space-y-4">
+            ${groupsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * Render lampiran dokumentasi foto bukti dukung untuk cetak / PDF
+     */
+    function renderLampiranHtmlForPrint(buktiList, periode) {
+      if (!buktiList || !Array.isArray(buktiList) || buktiList.length === 0) {
+        return `
+          <div style="page-break-before: always; break-before: page; margin-top: 30px;">
+            <div class="kop-header">
+              <h1 class="kop-instansi">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</h1>
+              <div class="kop-aplikasi">LAMPIRAN BUKTI DUKUNG DOKUMENTASI PEKERJAAN (SIMPEL-KU)</div>
+            </div>
+            <div style="text-align: center; padding: 40px 20px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; font-size: 9pt; color: #64748b;">
+              Tidak ada dokumentasi foto bukti dukung yang diunggah pada periode ini.
+            </div>
+          </div>
+        `;
+      }
+
+      const groups = groupBuktiDukungByTask(buktiList);
+      const taskNames = Object.keys(groups);
+
+      const groupsHtml = taskNames.map((taskName, gIdx) => {
+        const items = groups[taskName];
+        const cards = items.map(it => {
+          const imgUrl = it.thumbnailUrl || it.fileUrl || '';
+          const statusText = it.statusPengawas
+            ? `<span style="color: #047857; font-weight: bold;">&#10003; Divalidasi Pengawas${it.namaPengawas ? ': ' + escapeHtml(it.namaPengawas) : ''}</span>`
+            : `<span style="color: #d97706; font-weight: 600;">&#9203; Menunggu Validasi</span>`;
+
+          return `
+            <div class="print-photo-card">
+              <div class="print-photo-box">
+                ${imgUrl ? `
+                  <img src="${imgUrl}" alt="Foto Bukti" class="print-photo-img" onerror="this.onerror=null; this.src='img/logo_simpelku.png';">
+                ` : `
+                  <div style="height: 180px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 8pt;">Foto tidak tersedia</div>
+                `}
+              </div>
+              <div class="print-photo-meta">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                  <strong>Tgl ${it.tanggal || '-'} &bull; ${escapeHtml(it.waktu || '-')} WIB</strong>
+                  <span>${statusText}</span>
+                </div>
+                <div><strong>Ruangan:</strong> ${escapeHtml(it.ruangan || '-')}</div>
+                <div><strong>Petugas:</strong> ${escapeHtml(it.namaPegawai || '-')}</div>
+                ${it.lokasi ? `<div style="font-size: 7pt; color: #64748b;"><strong>Lokasi:</strong> ${escapeHtml(it.lokasi)} ${it.koordinat ? `(${escapeHtml(it.koordinat)})` : ''}</div>` : ''}
+                ${it.catatan ? `<div style="font-size: 7pt; color: #64748b; font-style: italic;"><strong>Catatan:</strong> "${escapeHtml(it.catatan)}"</div>` : ''}
+                ${it.fileUrl ? `<div style="margin-top: 3px; font-size: 7pt;"><a href="${it.fileUrl}" target="_blank" style="color: #2563eb; text-decoration: none;">&#128279; Tautan Berkas Google Drive</a></div>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div class="print-task-group">
+            <div class="print-task-header">
+              <span style="font-weight: 800;">&#128203; TUGAS ${gIdx + 1}: ${escapeHtml(taskName.toUpperCase())}</span>
+              <span style="font-size: 8pt; font-weight: normal; opacity: 0.9;">${items.length} Foto Bukti Terlampir</span>
+            </div>
+            <div class="print-photo-grid">
+              ${cards}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div style="page-break-before: always; break-before: page; margin-top: 24px;">
+          <div class="kop-header">
+            <h1 class="kop-instansi">BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT</h1>
+            <p class="kop-alamat">Jl. Sutan Syahrir No. 24/42, Pontianak 78116 | Telp: (0561) 732049 | Email: bps6100@bps.go.id</p>
+            <div class="kop-aplikasi">LAMPIRAN BUKTI DUKUNG DOKUMENTASI PEKERJAAN (SIMPEL-KU)</div>
+          </div>
+
+          <div class="doc-title" style="margin: 8px 0 16px;">
+            <h2 style="font-size: 11pt;">LAMPIRAN DOKUMENTASI FOTO BUKTI DUKUNG PELAKSANAAN TUGAS</h2>
+            <p style="font-size: 8.5pt;">Periode: <strong>${escapeHtml(periode.labelPeriode || '')}</strong> &bull; Total <strong>${buktiList.length}</strong> Foto Bukti Terverifikasi</p>
+          </div>
+
+          <div style="margin-bottom: 14px; font-size: 8pt; color: #475569; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            Seluruh foto di bawah ini memuat identitas tugas, stempel waktu (WIB), koordinat lokasi GPS, dan nama petugas pelaksana secara otomatis.
+          </div>
+
+          ${groupsHtml}
+        </div>
+      `;
+    }
+
+    /**
+     * Render lampiran dokumentasi foto bukti dukung untuk berkas Excel (.xls)
+     */
+    function renderLampiranHtmlForExcel(buktiList, periode, colSpanTotal) {
+      const spanVal = Math.max(9, colSpanTotal || 9);
+      if (!buktiList || !Array.isArray(buktiList) || buktiList.length === 0) {
+        return `
+          <table style="border: none; margin-top: 30px;">
+            <tr>
+              <td colspan="${spanVal}" style="border: none; font-size: 12pt; font-weight: bold; color: #1e3a8a;">
+                LAMPIRAN: DOKUMENTASI FOTO BUKTI DUKUNG PELAKSANAAN TUGAS
+              </td>
+            </tr>
+            <tr>
+              <td colspan="${spanVal}" style="border: none; font-size: 9.5pt; color: #64748b; font-style: italic;">
+                Belum ada foto bukti dukung yang diunggah pada periode ini.
+              </td>
+            </tr>
+          </table>
+        `;
+      }
+
+      const groups = groupBuktiDukungByTask(buktiList);
+      const taskNames = Object.keys(groups);
+
+      let rowsHtml = '';
+      let counter = 1;
+
+      taskNames.forEach((taskName, gIdx) => {
+        const items = groups[taskName];
+        rowsHtml += `
+          <tr style="background-color: #1e3a8a; color: #ffffff;">
+            <td colspan="${spanVal}" style="font-weight: bold; font-size: 10pt; padding: 6px 8px; color: #ffffff; background-color: #1e3a8a;">
+              &#128203; TUGAS: ${escapeHtml(taskName.toUpperCase())} (${items.length} Foto Bukti)
+            </td>
+          </tr>
+        `;
+
+        items.forEach(it => {
+          const bgClass = (counter % 2 === 1) ? 'class="bg-alt"' : '';
+          const tglWaktu = `${it.tanggal || '-'} ${escapeHtml(periode.namaBulan || '')} ${periode.tahun || ''} - ${escapeHtml(it.waktu || '-')} WIB`;
+          const statusText = it.statusPengawas ? `Divalidasi (${escapeHtml(it.namaPengawas || 'Pengawas')})` : 'Menunggu Validasi';
+          const linkDrive = it.fileUrl ? `<a href="${it.fileUrl}">Buka Foto Drive</a>` : '-';
+
+          rowsHtml += `
+            <tr ${bgClass}>
+              <td class="text-center">${counter}</td>
+              <td class="text-left font-bold">${escapeHtml(taskName)}</td>
+              <td class="text-left">${escapeHtml(it.ruangan || '-')}</td>
+              <td class="text-center">${tglWaktu}</td>
+              <td class="text-left">${escapeHtml(it.namaPegawai || '-')}</td>
+              <td class="text-left">${escapeHtml(it.lokasi || '-')} ${it.koordinat ? `(${escapeHtml(it.koordinat)})` : ''}</td>
+              <td class="text-center font-bold" style="color: ${it.statusPengawas ? '#047857' : '#d97706'};">${statusText}</td>
+              <td class="text-center font-bold">${linkDrive}</td>
+              <td class="text-left">${escapeHtml(it.catatan || '-')}</td>
+            </tr>
+          `;
+          counter++;
+        });
+      });
+
+      return `
+        <table style="border: none; margin-top: 35px;">
+          <tr>
+            <td colspan="${spanVal}" style="border: none; font-size: 13pt; font-weight: bold; color: #1e3a8a;">
+              LAMPIRAN: DOKUMENTASI FOTO BUKTI DUKUNG PELAKSANAAN TUGAS
+            </td>
+          </tr>
+          <tr>
+            <td colspan="${spanVal}" style="border: none; font-size: 10pt; color: #475569;">
+              Daftar seluruh foto bukti dukung dikelompokkan berdasarkan tugas yang dikerjakan pada periode ${escapeHtml(periode.labelPeriode || '')} (Total: ${buktiList.length} Foto)
+            </td>
+          </tr>
+        </table>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 45px;">No</th>
+              <th style="width: 250px;">Uraian Tugas / Kegiatan</th>
+              <th style="width: 150px;">Ruangan / Area</th>
+              <th style="width: 170px;">Tanggal & Waktu Pelaksanaan</th>
+              <th style="width: 160px;">Petugas Pelaksana</th>
+              <th style="width: 220px;">Lokasi & Koordinat GPS</th>
+              <th style="width: 150px;">Status Validasi</th>
+              <th style="width: 180px;">Tautan Foto Google Drive</th>
+              <th style="width: 160px;">Catatan</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      `;
+    }
+
+    /**
      * Render dokumen laporan resmi berformat HTML bersih untuk preview inline & modal
      */
     function renderLaporanPreviewHtml(d) {
@@ -916,21 +1240,31 @@ function renderIntegratedMonitoringUI() {
           <!-- TABEL DATA -->
           ${tableHtml}
 
-          <!-- LEMBAR PENGESAHAN TANDA TANGAN -->
+          <!-- LEMBAR PENGESAHAN TANDA TANGAN (Format Resmi BPS) -->
           <div class="pt-6 grid grid-cols-2 gap-4 text-xs text-center border-t border-slate-200 mt-6">
             <div>
-              <p class="font-medium text-slate-600">Mengetahui,<br><strong class="text-slate-900">Kasubbag Umum BPS Prov. Kalbar</strong></p>
-              <div class="h-16"></div>
-              <p class="font-bold underline text-slate-900">( .................................................... )</p>
-              <p class="text-[10px] text-slate-400 mt-0.5">NIP. ........................................</p>
-            </div>
-            <div>
-              <p class="font-medium text-slate-600">Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br><strong class="text-slate-900">${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong></p>
+              <p class="font-medium text-slate-600">
+                <span class="text-[11px] text-slate-400 block mb-0.5">Petugas Pelaksana:</span>
+                <strong class="text-slate-900">${isSemua ? 'Supervisor Operasional' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong>
+              </p>
               <div class="h-16"></div>
               <p class="font-bold underline text-slate-900">( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</p>
               <p class="text-[10px] text-slate-400 mt-0.5">${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}</p>
             </div>
+            <div>
+              <p class="font-medium text-slate-600">
+                Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
+                Mengetahui,<br>
+                <strong class="text-slate-900">Kasubbag Umum BPS Prov. Kalbar</strong>
+              </p>
+              <div class="h-16"></div>
+              <p class="font-bold underline text-slate-900">( .................................................... )</p>
+              <p class="text-[10px] text-slate-400 mt-0.5">NIP. ........................................</p>
+            </div>
           </div>
+
+          <!-- LAMPIRAN BUKTI DUKUNG DOKUMENTASI FOTO (DIKELOMPOKKAN BERDASARKAN TUGAS) -->
+          ${renderLampiranHtmlForPreview(d.buktiDukung, periode)}
         </div>
       `;
     }
@@ -1191,20 +1525,23 @@ function renderIntegratedMonitoringUI() {
 
           <table style="border: none; margin-top: 30px;">
             <tr>
-              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
+              <td colspan="${isSemua ? 3 : 5}" style="border: none; text-align: center; font-size: 10pt;">
+                Petugas Pelaksana:<br>
+                <strong>${isSemua ? 'Supervisor Operasional' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong><br><br><br><br>
+                <strong>( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</strong><br>
+                ${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}
+              </td>
+              <td colspan="${isSemua ? 2 : Math.max(1, (periode.daysInMonth || 31) - 4)}" style="border: none;"></td>
+              <td colspan="${isSemua ? 3 : 5}" style="border: none; text-align: center; font-size: 10pt;">
+                Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
                 Mengetahui,<br><strong>Kasubbag Umum BPS Prov. Kalbar</strong><br><br><br><br>
                 <strong>( .................................................... )</strong><br>
                 NIP. ........................................
               </td>
-              <td colspan="4" style="border: none;"></td>
-              <td colspan="3" style="border: none; text-align: center; font-size: 10pt;">
-                Pontianak, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>
-                <strong>${isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`}</strong><br><br><br><br>
-                <strong>( ${isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas')} )</strong><br>
-                ${isSemua ? 'Koordinator Lapangan' : `@${escapeHtml(d.pegawai?.username || '')}`}
-              </td>
             </tr>
           </table>
+
+          ${renderLampiranHtmlForExcel(d.buktiDukung, periode, isSemua ? 8 : (7 + (periode.daysInMonth || 31)))}
         \x3C/body\x3E
         \x3C/html\x3E
       `;
@@ -1352,8 +1689,8 @@ function renderIntegratedMonitoringUI() {
         `;
       }
 
-      const namaTandaTanganKanan = isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas');
-      const jabatanKanan = isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`;
+      const namaTandaTanganKiri = isSemua ? 'Supervisor Operasional' : escapeHtml(d.pegawai?.namaPegawai || 'Petugas');
+      const jabatanKiri = isSemua ? 'Koordinator Monitoring' : `Petugas ${escapeHtml(d.pegawai?.unit || 'Operasional')}`;
 
       const printHtml = `
         \x3C!DOCTYPE html>
@@ -1364,7 +1701,7 @@ function renderIntegratedMonitoringUI() {
           <style>
             @page {
               size: ${isSemua ? 'A4 portrait' : 'A4 landscape'};
-              margin: ${isSemua ? '12mm 15mm 12mm 15mm' : '10mm 12mm 10mm 12mm'};
+              margin: ${isSemua ? '10mm 14mm 10mm 14mm' : '8mm 10mm 8mm 10mm'};
             }
             * { box-sizing: border-box; }
             body {
@@ -1528,6 +1865,65 @@ function renderIntegratedMonitoringUI() {
               margin-top: 2px;
             }
 
+            /* Lampiran Foto Bukti Dukung Cetak Styling */
+            .print-task-group {
+              margin-bottom: 16px;
+              border: 1px solid #cbd5e1;
+              border-radius: 6px;
+              overflow: hidden;
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .print-task-header {
+              background-color: #1e3a8a;
+              color: #ffffff;
+              font-size: 8.5pt;
+              font-weight: 700;
+              padding: 6px 10px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+            .print-photo-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 12px;
+              padding: 12px;
+              background-color: #f8fafc;
+            }
+            .print-photo-card {
+              border: 1px solid #e2e8f0;
+              border-radius: 6px;
+              background-color: #ffffff;
+              padding: 8px;
+              page-break-inside: avoid;
+              break-inside: avoid;
+              display: flex;
+              flex-direction: column;
+            }
+            .print-photo-box {
+              width: 100%;
+              height: 190px;
+              background-color: #0f172a;
+              border-radius: 4px;
+              overflow: hidden;
+              margin-bottom: 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .print-photo-img {
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              display: block;
+            }
+            .print-photo-meta {
+              font-size: 7.5pt;
+              line-height: 1.4;
+              color: #1e293b;
+            }
+
             @media print {
               .no-print { display: none !important; }
               body { padding: 0; }
@@ -1594,20 +1990,31 @@ function renderIntegratedMonitoringUI() {
 
           ${contentTableHtml}
 
+          <!-- LEMBAR PENGESAHAN TANDA TANGAN (Format Resmi BPS) -->
           <div class="sig-section">
             <div class="sig-box">
-              <p style="margin: 0;">Mengetahui,<br><strong>Kasubbag Umum BPS Prov. Kalbar</strong></p>
+              <p style="margin: 0;">
+                <span style="font-size: 8pt; color: #64748b; display: block; margin-bottom: 2px;">Petugas Pelaksana:</span>
+                <strong>${jabatanKiri}</strong>
+              </p>
+              <div class="sig-space"></div>
+              <p class="sig-name">( ${namaTandaTanganKiri} )</p>
+              <p class="sig-title">${isSemua ? 'Koordinator Tim' : `@${escapeHtml(d.pegawai?.username || '')}`}</p>
+            </div>
+            <div class="sig-box">
+              <p style="margin: 0;">
+                Pontianak, ${tglCetakStr}<br>
+                Mengetahui,<br>
+                <strong>Kasubbag Umum BPS Prov. Kalbar</strong>
+              </p>
               <div class="sig-space"></div>
               <p class="sig-name">( .................................................... )</p>
               <p class="sig-title">NIP. ........................................</p>
             </div>
-            <div class="sig-box">
-              <p style="margin: 0;">Pontianak, ${tglCetakStr}<br><strong>${jabatanKanan}</strong></p>
-              <div class="sig-space"></div>
-              <p class="sig-name">( ${namaTandaTanganKanan} )</p>
-              <p class="sig-title">${isSemua ? 'Koordinator Tim' : `@${escapeHtml(d.pegawai?.username || '')}`}</p>
-            </div>
           </div>
+
+          <!-- LAMPIRAN DOKUMENTASI FOTO BUKTI DUKUNG PELAKSANAAN TUGAS -->
+          ${renderLampiranHtmlForPrint(d.buktiDukung, periode)}
 
         \x3C/body\x3E
         \x3C/html\x3E
