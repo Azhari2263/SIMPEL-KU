@@ -15,6 +15,7 @@ var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
 var GOOGLE_DRIVE_FALLBACK_FOLDER_NAME = "[SIMPEL-KU] Bukti Dukung Foto";
 var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
 var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
+var PASSWORD_SALT = "SIMPELKU_BPS_KALBAR_SECURE_SALT_2026"; // Salt untuk hashing kredensial SHA-256
 
 // Nama-nama sheet standar dalam spreadsheet
 var SHEET_NAMES = {

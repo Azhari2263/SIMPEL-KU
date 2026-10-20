@@ -1,7 +1,8 @@
 /**
  * ========================================================================
  * SIMPEL-KU - API ROUTER & DISPATCHER MODULE
-*/
+ * ========================================================================
+ */
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action) {
@@ -131,9 +132,22 @@ function handleApiRequest(params) {
     } else if (action === 'changeCredentials') {
       result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
     } else if (action === 'setupAllUsers') {
-      result = { success: true, message: setupAllUsers() };
+      // Proteksi otorisasi Admin
+      var sUser = getSessionUser(params.token);
+      if (!sUser || (sUser.role || '').toLowerCase() !== 'admin') {
+        result = { success: false, message: 'Akses ditolak. Tindakan ini memerlukan otorisasi Admin.' };
+      } else {
+        result = { success: true, message: setupAllUsers() };
+      }
     } else if (action === 'testGoogleDriveAccess') {
-      result = { success: true, data: testGoogleDriveAccess() };
+      // Proteksi otorisasi Pengawas / Admin
+      var sUser = getSessionUser(params.token);
+      var rLower = sUser ? (sUser.role || '').toLowerCase() : '';
+      if (!sUser || (!rLower.includes('admin') && !rLower.includes('supervisor') && !rLower.includes('kabag'))) {
+        result = { success: false, message: 'Akses ditolak. Tindakan ini memerlukan otorisasi Pengawas/Admin.' };
+      } else {
+        result = { success: true, data: testGoogleDriveAccess() };
+      }
     } else {
       result = { success: false, message: 'Aksi "' + action + '" tidak dikenali.' };
     }
