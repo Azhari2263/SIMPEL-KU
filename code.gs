@@ -1,5023 +1,4663 @@
-/**
+// ============================================================
+// SIDAK6100 BPS Kalbar - Code.gs
+// Dimodifikasi untuk integrasi penuh dengan index.html
+// ============================================================
 
- * ========================================================================
-
- * SISTEM MONITORING PELAYANAN, KEAMANAN & KEBERSIHAN UMUM (SIMPEL-KU)
-
- * BPS Provinsi Kalimantan Barat
-
- * COMPILED MASTER BACKEND - GOOGLE APPS SCRIPT
-
- * ========================================================================
-
- */
-
-
-// >>>>>>>>>> MODUL: config/Config.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - CONFIGURATION MODULE (BACKEND)
- * Sistem Monitoring Pelayanan, Keamanan & Kebersihan Umum
- * BPS Provinsi Kalimantan Barat
- * ========================================================================
- */
-
-// SPREADSHEET ID: Fallback jika tidak terikat ke container
-var SPREADSHEET_ID = "1c2XUeoYFt_UEqJruBSciKPAIiPEdNoJvTO9epLWVTqs";
-// GOOGLE DRIVE ROOT FOLDER ID: Folder Induk Penyimpanan Bukti Dukung Foto
-// URL Folder: https://drive.google.com/drive/folders/1WvFEHzdredv8wQEBRivNY9iDk5C6iktR?usp=sharing
-var GOOGLE_DRIVE_ROOT_FOLDER_ID = "1WvFEHzdredv8wQEBRivNY9iDk5C6iktR";
-// Nama Folder Cadangan (Fallback) jika Folder Eksternal belum dibagikan langsung ke email deployer:
-var GOOGLE_DRIVE_FALLBACK_FOLDER_NAME = "[SIMPEL-KU] Bukti Dukung Foto";
-var SESSION_DURATION_SEC = 21600; // Durasi sesi login: 6 Jam
-var CACHE_TTL_SEC = 60;           // Cache script data: 60 detik
-var PASSWORD_SALT = "SIMPELKU_BPS_KALBAR_SECURE_SALT_2026"; // Salt untuk hashing kredensial SHA-256
-
-// Nama-nama sheet standar dalam spreadsheet
-var SHEET_NAMES = {
+// ======================= KONSTANTA =======================
+const SHEET_NAMES = {
+  PEGAWAI: 'Pegawai',
   USERS: 'Users',
-  JADWAL_SECURITY: 'JadwalPiketSecurity',
-  INSPEKSI_MUTU: 'InspeksiMutu',
-  BUKTI_DUKUNG: 'ValidasiDanBuktiDukung'
+  RIWAYAT: 'Riwayat_AK',
+  KINERJA: 'Kategori_Kinerja',
+  INPUT_KINERJA: 'Input_Kinerja',
+  KENAIKAN: 'Kenaikan_Pangkat',
+  SATKER: 'Satker',
+  RIWAYAT_PAK_TERBIT: 'Riwayat_PAK_Terbit',
+  ARSIP_DOKUMEN: 'Arsip_Dokumen',
+  JADWAL: 'Jadwal',
+  HISTORY_PAK: 'Dokumen_Terbit',
+  DOKUMEN_TERBIT: 'Dokumen_Terbit'
 };
 
-// Mapping Bulan Bahasa Indonesia
-var MONTH_MAP_ID = {
-  'JANUARI': 1, 'PEBRUARI': 2, 'FEBRUARI': 2, 'MARET': 3,
-  'APRIL': 4, 'MEI': 5, 'JUNI': 6, 'JULI': 7,
-  'AGUSTUS': 8, 'SEPTEMBER': 9, 'OKTOBER': 10,
-  'NOPEMBER': 11, 'NOVEMBER': 11, 'DESEMBER': 12
+const REGULASI = {
+  // ===================== JABATAN KEAHLIAN =====================
+  'Ahli Pertama III/a': { akPang: 50, nextPang: 'Ahli Pertama III/b', akJab: 100, nextJab: 'Ahli Muda III/c', next: 'Ahli Pertama III/b' },
+  'Ahli Pertama III/b': { akPang: null, nextPang: null, akJab: 100, nextJab: 'Ahli Muda III/c', next: 'Ahli Muda III/c' },
+  'Ahli Muda III/c': { akPang: 100, nextPang: 'Ahli Muda III/d', akJab: 200, nextJab: 'Ahli Madya IV/a', next: 'Ahli Muda III/d' },
+  'Ahli Muda III/d': { akPang: 200, nextPang: 'Ahli Muda IV/a', akJab: 200, nextJab: 'Ahli Madya IV/a', next: 'Ahli Madya IV/a' },
+  'Ahli Muda IV/a': { akPang: null, nextPang: null, akJab: 200, nextJab: 'Ahli Madya', next: 'Ahli Madya' },
+  'Ahli Muda IV/b': { akPang: null, nextPang: null, akJab: 200, nextJab: 'Ahli Madya', next: 'Ahli Madya' },
+  'Ahli Madya IV/a': { akPang: 150, nextPang: 'Ahli Madya IV/b', akJab: 450, nextJab: 'Ahli Utama IV/d', next: 'Ahli Madya IV/b' },
+  'Ahli Madya IV/b': { akPang: 300, nextPang: 'Ahli Madya IV/c', akJab: 450, nextJab: 'Ahli Utama IV/d', next: 'Ahli Madya IV/c' },
+  'Ahli Madya IV/c': { akPang: 450, nextPang: 'Ahli Madya IV/d', akJab: 450, nextJab: 'Ahli Utama IV/d', next: 'Ahli Madya IV/d' },
+  'Ahli Utama IV/d': { akPang: 200, nextPang: 'Ahli Utama IV/e', akJab: null, nextJab: null, next: 'Ahli Utama IV/e' },
+
+  // ===================== JABATAN KETERAMPILAN =====================
+  'Terampil II/c': { akPang: 20, nextPang: 'Terampil II/d', akJab: 40, nextJab: 'Mahir III/a', next: 'Terampil II/d' },
+  'Terampil II/d': { akPang: 40, nextPang: 'Mahir III/a', akJab: 40, nextJab: 'Mahir III/a', next: 'Mahir III/a' },
+  'Mahir III/a': { akPang: 50, nextPang: 'Mahir III/b', akJab: 100, nextJab: 'Penyelia III/c', next: 'Mahir III/b' },
+  'Mahir III/b': { akPang: 100, nextPang: 'Mahir III/c', akJab: 100, nextJab: 'Penyelia III/c', next: 'Penyelia III/c' },
+  'Penyelia III/c': { akPang: 100, nextPang: 'Penyelia III/d', akJab: 200, nextJab: null, next: 'Penyelia III/d' },
+  'Penyelia III/d': { akPang: 200, nextPang: 'Penyelia IV/a', akJab: null, nextJab: null, next: 'Penyelia IV/a' }
 };
 
-// Array Nama Bulan Standar Bahasa Indonesia
-var MONTH_NAMES_ID = [
-  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-];
-
-// Daftar kata kunci header yang diabaikan saat pencarian nama pegawai
-var IGNORE_HEADER_WORDS = [
-  'JADWAL', 'PIKET', 'PETUGAS', 'BULAN', 'TAHUN', 'SHIFT', 'PAGI', 'SIANG',
-  'SORE', 'MALAM', 'LIBUR', 'HARI', 'TANGGAL', 'NO', 'NAMA', 'KEGIATAN',
-  'RUANGAN', 'LOKASI', 'STANDAR', 'PELAYANAN', 'KEBERSIHAN', 'KEAMANAN',
-  'REKAP', 'REKAPITULASI', 'TOTAL', 'JUMLAH', 'PERSEN', 'STATUS',
-  'URAIAN', 'CHECKLIST', 'MONITORING', 'BPS', 'PROVINSI', 'KALIMANTAN', 'BARAT'
-];
-
-// Daftar baris kegiatan yang dilewati dalam sheet checklist
-var SKIP_ROW_KEYWORDS = [
-  'NO', 'RUANGAN', 'NAMA RUANGAN', 'KEGIATAN', 'URAIAN KEGIATAN',
-  'JADWAL', 'BULAN', 'TAHUN', 'TANGGAL', 'HARI', 'SUB TOTAL', 'TOTAL',
-  'PARAF', 'KETERANGAN', 'CHECKLIST', 'CATATAN', 'STANDAR'
-];
-
-// Role dan Kewenangan Akses
-var ROLE_PERMISSIONS = {
-  'Admin': { canManageUsers: true, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
-  'Supervisor': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
-  'Tim Umum dan Humas': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
-  'Koordinator Lapangan': { canManageUsers: false, canEditAllShifts: true, canViewAll: true, canInspect: true, canValidateChecklist: true },
-  'Petugas Kebersihan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
-  'Petugas Pelayanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false },
-  'Petugas Keamanan': { canManageUsers: false, canEditAllShifts: false, canViewAll: false, canInspect: false, canValidateChecklist: false }
+const KOEFISIEN = {
+  'Pemula': 3.75, 'Terampil': 5, 'Mahir': 12.5, 'Penyelia': 25,
+  'Ahli Pertama': 12.5, 'Ahli Muda': 25, 'Ahli Madya': 37.5, 'Ahli Utama': 50
 };
 
-// <<<<<<<<<< END MODUL: config/Config.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: utils/Utils.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - UTILITIES MODULE (BACKEND)
- * ========================================================================
- */
-
-/**
- * Normalisasi string nama (menghapus gelar/nomor urut/tanda baca)
- */
-function normalizeName(s) {
-  if (!s) return '';
-  return String(s)
-    .toLowerCase()
-    .replace(/^(bpk|bapak|ibu|pak|bu|sdr|sdri|danru|anggota|petugas|satpam|security)[\.\s]+/gi, '')
-    .replace(/^[0-9]+[\.\-\s\)\/]+/g, '')
-    .replace(/\(.*?\)/g, '')
-    .replace(/[\.\,\-\_\/\:\;\*\#]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getAlphaOnly(s) {
-  return normalizeName(s).replace(/[^a-z0-9]/g, '');
-}
-
-function cleanPass(p) {
-  if (p === null || p === undefined) return '';
-  return String(p).replace(/[\r\n\u00a0\u200b\t]/g, '').trim();
-}
-
-function cleanStr(s) {
-  if (s === null || s === undefined) return '';
-  return String(s).replace(/[\r\n\u00a0\u200b\t]/g, ' ').trim();
-}
-
-function isUserAliasMatch(inputAlpha, targetAlpha) {
-  if (!inputAlpha || !targetAlpha) return false;
-  if (inputAlpha === targetAlpha) return true;
-  
-  var aliases = {
-    'syreza': ['syarif', 'reza', 'syarifreza', 'syarifrezanopriadrianalkadri', 'syarifrezanopriadrian', 'syarifrezaalkadri', 'nopriadrian', 'kadri', 'syarifrezanopriadrianalkadrial'],
-    'syarifreza': ['syreza', 'syarif', 'reza', 'syarifrezanopriadrianalkadri', 'kadri', 'nopriadrian'],
-    'syarifrezanopriadrianalkadri': ['syreza', 'syarifreza', 'syarif', 'reza', 'kadri', 'nopriadrian'],
-    'reza': ['syreza', 'syarifreza', 'syarifrezanopriadrianalkadri', 'syarif'],
-    'syarif': ['syreza', 'syarifreza', 'syarifrezanopriadrianalkadri', 'reza'],
-    'nopriadrian': ['syreza', 'syarifreza', 'syarifrezanopriadrianalkadri', 'reza'],
-    'kadri': ['syreza', 'syarifreza', 'syarifrezanopriadrianalkadri', 'reza'],
-    'nurramadhanial': ['dede', 'nurramadhani', 'ramadhanial', 'dedenurramadhanial'],
-    'dede': ['nurramadhanial', 'nurramadhani', 'ramadhanial'],
-    'muhammadsyukri': ['msyukri', 'syukri', 'muhsyukri', 'syukrimuhammad'],
-    'msyukri': ['muhammadsyukri', 'syukri', 'muhsyukri'],
-    'syukri': ['muhammadsyukri', 'msyukri', 'muhsyukri'],
-    'alfianaayuni': ['fifi', 'alfiana', 'ayuni', 'fifialfiana'],
-    'fifi': ['alfianaayuni', 'alfiana', 'ayuni'],
-    'ranianailahusna': ['rania', 'naila', 'husna'],
-    'rania': ['ranianailahusna', 'naila', 'husna'],
-    'slametriyadi': ['slamet', 'riyadi'],
-    'slamet': ['slametriyadi', 'riyadi'],
-    'yunijuniarti': ['yuni', 'juniarti'],
-    'yuni': ['yunijuniarti', 'juniarti'],
-    'agustetriansyah': ['agus', 'tetriansyah', 'aira'],
-    'agus': ['agustetriansyah', 'tetriansyah'],
-    'eddysuryadi': ['eddy', 'suryadi', 'edi'],
-    'eddy': ['eddysuryadi', 'suryadi', 'edi'],
-    'ekoprasetyo': ['eko', 'prasetyo'],
-    'eko': ['ekoprasetyo', 'prasetyo'],
-    'feriyustami': ['feri', 'yustami', 'ferry'],
-    'feri': ['feriyustami', 'yustami', 'ferry'],
-    'rizkifadil': ['rizki', 'fadil', 'kiki'],
-    'rizki': ['rizkifadil', 'fadil', 'kiki'],
-    'mawardi': ['ardi', 'mawardiardi'],
-    'ardi': ['mawardi', 'mawardiardi'],
-    'ramadhan': ['rama', 'ramadhani'],
-    'rama': ['ramadhan', 'ramadhani']
-  };
-
-  if (aliases[inputAlpha] && aliases[inputAlpha].indexOf(targetAlpha) >= 0) return true;
-  if (aliases[targetAlpha] && aliases[targetAlpha].indexOf(inputAlpha) >= 0) return true;
-  return false;
-}
-
-function calculateMatchScore(cellVal, user) {
-  if (!cellVal) return 0;
-
-  var rawClean = cleanStr(cellVal);
-  if (!rawClean) return 0;
-
-  var upper = rawClean.toUpperCase();
-  // Filter baris header umum secara aman tanpa menyaring nama orang yang panjang
-  var headerPhrases = [
-    'JADWAL PIKET', 'BPS PROVINSI', 'KEAMANAN KANTOR', 'REKAPITULASI',
-    'SUB TOTAL', 'SELAMA JAM KERJA', 'SHIFT PAGI', 'SHIFT SORE', 'SHIFT MALAM', 'CHECKLIST MONITORING'
-  ];
-  for (var h = 0; h < headerPhrases.length; h++) {
-    if (upper.indexOf(headerPhrases[h]) >= 0) return 0;
-  }
-
-  var cellNorm = normalizeName(rawClean);
-  var cellAlpha = getAlphaOnly(rawClean);
-  if (!cellAlpha || cellAlpha.length < 2) return 0;
-
-  var userFull = normalizeName(user.namaPegawai);
-  var userFullAlpha = getAlphaOnly(user.namaPegawai);
-  var usernameAlpha = getAlphaOnly(user.username);
-  var sheetAlpha = getAlphaOnly(user.namaSheet);
-
-  // 1. Exact Alpha Match
-  if (userFullAlpha && cellAlpha === userFullAlpha) return 100;
-  if (usernameAlpha && cellAlpha === usernameAlpha) return 98;
-  if (sheetAlpha && cellAlpha === sheetAlpha) return 96;
-
-  // 2. Alias Match
-  if ((userFullAlpha && isUserAliasMatch(cellAlpha, userFullAlpha)) ||
-      (usernameAlpha && isUserAliasMatch(cellAlpha, usernameAlpha)) ||
-      (sheetAlpha && isUserAliasMatch(cellAlpha, sheetAlpha))) {
-    return 95;
-  }
-
-  // 3. Substring & Containment Match
-  if ((usernameAlpha && usernameAlpha.length >= 4 && (usernameAlpha.indexOf(cellAlpha) >= 0 || cellAlpha.indexOf(usernameAlpha) >= 0)) ||
-      (userFullAlpha && userFullAlpha.length >= 4 && (userFullAlpha.indexOf(cellAlpha) >= 0 || cellAlpha.indexOf(userFullAlpha) >= 0)) ||
-      (sheetAlpha && sheetAlpha.length >= 4 && (sheetAlpha.indexOf(cellAlpha) >= 0 || cellAlpha.indexOf(sheetAlpha) >= 0))) {
-    return 92;
-  }
-
-  // 4. Token & Prefix Matching (panjang token minimal 2 untuk menangani prefix seperti 'sy', 'al', 'm')
-  var userTokens = userFull.split(' ').filter(function(t) { return t.length >= 2; });
-  if (usernameAlpha && usernameAlpha.length >= 3 && userTokens.indexOf(usernameAlpha) === -1) {
-    userTokens.push(usernameAlpha);
-  }
-  if (sheetAlpha && sheetAlpha.length >= 3 && userTokens.indexOf(sheetAlpha) === -1) {
-    userTokens.push(sheetAlpha);
-  }
-
-  var cellTokens = cellNorm.split(' ').filter(function(t) { return t.length >= 2; });
-  var matchCount = 0;
-
-  for (var i = 0; i < cellTokens.length; i++) {
-    var cTok = cellTokens[i];
-    var cTokAlpha = getAlphaOnly(cTok);
-    for (var j = 0; j < userTokens.length; j++) {
-      var uTok = userTokens[j];
-      var uTokAlpha = getAlphaOnly(uTok);
-      if (cTok === uTok || isUserAliasMatch(cTokAlpha, uTokAlpha)) {
-        matchCount++;
-        break;
-      } else if (uTokAlpha.length >= 3 && cTokAlpha.length >= 3 && (cTokAlpha.indexOf(uTokAlpha) === 0 || uTokAlpha.indexOf(cTokAlpha) === 0)) {
-        matchCount++;
-        break;
-      }
-    }
-  }
-
-  if (matchCount >= 2) return 90;
-  if (matchCount === 1) return 88;
-
-  // 5. Singkatan / Inisial Gabungan (misal: 'syreza' untuk 'syarif reza')
-  var testAbbr = usernameAlpha || userFullAlpha;
-  if (testAbbr && cellTokens.length >= 2) {
-    var firstLetters = '';
-    for (var k = 0; k < cellTokens.length; k++) {
-      firstLetters += cellTokens[k].charAt(0);
-    }
-    if (firstLetters.length >= 2 && (testAbbr.indexOf(firstLetters) === 0 || firstLetters.indexOf(testAbbr) === 0)) {
-      return 86;
-    }
-  }
-
-  return 0;
-}
-
-/**
- * Memeriksa apakah suatu tugas checklist keamanan sesuai dengan kode shift tertentu.
- * Aturan Shift:
- *   'P' = Pagi (06.00 - 16.00 WIB): Meliputi tugas PAGI (06.00-07.30) dan SELAMA JAM KERJA (07.30-16.00)
- *   'S' = Sore (15.30 - 23.30 WIB): Meliputi tugas SORE dan MALAM (penutupan kantor/patroli)
- *   'M' = Malam (23.00 - 07.30 WIB): Meliputi tugas MALAM (23.00-07.30)
- *   'O' = Libur (Bebas Tugas): Tidak ada tugas
- */
-function isKeamananTaskForShift(t, kodeShift) {
-  if (!kodeShift || kodeShift === 'O') return false;
-  var combined = (String((t && t.ruangan) || '') + ' ' + String((t && t.kegiatan) || '') + ' ' + String((t && t.item) || '')).toUpperCase();
-
-  var hasPagi = combined.indexOf('PAGI') >= 0 || combined.indexOf('JAM KERJA') >= 0 || combined.indexOf('SIANG') >= 0 || combined.indexOf('SHIFT P') >= 0;
-  var hasSore = combined.indexOf('SORE') >= 0 || combined.indexOf('SHIFT S') >= 0;
-  var hasMalam = combined.indexOf('MALAM') >= 0 || combined.indexOf('SHIFT M') >= 0;
-
-  // Jika tugas umum yang tidak memiliki penanda shift spesifik sama sekali, berlaku untuk semua shift aktif (P, S, M)
-  if (!hasPagi && !hasSore && !hasMalam) {
-    return true;
-  }
-
-  if (kodeShift === 'P') {
-    // Shift Pagi: hanya tugas pagi/jam kerja, tidak tugas malam atau sore
-    if (hasMalam || hasSore) return false;
-    return hasPagi;
-  } else if (kodeShift === 'S') {
-    // Shift Sore: tugas sore atau malam, tidak tugas pagi
-    if (hasPagi) return false;
-    return hasSore || hasMalam;
-  } else if (kodeShift === 'M') {
-    // Shift Malam: tugas malam, tidak tugas pagi
-    if (hasPagi) return false;
-    return hasMalam;
-  }
-
-  return false;
-}
-
-// <<<<<<<<<< END MODUL: utils/Utils.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/Database.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - DATABASE & SHEET ACCESS MODULE
- * ========================================================================
- */
-
-function getDb() {
-  if (_cachedDb) return _cachedDb;
-
+// ======================= SHA-256 FUNCTION =======================
+function sha256Hex(text) {
   try {
-    _cachedDb = SpreadsheetApp.getActiveSpreadsheet();
-    if (_cachedDb) return _cachedDb;
-  } catch (e) { /* ignore */ }
-
-  try {
-    if (typeof SPREADSHEET_ID !== 'undefined' && SPREADSHEET_ID && SPREADSHEET_ID !== "MASUKKAN_SPREADSHEET_ID_ANDA_DI_SINI") {
-      _cachedDb = SpreadsheetApp.openById(SPREADSHEET_ID);
-      return _cachedDb;
-    }
-  } catch (e) { /* ignore */ }
-
-  return null;
-}
-
-var _cachedDb = null;
-var _cachedSheetsList = null;
-var _cachedSheetsMap = null;
-var _cachedUserList = null;
-var _cachedParsedMonitoring = {};
-var _cachedJadwalRawValues = null;
-var _cachedJadwalDispValues = null;
-var _cachedJadwalGrid = {};
-
-function resetMemoryCache() {
-  _cachedSheetsList = null;
-  _cachedSheetsMap = null;
-  _cachedUserList = null;
-  _cachedParsedMonitoring = {};
-  _cachedJadwalRawValues = null;
-  _cachedJadwalDispValues = null;
-  _cachedJadwalGrid = {};
-}
-
-function getCachedSheets(ss) {
-  if (_cachedSheetsList && _cachedSheetsMap) {
-    return { list: _cachedSheetsList, map: _cachedSheetsMap };
-  }
-  if (!ss) ss = getDb();
-  if (!ss) return { list: [], map: {} };
-
-  _cachedSheetsList = ss.getSheets();
-  _cachedSheetsMap = {};
-  for (var i = 0; i < _cachedSheetsList.length; i++) {
-    var sh = _cachedSheetsList[i];
-    var raw = sh.getName();
-    _cachedSheetsMap[raw] = sh;
-    _cachedSheetsMap[raw.toLowerCase()] = sh;
-    _cachedSheetsMap[getAlphaOnly(raw)] = sh;
-  }
-  return { list: _cachedSheetsList, map: _cachedSheetsMap };
-}
-
-/**
- * Mengambil data dari CacheService (Mendukung data besar >95KB dengan auto-reassembly chunk)
- */
-function getScriptCacheData(key) {
-  if (!key) return null;
-  try {
-    var c = CacheService.getScriptCache();
-    // 1. Periksa apakah data disimpan dalam format berpartisi (chunking)
-    var metaVal = c.get(key + '_meta');
-    if (metaVal) {
-      var meta = JSON.parse(metaVal);
-      if (meta && meta.chunks && meta.chunks > 0) {
-        var chunkKeys = [];
-        for (var i = 0; i < meta.chunks; i++) {
-          chunkKeys.push(key + '_chunk_' + i);
-        }
-        var chunksMap = c.getAll(chunkKeys);
-        var fullStr = '';
-        var allPresent = true;
-        for (var j = 0; j < meta.chunks; j++) {
-          var part = chunksMap[key + '_chunk_' + j];
-          if (typeof part !== 'string') {
-            allPresent = false;
-            break;
-          }
-          fullStr += part;
-        }
-        if (allPresent && fullStr) {
-          return JSON.parse(fullStr);
-        }
-      }
-    }
-
-    // 2. Fallback pembacaan langsung
-    var val = c.get(key);
-    if (val) return JSON.parse(val);
-  } catch (e) { /* ignore */ }
-  return null;
-}
-
-/**
- * Menyimpan data ke CacheService (Mendukung data besar >95KB dengan auto-chunking tanpa silent failure)
- */
-function putScriptCacheData(key, data, ttlSeconds) {
-  if (!key || data === undefined || data === null) return;
-  try {
-    var c = CacheService.getScriptCache();
-    var str = JSON.stringify(data);
-    var ttl = ttlSeconds || 120;
-    var CHUNK_SIZE = 85000; // Batas aman di bawah limit 100KB per nilai cache Google
-
-    if (str.length < CHUNK_SIZE) {
-      c.put(key, str, ttl);
-      // Bersihkan meta chunk terdahulu jika sebelumnya pernah berpartisi
-      try { c.remove(key + '_meta'); } catch (eRem) { /* ignore */ }
-      return;
-    }
-
-    // Jika ukuran data melampaui limit Google Apps Script, partisi menjadi beberapa chunk
-    var totalChunks = Math.ceil(str.length / CHUNK_SIZE);
-    if (totalChunks > 10) return; // Batasi maksimal ~850KB untuk mencegah ekses memori cache
-
-    var chunkObj = {};
-    for (var i = 0; i < totalChunks; i++) {
-      var chunkStr = str.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-      chunkObj[key + '_chunk_' + i] = chunkStr;
-    }
-    chunkObj[key + '_meta'] = JSON.stringify({ chunks: totalChunks, len: str.length });
-
-    // Tulis seluruh chunk sekaligus secara atomik menggunakan putAll
-    c.putAll(chunkObj, ttl);
-  } catch (e) { /* ignore */ }
-}
-
-/**
- * Menghapus cache spesifik beserta seluruh partisi chunk-nya
- */
-function clearScriptCacheKeys(keys) {
-  if (!keys || !keys.length) return;
-  try {
-    var c = CacheService.getScriptCache();
-    var allKeysToRemove = [];
-    for (var k = 0; k < keys.length; k++) {
-      var key = keys[k];
-      if (!key) continue;
-      allKeysToRemove.push(key);
-      allKeysToRemove.push(key + '_meta');
-      for (var i = 0; i < 10; i++) {
-        allKeysToRemove.push(key + '_chunk_' + i);
-      }
-    }
-    c.removeAll(allKeysToRemove);
-  } catch (e) { /* ignore */ }
-}
-
-/**
- * Mencari Sheet secara fleksibel (toleran spasi, huruf besar/kecil, dan alias nama)
- */
-function findSheet(ss, sheetName) {
-  if (!ss || !sheetName) return null;
-  var sName = String(sheetName).trim();
-  var sNameLower = sName.toLowerCase();
-  var sNameAlpha = getAlphaOnly(sName);
-
-  var cs = getCachedSheets(ss);
-  if (cs.map[sName]) return cs.map[sName];
-  if (cs.map[sNameLower]) return cs.map[sNameLower];
-  if (sNameAlpha && cs.map[sNameAlpha]) return cs.map[sNameAlpha];
-
-  var sNameUpper = sName.toUpperCase();
-  var aliases = [sName];
-  if (sNameUpper === 'USERS' || sNameUpper === 'USER') {
-    aliases = ['Users', 'users', 'User', 'user', 'Pengguna', 'Data Users', 'Data User', 'Daftar User', 'Akun', 'Login'];
-  } else if (sNameUpper.includes('JADWAL') || sNameUpper.includes('SECURITY') || sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SATPAM')) {
-    aliases = [
-      'JadwalPiketSecurity', 'Jadwal Piket Security', 'JadwalPiket', 'Jadwal Piket',
-      'Jadwal Keamanan', 'Jadwal Piket Keamanan', 'Jadwal Security', 'Jadwal Satpam',
-      'Piket Keamanan', 'Piket Security', 'Jadwal_Piket', 'Jadwal_Piket_Security',
-      'Security', 'Keamanan', 'Jadwal'
-    ];
-  } else if (sNameUpper.includes('INSPEKSI') || sNameUpper.includes('MUTU')) {
-    aliases = ['InspeksiMutu', 'Inspeksi Mutu', 'Log Inspeksi Mutu', 'Data Inspeksi Mutu', 'Inspeksi'];
-  }
-
-  for (var a = 0; a < aliases.length; a++) {
-    var al = aliases[a];
-    if (cs.map[al]) return cs.map[al];
-    if (cs.map[al.toLowerCase()]) return cs.map[al.toLowerCase()];
-    var alAlpha = getAlphaOnly(al);
-    if (alAlpha && cs.map[alAlpha]) return cs.map[alAlpha];
-  }
-
-  // Exact alpha match in list
-  for (var i = 0; i < cs.list.length; i++) {
-    var shNorm = getAlphaOnly(cs.list[i].getName());
-    if (shNorm === sNameAlpha) return cs.list[i];
-  }
-
-  // Substring match
-  if (sNameAlpha && sNameAlpha.length >= 4) {
-    for (var i = 0; i < cs.list.length; i++) {
-      var shNorm = getAlphaOnly(cs.list[i].getName());
-      if (shNorm && (shNorm.indexOf(sNameAlpha) >= 0 || sNameAlpha.indexOf(shNorm) >= 0)) {
-        return cs.list[i];
-      }
-    }
-  }
-
-  return null;
-}
-
-function findJadwalSheet(ss) {
-  if (!ss) ss = getDb();
-  if (!ss) return null;
-
-  var sh = findSheet(ss, "JadwalPiketSecurity");
-  if (sh) return sh;
-
-  var cs = getCachedSheets(ss);
-  for (var i = 0; i < cs.list.length; i++) {
-    var nameUpper = cs.list[i].getName().toUpperCase();
-    if (nameUpper.includes('JADWAL') || nameUpper.includes('SECURITY') || nameUpper.includes('KEAMANAN') || nameUpper.includes('SATPAM')) {
-      return cs.list[i];
-    }
-  }
-  return null;
-}
-
-function findEmployeeSheet(ss, namaSheet, namaPegawai, username) {
-  if (!ss) return null;
-  if (namaSheet) {
-    var sh = findSheet(ss, namaSheet);
-    if (sh) return sh;
-  }
-  if (namaPegawai) {
-    var sh = findSheet(ss, namaPegawai);
-    if (sh) return sh;
-  }
-  if (username) {
-    var sh = findSheet(ss, username);
-    if (sh) return sh;
-  }
-
-  var cs = getCachedSheets(ss);
-  var uAlpha = getAlphaOnly(username || '');
-  var pAlpha = getAlphaOnly(namaPegawai || '');
-  var sAlpha = getAlphaOnly(namaSheet || '');
-
-  for (var i = 0; i < cs.list.length; i++) {
-    var sNameNorm = getAlphaOnly(cs.list[i].getName());
-    if (!sNameNorm) continue;
-    if (sNameNorm === uAlpha || sNameNorm === pAlpha || sNameNorm === sAlpha) return cs.list[i];
-    if (isUserAliasMatch(sNameNorm, uAlpha) || isUserAliasMatch(sNameNorm, pAlpha) || isUserAliasMatch(sNameNorm, sAlpha)) {
-      return cs.list[i];
-    }
-  }
-
-  if (namaPegawai) {
-    var tokens = normalizeName(namaPegawai).split(/\s+/).filter(function(t) { return t.length >= 3; });
-    for (var i = 0; i < cs.list.length; i++) {
-      var sNameNorm = getAlphaOnly(cs.list[i].getName());
-      for (var t = 0; t < tokens.length; t++) {
-        var tokNorm = getAlphaOnly(tokens[t]);
-        if (tokNorm.length >= 3 && sNameNorm.indexOf(tokNorm) >= 0) {
-          return cs.list[i];
-        }
-      }
-    }
-  }
-  return null;
-}
-
-// <<<<<<<<<< END MODUL: backend/Database.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/Auth.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - AUTHENTICATION & USER MANAGEMENT MODULE
- * ========================================================================
- */
-
-/**
- * Hashing Password dengan algoritma SHA-256 + Salt
- */
-function hashPassword(plainPassword) {
-  if (!plainPassword) return '';
-  var salt = (typeof PASSWORD_SALT !== 'undefined' && PASSWORD_SALT) ? PASSWORD_SALT : 'SIMPELKU_BPS_KALBAR_SECURE_SALT_2026';
-  var rawBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(plainPassword) + salt, Utilities.Charset.UTF_8);
-  var hexStr = '';
-  for (var i = 0; i < rawBytes.length; i++) {
-    var b = rawBytes[i];
-    if (b < 0) b += 256;
-    var byteHex = b.toString(16);
-    if (byteHex.length === 1) byteHex = '0' + byteHex;
-    hexStr += byteHex;
-  }
-  return 'sha256:' + hexStr;
-}
-
-/**
- * Verifikasi Password (Mendukung SHA-256 dan Plaintext untuk migrasi transparan)
- */
-function verifyPassword(inputPassword, storedPassword) {
-  var cleanInput = cleanPass(inputPassword);
-  var cleanStored = cleanPass(storedPassword);
-  if (!cleanInput || !cleanStored) return false;
-
-  // 1. Jika password di database sudah berformat hash
-  if (cleanStored.indexOf('sha256:') === 0) {
-    return hashPassword(cleanInput) === cleanStored;
-  }
-
-  // 2. Fallback pencocokan plaintext untuk akun yang belum termigrasi
-  return cleanInput === cleanStored;
-}
-
-/**
- * Resolver Cepat Role, Unit, dan Jenis tanpa pembacaan sheet terpisah (O(1) Memory Resolve)
- */
-function resolveUserRoleAndUnit(uObj) {
-  var r = String(uObj.role || '').toLowerCase();
-  var u = String(uObj.unit || '').toLowerCase();
-  var un = String(uObj.username || '').toLowerCase();
-  var np = String(uObj.namaPegawai || '').toLowerCase();
-
-  // 1. Resolusi Role
-  if (!uObj.role) {
-    if (r.includes('admin') || un.includes('admin') || np.includes('admin')) uObj.role = 'Admin';
-    else if (r.includes('supervisor') || un.includes('supervisor') || un.includes('kabag') || un.includes('kasubbag') || np.includes('kabag')) uObj.role = 'Supervisor';
-    else if (r.includes('humas') || un.includes('humas') || un.includes('timumum') || np.includes('humas')) uObj.role = 'Tim Umum dan Humas';
-    else if (r.includes('korlap') || un.includes('korlap') || un.includes('koordinator') || np.includes('koordinator')) uObj.role = 'Koordinator Lapangan';
-    else if (r.includes('keamanan') || u.includes('keamanan') || un.includes('satpam') || un.includes('security')) uObj.role = 'Petugas Keamanan';
-    else if (r.includes('pelayanan') || u.includes('pelayanan') || un.includes('resepsionis') || un.includes('pst')) uObj.role = 'Petugas Pelayanan';
-    else uObj.role = 'Petugas Kebersihan';
-  }
-
-  // 2. Resolusi Unit Kerja
-  if (!uObj.unit) {
-    var roleCheck = String(uObj.role || '').toLowerCase();
-    if (roleCheck.includes('admin') || roleCheck.includes('supervisor') || roleCheck.includes('kabag')) uObj.unit = 'Manajemen';
-    else if (roleCheck.includes('humas') || roleCheck.includes('korlap')) uObj.unit = 'Umum';
-    else if (roleCheck.includes('keamanan')) uObj.unit = 'Keamanan';
-    else if (roleCheck.includes('pelayanan')) uObj.unit = 'Pelayanan';
-    else uObj.unit = 'Kebersihan';
-  } else {
-    uObj.unit = determineUnit(null, uObj.role, uObj.unit);
-  }
-
-  // 3. Resolusi Jenis Monitoring
-  if (!uObj.jenis) {
-    var unitCheck = String(uObj.unit || '').toLowerCase();
-    var roleLow = String(uObj.role || '').toLowerCase();
-    if (unitCheck.includes('keamanan') || roleLow.includes('keamanan')) uObj.jenis = 'KEAMANAN KANTOR';
-    else if (unitCheck.includes('pelayanan') || roleLow.includes('pelayanan') || unitCheck.includes('resepsionis')) uObj.jenis = 'RESEPSIONIS';
-    else uObj.jenis = 'PIKET KEBERSIHAN KANTOR';
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8);
+    return digest.map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+  } catch(e) {
+    console.error('Error sha256Hex: ' + e.message);
+    return '';
   }
 }
 
-function getSheetJenis(sheet, matchedUser, ss) {
-  if (matchedUser) {
-    const rawUser = String(matchedUser.username || '').toLowerCase();
-    const rawNama = String(matchedUser.namaPegawai || '').toLowerCase();
-    const userAlpha = getAlphaOnly(rawUser || rawNama);
-
-    // 1. Definitif Kebersihan
-    const kebersihanNames = [
-      'yuni juniarti', 'yuni', 'yunijuniarti',
-      'slamet riyadi', 'slamet', 'slametriyadi',
-      'nurramadhanial', 'dede',
-      'muhammad syukri', 'm syukri', 'syukri', 'msyukri',
-      'ramadhan', 'rama'
-    ];
-    for (let k = 0; k < kebersihanNames.length; k++) {
-      if (userAlpha === getAlphaOnly(kebersihanNames[k])) {
-        return 'PIKET KEBERSIHAN KANTOR';
-      }
-    }
-
-    // 2. Definitif Pelayanan / Resepsionis
-    const pelayananNames = [
-      'mawardi', 'ardi',
-      'rania naila husna', 'rania', 'ranianailahusna',
-      'alfiana ayuni', 'alfiana', 'alfianaayuni'
-    ];
-    for (let k = 0; k < pelayananNames.length; k++) {
-      if (userAlpha === getAlphaOnly(pelayananNames[k])) {
-        return 'RESEPSIONIS';
-      }
-    }
-
-    // 3. Definitif Keamanan
-    const securityNames = [
-      'eddy suryadi', 'eddy', 'syarif reza nopriadrian al kadri', 'syarif reza', 'sy reza', 'syreza', 'reza',
-      'feri yustami', 'feri', 'rizki fadil', 'rizki', 'eko prasetyo', 'eko', 'agus tetriansyah', 'agus'
-    ];
-    for (let k = 0; k < securityNames.length; k++) {
-      if (userAlpha === getAlphaOnly(securityNames[k])) {
-        return 'KEAMANAN KANTOR';
-      }
-    }
-  }
-
-  if (sheet) {
-    try {
-      const sName = sheet.getName();
-      const sNameUpper = String(sName || '').toUpperCase();
-      const isJadwalOrUsers = sNameUpper.includes('USERS') || sNameUpper.includes('JADWAL') || sNameUpper.includes('INSPEKSI');
-
-      if (!isJadwalOrUsers) {
-        const maxCols = Math.min(sheet.getMaxColumns(), 15);
-        const maxRows = Math.min(sheet.getMaxRows(), 10);
-        const vals = sheet.getRange(1, 1, maxRows, maxCols).getValues();
-
-        for (let r = 0; r < vals.length; r++) {
-          for (let c = 0; c < vals[r].length; c++) {
-            const v = String(vals[r][c] || '').toUpperCase().trim();
-            if (v.includes('RESEPSIONIS') || v.includes('PELAYANAN') || v.includes('PST') || v.includes('STANDAR PELAYANAN')) {
-              return 'RESEPSIONIS';
-            }
-            if (v.includes('KEBERSIHAN') || v.includes('KEBERSIHAN KANTOR')) {
-              return 'PIKET KEBERSIHAN KANTOR';
-            }
-            if (v.includes('KEAMANAN') || v.includes('SECURITY')) {
-              return 'KEAMANAN KANTOR';
-            }
-          }
-        }
-
-        if (sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PELAYANAN') || sNameUpper.includes('PST')) return 'RESEPSIONIS';
-        if (sNameUpper.includes('KEBERSIHAN')) return 'PIKET KEBERSIHAN KANTOR';
-        if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) return 'KEAMANAN KANTOR';
-
-        return 'PIKET KEBERSIHAN KANTOR';
-      }
-    } catch (e) { /* ignore */ }
-  }
-
-  if (matchedUser && ss && !sheet) {
-    try {
-      const jadwalSheet = findJadwalSheet(ss);
-      if (jadwalSheet) {
-        const jVals = jadwalSheet.getDataRange().getValues();
-        const rowInJadwal = findEmployeeRowInJadwal(jVals, matchedUser, 0);
-        if (rowInJadwal !== -1) {
-          return 'KEAMANAN KANTOR';
-        }
-      }
-    } catch (e) { /* ignore */ }
-  }
-
-  return 'PIKET KEBERSIHAN KANTOR';
-}
-
-function determineUnit(jenis, role, customUnit) {
-  if (customUnit) {
-    const cu = String(customUnit).trim().toLowerCase();
-    if (cu.includes('kebersihan')) return 'Kebersihan';
-    if (cu.includes('pelayanan') || cu.includes('resepsionis')) return 'Pelayanan';
-    if (cu.includes('keamanan') || cu.includes('security') || cu.includes('satpam')) return 'Keamanan';
-    if (cu.includes('manajemen') || cu.includes('pimpinan') || cu.includes('tu') || cu.includes('umum')) return 'Manajemen';
-  }
-
-  const rUpper = String(role || '').toUpperCase();
-  if (rUpper.includes('ADMIN') || rUpper.includes('SUPERVISOR') || rUpper.includes('KABAG') || rUpper.includes('MANAJEMEN')) return 'Manajemen';
-  if (rUpper.includes('HUMAS') || rUpper.includes('KORLAP')) return 'Umum';
-  if (rUpper.includes('RESEPSIONIS') || rUpper.includes('PELAYANAN')) return 'Pelayanan';
-  if (rUpper.includes('KEAMANAN') || rUpper.includes('SECURITY') || rUpper.includes('SATPAM')) return 'Keamanan';
-  if (rUpper.includes('KEBERSIHAN')) return 'Kebersihan';
-
-  const jUpper = String(jenis || '').toUpperCase();
-  if (jUpper.includes('RESEPSIONIS') || jUpper.includes('PELAYANAN')) return 'Pelayanan';
-  if (jUpper.includes('KEAMANAN') || jUpper.includes('SECURITY')) return 'Keamanan';
-  if (jUpper.includes('KEBERSIHAN')) return 'Kebersihan';
-
-  return 'Kebersihan';
-}
-
-/**
- * Autentikasi Pengguna & Sesi Berbasis Spreadsheet
- * Mendukung verifikasi hash SHA-256 dan auto-upgrade password plaintext
- */
-function login(username, password) {
-  try {
-    if (!username || !password) {
-      return { success: false, message: "Username dan Password wajib diisi." };
-    }
-
-    const ss = getDb();
-    if (!ss) {
-      return { success: false, message: "Koneksi database spreadsheet gagal. Pastikan SPREADSHEET_ID valid." };
-    }
-
-    const userSheet = findSheet(ss, "Users");
-    if (!userSheet) {
-      return { success: false, message: "Sheet 'Users' tidak ditemukan pada spreadsheet." };
-    }
-
-    const rawValues = userSheet.getDataRange().getValues();
-    if (rawValues.length < 2) {
-      return { success: false, message: "Sheet 'Users' belum memiliki data akun." };
-    }
-
-    const inputUserNorm = normalizeName(username);
-    const inputUserAlpha = getAlphaOnly(username);
-    const inputPassClean = cleanPass(password);
-
-    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3, colRole = -1, colUnit = -1, colNip = -1;
-    let headerRowIdx = 0;
-
-    for (let r = 0; r < Math.min(5, rawValues.length); r++) {
-      const row = rawValues[r];
-      for (let c = 0; c < row.length; c++) {
-        const h = cleanStr(row[c]).toLowerCase();
-        if (h.includes('sheet')) colSheet = c;
-        else if (h.includes('user')) colUser = c;
-        else if (h.includes('nama') || h.includes('pegawai')) colNama = c;
-        else if (h.includes('pass') || h === 'password' || h.includes('sandi')) colPass = c;
-        else if (h.includes('role') || h.includes('jabatan')) colRole = c;
-        else if (h.includes('unit') || h.includes('kategori')) colUnit = c;
-        else if (h.includes('nip') || h.includes('id')) colNip = c;
-      }
-      if (colUser !== -1 && colPass !== -1) {
-        headerRowIdx = r;
-        break;
-      }
-    }
-
-    let matchedUser = null;
-    let matchedRowIndex = -1;
-    let needPasswordUpgrade = false;
-
-    for (let i = headerRowIdx + 1; i < rawValues.length; i++) {
-      const row = rawValues[i];
-      const rowUser = cleanStr(row[colUser]);
-      const rowNama = cleanStr(row[colNama]);
-      const rowSheet = cleanStr(row[colSheet]);
-      const rowPass = cleanPass(row[colPass]);
-      const rowRole = colRole !== -1 ? cleanStr(row[colRole]) : '';
-      const rowUnit = colUnit !== -1 ? cleanStr(row[colUnit]) : '';
-      const rowNip = colNip !== -1 ? cleanStr(row[colNip]) : '';
-
-      if (!rowUser && !rowNama) continue;
-
-      const rowUserAlpha = getAlphaOnly(rowUser);
-      const rowNamaAlpha = getAlphaOnly(rowNama);
-
-      const isMatchUser = (
-        inputUserAlpha === rowUserAlpha ||
-        inputUserAlpha === rowNamaAlpha ||
-        isUserAliasMatch(inputUserAlpha, rowUserAlpha) ||
-        isUserAliasMatch(inputUserAlpha, rowNamaAlpha)
-      );
-
-      if (isMatchUser && verifyPassword(inputPassClean, rowPass)) {
-        matchedUser = {
-          username: rowUser || rowNama,
-          namaPegawai: rowNama || rowUser,
-          namaSheet: rowSheet || rowUser,
-          role: rowRole,
-          unit: rowUnit,
-          nip: rowNip
-        };
-        matchedRowIndex = i + 1;
-        // Tandai perlunya upgrade jika password masih berformat plaintext
-        if (rowPass.indexOf('sha256:') !== 0) {
-          needPasswordUpgrade = true;
-        }
-        break;
-      }
-    }
-
-    if (!matchedUser) {
-      return { success: false, message: "Username atau Password salah. Pastikan kredensial sesuai dengan sheet 'Users'." };
-    }
-
-    // Auto-upgrade password plaintext ke SHA-256 hash secara transparan
-    if (needPasswordUpgrade && matchedRowIndex > 0) {
-      try {
-        var hashed = hashPassword(inputPassClean);
-        userSheet.getRange(matchedRowIndex, colPass + 1).setValue(hashed);
-        _cachedUserList = null;
-      } catch (eUpgrade) { /* abaikan jika terjadi kendala minor penulisan */ }
-    }
-
-    let targetSheet = findEmployeeSheet(ss, matchedUser.namaSheet, matchedUser.namaPegawai, matchedUser.username);
-    let actualSheetName = targetSheet ? targetSheet.getName() : (matchedUser.namaSheet || matchedUser.namaPegawai);
-    let jenisSheet = getSheetJenis(targetSheet, matchedUser, ss);
-
-    let detectedRole = matchedUser.role;
-    const uLower = matchedUser.username.toLowerCase();
-    const nLower = matchedUser.namaPegawai.toLowerCase();
-    const rLower = (matchedUser.role || '').toLowerCase();
-
-    if (rLower.includes('admin') || uLower === 'admin' || uLower.includes('admin') || nLower.includes('admin')) {
-      detectedRole = 'Admin';
-    } else if (rLower.includes('supervisor') || uLower === 'supervisor' || uLower.includes('supervisor') || uLower.includes('kabag') || uLower.includes('kasubbag') || nLower.includes('kabag') || nLower.includes('kasubbag')) {
-      detectedRole = 'Supervisor';
-    } else if (rLower.includes('humas') || uLower.includes('humas') || nLower.includes('humas') || uLower.includes('timumum')) {
-      detectedRole = 'Tim Umum dan Humas';
-    } else if (rLower.includes('korlap') || uLower.includes('korlap') || nLower.includes('korlap') || nLower.includes('koordinator')) {
-      detectedRole = 'Koordinator Lapangan';
-    } else if (rLower.includes('keamanan') || rLower.includes('satpam') || rLower.includes('security') || jenisSheet === 'KEAMANAN KANTOR') {
-      detectedRole = 'Petugas Keamanan';
-    } else if (rLower.includes('resepsionis') || rLower.includes('pelayanan') || jenisSheet === 'RESEPSIONIS') {
-      detectedRole = 'Petugas Pelayanan';
-    } else {
-      detectedRole = 'Petugas Kebersihan';
-    }
-
-    const detectedUnit = determineUnit(jenisSheet, detectedRole, matchedUser.unit);
-
-    const token = Utilities.getUuid();
-    const cache = CacheService.getScriptCache();
-
-    const sessionPayload = {
-      username: matchedUser.username,
-      namaPegawai: matchedUser.namaPegawai,
-      namaSheet: actualSheetName,
-      jenis: jenisSheet,
-      role: detectedRole,
-      unit: detectedUnit,
-      nip: matchedUser.nip || '',
-      loginTime: new Date().toISOString()
-    };
-
-    const sessDuration = (typeof SESSION_DURATION_SEC !== 'undefined' && SESSION_DURATION_SEC) ? SESSION_DURATION_SEC : 21600;
-    cache.put(token, JSON.stringify(sessionPayload), sessDuration);
-
-    return {
-      success: true,
-      token: token,
-      user: {
-        username: matchedUser.username,
-        namaPegawai: matchedUser.namaPegawai,
-        jenis: jenisSheet,
-        role: detectedRole,
-        unit: detectedUnit,
-        nip: matchedUser.nip || ''
-      }
-    };
-
-  } catch (err) {
-    return { success: false, message: "Terjadi kesalahan server: " + err.message };
-  }
-}
-
-function getSessionUser(token) {
-  if (!token) return null;
-  const cache = CacheService.getScriptCache();
-  const raw = cache.get(token);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
-  }
-}
-
-function changeCredentials(token, oldPassword, newUsername, newPassword) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
-    }
-
-    if (!oldPassword) {
-      return { success: false, message: "Password saat ini wajib diisi untuk verifikasi keamanan." };
-    }
-
-    const cleanOldPass = cleanPass(oldPassword);
-    const cleanNewUser = newUsername ? cleanStr(newUsername) : '';
-    const cleanNewPass = newPassword ? cleanPass(newPassword) : '';
-
-    if (!cleanNewUser && !cleanNewPass) {
-      return { success: false, message: "Harap masukkan username baru atau password baru yang ingin diubah." };
-    }
-
-    if (cleanNewUser && cleanNewUser.length < 3) {
-      return { success: false, message: "Username baru minimal harus terdiri dari 3 karakter." };
-    }
-
-    if (cleanNewPass && cleanNewPass.length < 4) {
-      return { success: false, message: "Password baru minimal harus terdiri dari 4 karakter." };
-    }
-
-    const ss = getDb();
-    if (!ss) {
-      return { success: false, message: "Koneksi database spreadsheet gagal." };
-    }
-
-    const userSheet = findSheet(ss, "Users");
-    if (!userSheet) {
-      return { success: false, message: "Sheet 'Users' tidak ditemukan pada spreadsheet." };
-    }
-
-    const rawValues = userSheet.getDataRange().getValues();
-    const displayValues = userSheet.getDataRange().getDisplayValues();
-    if (rawValues.length < 2) {
-      return { success: false, message: "Data pengguna kosong." };
-    }
-
-    // Temukan baris header dan indeks kolom secara dinamis
-    let colUser = 0, colNama = 1, colSheet = 2, colPass = 3;
-    let headerRowIdx = 0;
-
-    for (let r = 0; r < Math.min(5, rawValues.length); r++) {
-      const row = rawValues[r];
-      for (let c = 0; c < row.length; c++) {
-        const h = cleanStr(row[c]).toLowerCase();
-        if (h.includes('sheet')) colSheet = c;
-        else if (h.includes('user')) colUser = c;
-        else if (h.includes('nama') || h.includes('pegawai')) colNama = c;
-        else if (h.includes('password') || h.includes('pass') || h.includes('sandi')) colPass = c;
-      }
-      if (cleanStr(row[colUser]).toLowerCase().includes('user') || cleanStr(row[colPass]).toLowerCase().includes('pass')) {
-        headerRowIdx = r;
-        break;
-      }
-    }
-
-    // Pastikan header kolom log timestamp ada jika belum ada
-    if (rawValues[headerRowIdx].length < 5 || !rawValues[headerRowIdx][4]) {
-      userSheet.getRange(headerRowIdx + 1, 5).setValue("Terakhir Ganti Kredensial");
-      userSheet.getRange(headerRowIdx + 1, 5)
-        .setBackground("#1e40af")
-        .setFontColor("#ffffff")
-        .setFontWeight("bold");
-    }
-
-    // Cari baris pengguna saat ini di sheet Users
-    let userRowIndex = -1;
-    let currentStoredUser = null;
-    const sessionUserLower = cleanStr(session.username).toLowerCase();
-    const sessionNamaAlpha = getAlphaOnly(session.namaPegawai);
-    const sessionSheetAlpha = getAlphaOnly(session.namaSheet);
-
-    for (let i = headerRowIdx + 1; i < rawValues.length; i++) {
-      const uName = cleanStr(rawValues[i][colUser]).toLowerCase();
-      const nPegAlpha = getAlphaOnly(rawValues[i][colNama]);
-      const nSheetAlpha = getAlphaOnly(rawValues[i][colSheet]);
-
-      const isMatch = (
-        uName === sessionUserLower ||
-        (sessionNamaAlpha && nPegAlpha === sessionNamaAlpha) ||
-        (sessionSheetAlpha && nSheetAlpha === sessionSheetAlpha) ||
-        isUserAliasMatch(getAlphaOnly(session.username), getAlphaOnly(rawValues[i][colUser])) ||
-        isUserAliasMatch(sessionNamaAlpha, nPegAlpha)
-      );
-
-      if (isMatch) {
-        userRowIndex = i + 1;
-        const rawPass = cleanPass(rawValues[i][colPass]);
-        const dispPass = displayValues[i] ? cleanPass(displayValues[i][colPass]) : '';
-
-        currentStoredUser = {
-          username: cleanStr(rawValues[i][colUser]),
-          namaPegawai: cleanStr(rawValues[i][colNama]),
-          namaSheet: cleanStr(rawValues[i][colSheet]),
-          password: rawPass || dispPass
-        };
-        break;
-      }
-    }
-
-    if (!currentStoredUser || userRowIndex === -1) {
-      return { success: false, message: "Data akun tidak ditemukan pada sheet Users." };
-    }
-
-    // Verifikasi kesesuaian password saat ini (Mendukung SHA-256 dan Plaintext)
-    const storedPassClean = cleanPass(currentStoredUser.password);
-    if (!verifyPassword(cleanOldPass, storedPassClean)) {
-      return { success: false, message: "Password saat ini salah. Perubahan kredensial ditolak." };
-    }
-
-    // Validasi duplikasi username baru dengan pengguna lain
-    const targetUsername = cleanNewUser ? cleanNewUser : currentStoredUser.username;
-    if (cleanNewUser && cleanNewUser.toLowerCase() !== currentStoredUser.username.toLowerCase()) {
-      for (let i = headerRowIdx + 1; i < rawValues.length; i++) {
-        if (i + 1 !== userRowIndex) {
-          const otherUser = cleanStr(rawValues[i][colUser]).toLowerCase();
-          if (otherUser === cleanNewUser.toLowerCase()) {
-            return {
-              success: false,
-              message: "Username '" + cleanNewUser + "' sudah digunakan oleh pegawai lain. Silakan pilih username lain."
-            };
-          }
-        }
-      }
-    }
-
-    // Password baru selalu di-hash menggunakan SHA-256
-    const targetPassword = cleanNewPass ? hashPassword(cleanNewPass) : (storedPassClean.indexOf('sha256:') === 0 ? storedPassClean : hashPassword(storedPassClean));
-    const nowTimestamp = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
-
-    // TULIS PERUBAHAN LANGSUNG KE SHEET USERS
-    userSheet.getRange(userRowIndex, colUser + 1).setValue(String(targetUsername));
-    userSheet.getRange(userRowIndex, colPass + 1).setValue(String(targetPassword));
-    userSheet.getRange(userRowIndex, 5).setValue(nowTimestamp);
-
-    // FLUSH LANGSUNG KE SPREADSHEET AGAR TERSIMPAN PERMANEN
-    SpreadsheetApp.flush();
-
-    // Reset memory user list cache
-    _cachedUserList = null;
-
-    // Perbarui sesi aktif di Cache
-    const cache = CacheService.getScriptCache();
-    const updatedPayload = {
-      username: targetUsername,
-      namaPegawai: session.namaPegawai,
-      namaSheet: session.namaSheet,
-      jenis: session.jenis,
-      loginTime: session.loginTime || new Date().toISOString()
-    };
-    const sessDuration = (typeof SESSION_DURATION_SEC !== 'undefined' && SESSION_DURATION_SEC) ? SESSION_DURATION_SEC : 21600;
-    cache.put(token, JSON.stringify(updatedPayload), sessDuration);
-
-    return {
-      success: true,
-      message: "Username dan password berhasil disimpan dengan enkripsi SHA-256 pada sheet Users!",
-      user: {
-        username: targetUsername,
-        namaPegawai: session.namaPegawai,
-        jenis: session.jenis
-      }
-    };
-
-  } catch (err) {
-    return { success: false, message: "Terjadi kesalahan: " + err.message };
-  }
-}
-
-/**
- * Logout & Menghapus Sesi Pengguna
- */
-function logout(token) {
-  try {
-    if (token) {
-      const cache = CacheService.getScriptCache();
-      cache.remove(token);
-    }
-    return { success: true };
-  } catch (err) {
-    return { success: true };
-  }
-}
-
-/**
- * PENGAMBILAN DAFTAR PENGGUNA TEROPTIMASI O(1)
- * Menghilangkan pembacaan sekuensial lembar sheet personal pada loop akun.
- * Menghemat 20+ panggilan Spreadsheet RPC dan mempercepat load dashboard 5-7 detik.
- */
-function getAllUsersList(ss) {
-  if (_cachedUserList && _cachedUserList.length > 0) {
-    return _cachedUserList;
-  }
-
-  if (!ss) ss = getDb();
-  if (!ss) return [];
-
-  const userSheet = findSheet(ss, "Users");
-  if (!userSheet) return [];
-
-  const rawValues = userSheet.getDataRange().getValues();
-  if (rawValues.length < 2) return [];
-
-  let colUser = 0, colNama = 1, colSheet = 2, colPass = 3, colRole = -1, colUnit = -1, colNip = -1;
-  let headerRowIdx = 0;
-
-  for (let r = 0; r < Math.min(5, rawValues.length); r++) {
-    const row = rawValues[r];
-    let headerKeywords = 0;
-    for (let c = 0; c < row.length; c++) {
-      const h = cleanStr(row[c]).toLowerCase();
-      if (h.includes('sheet')) { colSheet = c; headerKeywords++; }
-      else if (h.includes('user')) { colUser = c; headerKeywords++; }
-      else if (h.includes('nama') || h.includes('pegawai')) { colNama = c; headerKeywords++; }
-      else if (h.includes('role') || h.includes('jabatan')) { colRole = c; headerKeywords++; }
-      else if (h.includes('unit') || h.includes('kategori')) { colUnit = c; headerKeywords++; }
-      else if (h.includes('nip') || h.includes('id')) { colNip = c; headerKeywords++; }
-    }
-    if (headerKeywords >= 2) {
-      headerRowIdx = r;
-      break;
-    }
-  }
-
-  const list = [];
-  for (let i = headerRowIdx + 1; i < rawValues.length; i++) {
-    const row = rawValues[i];
-    const uName = cleanStr(row[colUser]);
-    const nNama = cleanStr(row[colNama]);
-    if (!uName && !nNama) continue;
-
-    const uObj = {
-      username: uName || nNama,
-      namaPegawai: nNama || uName,
-      namaSheet: cleanStr(row[colSheet]) || (uName || nNama),
-      role: colRole !== -1 ? cleanStr(row[colRole]) : '',
-      unit: colUnit !== -1 ? cleanStr(row[colUnit]) : '',
-      nip: colNip !== -1 ? cleanStr(row[colNip]) : ''
-    };
-
-    // Resolusi cepat berbasis metadata sheet Users tanpa I/O RPC ke sheet pegawai
-    resolveUserRoleAndUnit(uObj);
-
-    list.push(uObj);
-  }
-
-  _cachedUserList = list;
-  return list;
-}
-
-// <<<<<<<<<< END MODUL: backend/Auth.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/BuktiDukung.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - BUKTI DUKUNG & SUPERVISOR CHECKLIST VALIDATION MODULE
- * BPS Provinsi Kalimantan Barat
- * ========================================================================
- */
-
-/**
- * Inisialisasi Sheet ValidasiDanBuktiDukung jika belum ada di Spreadsheet
- */
-function setupBuktiDukungSheet(ss) {
-  if (!ss) ss = getDb();
-  if (!ss) return null;
-
-  var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
-  var sh = findSheet(ss, sheetName);
-  if (!sh) {
-    sh = ss.insertSheet(sheetName);
-    var headers = [
-      "TaskKey", "Timestamp", "Tahun", "Bulan", "BulanNama", "Tanggal", "Waktu",
-      "UnitKerja", "NamaPegawai", "Username", "Ruangan", "NamaTugas",
-      "StatusPetugas", "StatusPengawas", "NamaPengawas", "WaktuValidasiPengawas",
-      "AdaBuktiDukung", "FileIdDrive", "FileUrlDrive", "FileName",
-      "Koordinat", "Lokasi", "Catatan"
-    ];
-    sh.appendRow(headers);
-    sh.getRange(1, 1, 1, headers.length)
-      .setBackground("#1e40af")
-      .setFontColor("#ffffff")
-      .setFontWeight("bold");
-    sh.setFrozenRows(1);
-  }
-  return sh;
-}
-
-/**
- * Menghasilkan kunci unik task untuk integrasi data checklist & bukti dukung
- */
-function generateTaskKey(tahun, bulan, tanggal, namaPegawaiOrUsername, ruangan, namaTugas) {
-  var tThn = Number(tahun || 0);
-  var tBln = Number(bulan || 0);
-  var tTgl = Number(tanggal || 0);
-  var pAlpha = getAlphaOnly(namaPegawaiOrUsername || '');
-  var rAlpha = getAlphaOnly(ruangan || 'umum');
-  var kAlpha = getAlphaOnly(namaTugas || '');
-  return [tThn, tBln, tTgl, pAlpha, rAlpha, kAlpha].join('_');
-}
-
-/**
- * Resolves the precise Unit Kerja ('Kebersihan', 'Pelayanan', 'Keamanan') for an officer
- * based on officer name, username, payload unit, and session.
- */
-function resolveUnitKerja(payloadUnit, empName, username, session) {
-  var nameCheck = getAlphaOnly(empName || username || (session ? (session.namaPegawai || session.username) : ''));
-
-  // 1. Cek daftar definitif Petugas Pelayanan / Resepsionis
-  var pelayananNames = ['mawardi', 'ardi', 'ranianailahusna', 'rania', 'alfianaayuni', 'alfiana'];
-  for (var i = 0; i < pelayananNames.length; i++) {
-    var pAlpha = getAlphaOnly(pelayananNames[i]);
-    if (nameCheck === pAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(pAlpha) >= 0 || pAlpha.indexOf(nameCheck) >= 0))) {
-      return 'Pelayanan';
-    }
-  }
-
-  // 2. Cek daftar definitif Petugas Keamanan / Satpam
-  var securityNames = ['eddysuryadi', 'eddy', 'syarifrezanopriadrianalkadri', 'syarifreza', 'syreza', 'reza', 'feriyustami', 'feri', 'rizkifadil', 'rizki', 'ekoprasetyo', 'eko', 'agustetriansyah', 'agus'];
-  for (var j = 0; j < securityNames.length; j++) {
-    var sAlpha = getAlphaOnly(securityNames[j]);
-    if (nameCheck === sAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(sAlpha) >= 0 || sAlpha.indexOf(nameCheck) >= 0))) {
-      return 'Keamanan';
-    }
-  }
-
-  // 3. Cek daftar definitif Petugas Kebersihan
-  var kebersihanNames = ['yunijuniarti', 'yuni', 'slametriyadi', 'slamet', 'nurramadhanial', 'dede', 'muhammadsyukri', 'msyukri', 'syukri', 'ramadhan', 'rama'];
-  for (var k = 0; k < kebersihanNames.length; k++) {
-    var kAlpha = getAlphaOnly(kebersihanNames[k]);
-    if (nameCheck === kAlpha || (nameCheck.length >= 4 && (nameCheck.indexOf(kAlpha) >= 0 || kAlpha.indexOf(nameCheck) >= 0))) {
-      return 'Kebersihan';
-    }
-  }
-
-  // 4. Jika payloadUnit diberikan secara eksplisit dan valid
-  if (payloadUnit) {
-    var pLower = String(payloadUnit).toLowerCase().trim();
-    if (pLower === 'pelayanan' || pLower.includes('resepsionis') || pLower.includes('pst')) return 'Pelayanan';
-    if (pLower === 'keamanan' || pLower.includes('security') || pLower.includes('satpam')) return 'Keamanan';
-    if (pLower === 'kebersihan') return 'Kebersihan';
-  }
-
-  // 5. Cek session.unit
-  if (session && session.unit) {
-    var sLower = String(session.unit).toLowerCase().trim();
-    if (sLower === 'pelayanan' || sLower.includes('resepsionis') || sLower.includes('pst')) return 'Pelayanan';
-    if (sLower === 'keamanan' || sLower.includes('security') || sLower.includes('satpam')) return 'Keamanan';
-    if (sLower === 'kebersihan') return 'Kebersihan';
-  }
-
-  return 'Kebersihan';
-}
-
-/**
- * Mendapatkan atau membuat folder anak di Google Drive (Mencegah duplikasi folder)
- */
-function getOrCreateChildFolder(parentFolder, folderName) {
-  var nameClean = String(folderName || '').trim();
-  if (!nameClean) nameClean = 'Lainnya';
-
-  try {
-    var folders = parentFolder.getFoldersByName(nameClean);
-    if (folders.hasNext()) {
-      return folders.next();
-    }
-    return parentFolder.createFolder(nameClean);
-  } catch (err) {
-    try {
-      var checkFolders = parentFolder.getFoldersByName(nameClean);
-      if (checkFolders.hasNext()) {
-        return checkFolders.next();
-      }
-    } catch (eCheck) { /* ignore */ }
-    throw new Error("Gagal membuat folder '" + nameClean + "': " + err.message);
-  }
-}
-
-/**
- * Resolver Cerdas & Adaptif Folder Induk Google Drive:
- * 1. Mencoba mengakses Folder ID yang dikonfigurasi (GOOGLE_DRIVE_ROOT_FOLDER_ID)
- * 2. Menguji akses tulis ke folder target
- * 3. Jika folder target tidak dapat diakses (karena link belum ditambahkan ke Drive deployer,
- *    atau restriksi domain Workspace):
- *    - Otomatis fallback ke folder cadangan di My Drive deployer: "[SIMPEL-KU] Bukti Dukung Foto"
- *    - Menjamin proses upload bukti foto petugas TIDAK PERNAH MACET / GAGAL
- */
-function resolveRootFolder(targetFolderId) {
-  var configuredId = targetFolderId || (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined' ? GOOGLE_DRIVE_ROOT_FOLDER_ID : '');
-  var fallbackFolderName = (typeof GOOGLE_DRIVE_FALLBACK_FOLDER_NAME !== 'undefined' ? GOOGLE_DRIVE_FALLBACK_FOLDER_NAME : '[SIMPEL-KU] Bukti Dukung Foto');
-  
-  var effectiveEmail = '';
-  try {
-    effectiveEmail = Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '';
-  } catch (eEmail) { /* ignore */ }
-
-  var issues = [];
-
-  // Strategi 1: Coba akses folder ID yang dikonfigurasi
-  if (configuredId) {
-    try {
-      var folder = DriveApp.getFolderById(configuredId);
-      var folderName = folder.getName();
-      return {
-        folder: folder,
-        folderId: configuredId,
-        folderName: folderName,
-        isFallback: false,
-        note: "Menggunakan Folder Induk Utama (" + folderName + ")"
-      };
-    } catch (eTarget) {
-      issues.push("Folder ID '" + configuredId + "' gagal diakses: " + eTarget.message);
-    }
-  }
-
-  // Strategi 2: Cari apakah ada folder cadangan yang sudah dibuat sebelumnya di My Drive
-  try {
-    var existingFolders = DriveApp.getFoldersByName(fallbackFolderName);
-    if (existingFolders.hasNext()) {
-      var f = existingFolders.next();
-      return {
-        folder: f,
-        folderId: f.getId(),
-        folderName: f.getName(),
-        isFallback: true,
-        note: "Menggunakan folder cadangan: " + fallbackFolderName + " (Folder target ID " + configuredId + " belum dapat diakses)"
-      };
-    }
-  } catch (eSearch) {
-    issues.push("Pencarian folder cadangan gagal: " + eSearch.message);
-  }
-
-  // Strategi 3: Buat folder cadangan baru di Drive deployer
-  try {
-    var newFolder = DriveApp.createFolder(fallbackFolderName);
-    try {
-      newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (eShare) { /* batasan domain */ }
-
-    return {
-      folder: newFolder,
-      folderId: newFolder.getId(),
-      folderName: fallbackFolderName,
-      isFallback: true,
-      note: "Dibuat otomatis folder cadangan: " + fallbackFolderName + " karena folder induk belum dihubungkan ke email script (" + (effectiveEmail || "deployer") + ")"
-    };
-  } catch (eCreate) {
-    issues.push("Gagal membuat folder cadangan di Drive: " + eCreate.message);
-  }
-
-  // Jika semua gagal, kemungkinan besar OAuth scope DriveApp belum diotorisasi
-  throw new Error(
-    "Layanan Google Drive tidak dapat diakses (" + (issues.join(' | ') || 'Izin belum diotorisasi') + "). " +
-    "Pastikan akun Google Apps Script (" + (effectiveEmail || "deployer") + ") telah mengotorisasi izin Google Drive."
-  );
-}
-
-/**
- * Membaca seluruh data bukti dukung & status validasi pengawas pada bulan & tahun tertentu
- */
-function getBuktiDukungMap(ss, bulan, tahun) {
-  if (!ss) ss = getDb();
-  if (!ss) return { map: {}, fallbackMap: {} };
-
-  var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
-  var sh = findSheet(ss, sheetName);
-  if (!sh) return { map: {}, fallbackMap: {} };
-
-  var values = sh.getDataRange().getValues();
-  if (values.length < 2) return { map: {}, fallbackMap: {} };
-
-  var map = {};
-  var fallbackMap = {};
-  var selMonth = bulan ? Number(bulan) : null;
-  var selYear = tahun ? Number(tahun) : null;
-
-  for (var r = 1; r < values.length; r++) {
-    var row = values[r];
-    var taskKey = String(row[0] || '').trim();
-    var rYear = Number(row[2] || 0);
-    var rMonth = Number(row[3] || 0);
-    var rDay = Number(row[5] || 0);
-
-    if (selYear && rYear && rYear !== selYear) continue;
-    if (selMonth && rMonth && rMonth !== selMonth) continue;
-
-    var record = {
-      rowIndex: r + 1,
-      taskKey: taskKey,
-      timestamp: row[1] ? new Date(row[1]).toISOString() : '',
-      tahun: rYear,
-      bulan: rMonth,
-      bulanNama: String(row[4] || ''),
-      tanggal: rDay,
-      waktu: String(row[6] || ''),
-      unitKerja: String(row[7] || ''),
-      namaPegawai: String(row[8] || ''),
-      username: String(row[9] || ''),
-      ruangan: String(row[10] || ''),
-      namaTugas: String(row[11] || ''),
-      statusPetugas: (row[12] === true || row[12] === 1 || String(row[12]).toUpperCase() === 'TRUE'),
-      statusPengawas: (row[13] === true || row[13] === 1 || String(row[13]).toUpperCase() === 'TRUE'),
-      namaPengawas: String(row[14] || ''),
-      waktuValidasiPengawas: String(row[15] || ''),
-      adaBuktiDukung: (row[16] === true || row[16] === 1 || String(row[16]).toUpperCase() === 'TRUE'),
-      fileIdDrive: String(row[17] || ''),
-      fileUrlDrive: String(row[18] || ''),
-      fileName: String(row[19] || ''),
-      koordinat: String(row[20] || ''),
-      lokasi: String(row[21] || ''),
-      catatan: String(row[22] || '')
-    };
-
-    if (taskKey) {
-      map[taskKey] = record;
-    }
-
-    // Fallback key: tanggal_namaPegawaiAlpha_ruanganAlpha_tugasAlpha
-    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
-    fallbackMap[fKey] = record;
-  }
-
-  return { map: map, fallbackMap: fallbackMap };
-}
-
-/**
- * Mengunggah Foto Bukti Dukung ke Google Drive dengan struktur folder otomatis & bebas duplikat
- */
-function uploadBuktiDukungFoto(token, payload) {
-  try {
-    var session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
-    }
-
-    if (!payload || !payload.imageBase64) {
-      return { success: false, message: "Data foto bukti dukung tidak ditemukan." };
-    }
-
-    var ss = getDb();
-    if (!ss) {
-      return { success: false, message: "Koneksi spreadsheet gagal." };
-    }
-
-    var now = new Date();
-    var currentYear = now.getFullYear();
-    var currentMonth = now.getMonth() + 1;
-    var currentDay = now.getDate();
-
-    var targetTahun = payload.tahun ? Number(payload.tahun) : currentYear;
-    var targetBulan = payload.bulan ? Number(payload.bulan) : currentMonth;
-    var targetTanggal = payload.tanggal ? Number(payload.tanggal) : (payload.dayNum ? Number(payload.dayNum) : currentDay);
-
-    var empName = cleanStr(payload.targetNamaPegawai || payload.namaPegawai || session.namaPegawai || session.username);
-    var username = cleanStr(payload.targetUsername || payload.username || session.username);
-    var unitKerja = resolveUnitKerja(payload.unit, empName, username, session);
-    var namaTugas = cleanStr(payload.namaTugas || payload.kegiatan || payload.item || 'Pelaksanaan Tugas');
-    var ruangan = cleanStr(payload.ruangan || 'Area Umum');
-
-    var monthNames = (typeof MONTH_NAMES_ID !== 'undefined' && MONTH_NAMES_ID) ? MONTH_NAMES_ID : [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    var namaBulanStr = monthNames[targetBulan] || ('Bulan_' + targetBulan);
-
-    // 1. Ekstrak dan Konversi Base64 ke Blob Foto
-    var base64Content = payload.imageBase64;
-    if (base64Content.indexOf('base64,') >= 0) {
-      base64Content = base64Content.split('base64,')[1];
-    }
-    var imageBytes = Utilities.base64Decode(base64Content);
-
-    // Format Nama File: [NamaTugas]_[YYYY-MM-DD]_[HH-mm].jpg
-    var cleanTaskSlug = namaTugas.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').substring(0, 30);
-    if (!cleanTaskSlug) cleanTaskSlug = 'Bukti_Tugas';
-
-    var datePart = targetTahun + '-' +
-      (targetBulan < 10 ? '0' + targetBulan : targetBulan) + '-' +
-      (targetTanggal < 10 ? '0' + targetTanggal : targetTanggal);
-
-    var timePart = '';
-    if (payload.waktuWib) {
-      var numsOnly = String(payload.waktuWib).replace(/[^0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 5);
-      if (numsOnly) timePart = numsOnly;
-    }
-    if (!timePart) {
-      timePart = Utilities.formatDate(now, "GMT+7", "HH-mm");
-    }
-
-    var fileName = cleanTaskSlug + '_' + datePart + '_' + timePart + '.jpg';
-    var imageBlob = Utilities.newBlob(imageBytes, 'image/jpeg', fileName);
-
-    // 2. Akses Folder Induk Google Drive (Menggunakan Resolver Cerdas & Fallback)
-    var rootFolderInfo;
-    try {
-      rootFolderInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
-    } catch (eDrive) {
-      return {
-        success: false,
-        message: "Gagal mengakses Google Drive: " + eDrive.message
-      };
-    }
-    var rootFolder = rootFolderInfo.folder;
-
-    // 3. Bangun Struktur Folder Secara Berjenjang Tanpa Duplikasi:
-    // Folder Induk -> [Tahun] -> [Unit Kerja] -> [Bulan] -> [Nama Pegawai]
-    var yearFolder = getOrCreateChildFolder(rootFolder, String(targetTahun));
-    var unitFolder = getOrCreateChildFolder(yearFolder, unitKerja);
-    var monthFolder = getOrCreateChildFolder(unitFolder, namaBulanStr);
-    var employeeFolder = getOrCreateChildFolder(monthFolder, empName);
-
-    // 4. Simpan File Foto ke Folder Pegawai
-    var driveFile = employeeFolder.createFile(imageBlob);
-    try {
-      driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    } catch (eShare) { /* abaikan jika pembatasan domain */ }
-
-    var fileId = driveFile.getId();
-    var fileUrl = driveFile.getUrl();
-
-    // 5. Simpan / Perbarui Record di Sheet ValidasiDanBuktiDukung
-    var sh = setupBuktiDukungSheet(ss);
-    var taskKey = generateTaskKey(targetTahun, targetBulan, targetTanggal, username || empName, ruangan, namaTugas);
-
-    var waktuStr = payload.waktuWib || (Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB");
-    var koordinatStr = cleanStr(payload.koordinat || '-');
-    var lokasiStr = cleanStr(payload.lokasi || '-');
-    var catatanStr = cleanStr(payload.catatan || '-');
-
-    var values = sh.getDataRange().getValues();
-    var existingRowIdx = -1;
-
-    for (var r = 1; r < values.length; r++) {
-      if (String(values[r][0] || '').trim() === taskKey) {
-        existingRowIdx = r + 1;
-        break;
-      }
-    }
-
-    var recordRow = [
-      taskKey,
-      now,
-      targetTahun,
-      targetBulan,
-      namaBulanStr,
-      targetTanggal,
-      waktuStr,
-      unitKerja,
-      empName,
-      username,
-      ruangan,
-      namaTugas,
-      true, // StatusPetugas = TRUE karena ada bukti pelaksanaan
-      existingRowIdx > 0 ? values[existingRowIdx - 1][13] : false, // StatusPengawas tetap
-      existingRowIdx > 0 ? values[existingRowIdx - 1][14] : '',    // NamaPengawas tetap
-      existingRowIdx > 0 ? values[existingRowIdx - 1][15] : '',    // WaktuValidasiPengawas tetap
-      true, // AdaBuktiDukung = TRUE
-      fileId,
-      fileUrl,
-      fileName,
-      koordinatStr,
-      lokasiStr,
-      catatanStr
-    ];
-
-    if (existingRowIdx > 0) {
-      sh.getRange(existingRowIdx, 1, 1, recordRow.length).setValues([recordRow]);
-    } else {
-      sh.appendRow(recordRow);
-    }
-
-    SpreadsheetApp.flush();
-
-    // Invalidate script caches
-    clearScriptCacheKeys([
-      "cache_spv_dash_" + targetBulan + "_" + targetTahun,
-      "cache_rekap_terpadu_" + targetBulan + "_" + targetTahun
-    ]);
-    resetMemoryCache();
-
-    var successMsg = rootFolderInfo.isFallback
-      ? "Bukti foto berhasil disimpan ke Google Drive (" + rootFolderInfo.folderName + ")! Catatan: " + rootFolderInfo.note
-      : "Bukti dukung foto berhasil diunggah ke Google Drive!";
-
-    return {
-      success: true,
-      message: successMsg,
-      isFallbackFolder: rootFolderInfo.isFallback,
-      data: {
-        taskKey: taskKey,
-        fileId: fileId,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        folderUsed: rootFolderInfo.folderName,
-        isFallbackFolder: rootFolderInfo.isFallback,
-        folderNote: rootFolderInfo.note,
-        koordinat: koordinatStr,
-        lokasi: lokasiStr,
-        waktu: waktuStr,
-        tanggal: targetTanggal,
-        bulan: targetBulan,
-        tahun: targetTahun,
-        namaPegawai: empName,
-        namaTugas: namaTugas,
-        ruangan: ruangan,
-        unitKerja: unitKerja
-      }
-    };
-
-  } catch (err) {
-    return {
-      success: false,
-      message: "Gagal mengunggah bukti foto: " + err.message
-    };
-  }
-}
-
-/**
- * Memperbarui Status Checklist / Validasi Pengawas (Bisa Centang & Uncheck)
- */
-function updateSupervisorChecklist(token, payload) {
-  try {
-    var session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    // Validasi Hak Akses Pengawas
-    var isManager = (session.role === 'Admin' ||
-                     session.role === 'Supervisor' ||
-                     session.role === 'Tim Umum dan Humas' ||
-                     session.role === 'Koordinator Lapangan');
-
-    if (!isManager) {
-      return { success: false, message: "Akses ditolak. Hanya Pengawas atau Admin yang dapat memvalidasi checklist tugas." };
-    }
-
-    if (!payload) {
-      return { success: false, message: "Data validasi tidak lengkap." };
-    }
-
-    var ss = getDb();
-    if (!ss) {
-      return { success: false, message: "Koneksi spreadsheet gagal." };
-    }
-
-    var now = new Date();
-    var targetTahun = payload.tahun ? Number(payload.tahun) : now.getFullYear();
-    var targetBulan = payload.bulan ? Number(payload.bulan) : (now.getMonth() + 1);
-    var targetTanggal = payload.tanggal ? Number(payload.tanggal) : (payload.dayNum ? Number(payload.dayNum) : now.getDate());
-
-    var empName = cleanStr(payload.namaPegawai || payload.pegawai || '');
-    var username = cleanStr(payload.username || '');
-    var ruangan = cleanStr(payload.ruangan || 'Area Umum');
-    var namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
-    var unitKerja = resolveUnitKerja(payload.unit || payload.unitKerja, empName, username, session);
-
-    var newStatus = (payload.newStatus === true || payload.newStatus === '1' || payload.newStatus === 1 || String(payload.newStatus).toUpperCase() === 'TRUE');
-
-    var taskKey = payload.taskKey || generateTaskKey(targetTahun, targetBulan, targetTanggal, username || empName, ruangan, namaTugas);
-
-    var sh = setupBuktiDukungSheet(ss);
-    var values = sh.getDataRange().getValues();
-    var existingRowIdx = -1;
-
-    for (var r = 1; r < values.length; r++) {
-      if (String(values[r][0] || '').trim() === taskKey) {
-        existingRowIdx = r + 1;
-        break;
-      }
-    }
-
-    // Jika belum ada row taskKey exact, cari fallback (tanggal + nama + tugas)
-    if (existingRowIdx === -1 && empName && namaTugas) {
-      var searchAlpha = [targetTanggal, getAlphaOnly(username || empName), getAlphaOnly(namaTugas)].join('_');
-      for (var r = 1; r < values.length; r++) {
-        var row = values[r];
-        var rDay = Number(row[5] || 0);
-        var rUser = getAlphaOnly(String(row[9] || row[8] || ''));
-        var rTugas = getAlphaOnly(String(row[11] || ''));
-        if (rDay === targetTanggal && rUser === getAlphaOnly(username || empName) && rTugas === getAlphaOnly(namaTugas)) {
-          existingRowIdx = r + 1;
-          break;
-        }
-      }
-    }
-
-    var supervisorName = session.namaPegawai || session.username || 'Pengawas';
-    var waktuValidasiStr = Utilities.formatDate(now, "GMT+7", "dd/MM/yyyy HH:mm:ss") + " WIB";
-
-    var monthNames = (typeof MONTH_NAMES_ID !== 'undefined' && MONTH_NAMES_ID) ? MONTH_NAMES_ID : [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    var namaBulanStr = monthNames[targetBulan] || ('Bulan_' + targetBulan);
-
-    var willCheckStaff = (newStatus && (payload.alsoCheckStaff === true || payload.statusPetugas === true));
-
-    if (existingRowIdx > 0) {
-      // Perbarui kolom status pengawas, nama pengawas, waktu validasi, dan timestamp
-      sh.getRange(existingRowIdx, 2).setValue(now); // Timestamp
-      sh.getRange(existingRowIdx, 14).setValue(newStatus); // StatusPengawas
-      sh.getRange(existingRowIdx, 15).setValue(newStatus ? supervisorName : ''); // NamaPengawas
-      sh.getRange(existingRowIdx, 16).setValue(newStatus ? waktuValidasiStr : ''); // WaktuValidasiPengawas
-      if (willCheckStaff) {
-        sh.getRange(existingRowIdx, 13).setValue(true); // StatusPetugas = TRUE
-      }
-      if (payload.catatan) {
-        sh.getRange(existingRowIdx, 23).setValue(payload.catatan);
-      }
-    } else {
-      // Buat row baru
-      var newRow = [
-        taskKey,
-        now,
-        targetTahun,
-        targetBulan,
-        namaBulanStr,
-        targetTanggal,
-        Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB",
-        unitKerja,
-        empName,
-        username,
-        ruangan,
-        namaTugas,
-        (willCheckStaff ? true : (payload.statusPetugas !== undefined ? Boolean(payload.statusPetugas) : false)), // StatusPetugas
-        newStatus, // StatusPengawas
-        newStatus ? supervisorName : '',
-        newStatus ? waktuValidasiStr : '',
-        false, // AdaBuktiDukung
-        '',    // FileIdDrive
-        '',    // FileUrlDrive
-        '',    // FileName
-        '',    // Koordinat
-        '',    // Lokasi
-        payload.catatan || '-'
-      ];
-      sh.appendRow(newRow);
-    }
-
-    // Jika willCheckStaff, perbarui juga sheet personal pegawai jika ada
-    if (willCheckStaff) {
-      try {
-        var empSheet = findEmployeeSheet(ss, payload.targetSheetName, empName, username);
-        if (empSheet) {
-          var rIdx = Number(payload.sheetRowIndex || 0);
-          var cIdx = Number(payload.colIndex || 0);
-          if (rIdx >= 1 && cIdx >= 1) {
-            empSheet.getRange(rIdx, cIdx).setValue(true);
-          }
-        }
-      } catch (eEmpSh) {}
-    }
-
-    SpreadsheetApp.flush();
-
-    // Invalidate script caches
-    clearScriptCacheKeys([
-      "cache_spv_dash_" + targetBulan + "_" + targetTahun,
-      "cache_rekap_terpadu_" + targetBulan + "_" + targetTahun
-    ]);
-    resetMemoryCache();
-
-    return {
-      success: true,
-      message: newStatus ? "Tugas berhasil divalidasi oleh Pengawas!" : "Checklist validasi Pengawas berhasil dibatalkan.",
-      data: {
-        taskKey: taskKey,
-        statusPengawas: newStatus,
-        namaPengawas: newStatus ? supervisorName : '',
-        waktuValidasiPengawas: newStatus ? waktuValidasiStr : '',
-        namaPegawai: empName,
-        namaTugas: namaTugas,
-        tanggal: targetTanggal,
-        bulan: targetBulan,
-        tahun: targetTahun
-      }
-    };
-
-  } catch (err) {
-    return {
-      success: false,
-      message: "Gagal memperbarui checklist pengawas: " + err.message
-    };
-  }
-}
-
-/**
- * Mengambil data bukti dukung untuk tabel atau laporan
- */
-function getBuktiDukungData(token, bulan, tahun, unit, namaPegawai) {
-  try {
-    var session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir." };
-    }
-
-    var ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    var bMap = getBuktiDukungMap(ss, bulan, tahun);
-    var list = Object.values(bMap.map);
-
-    if (unit && unit !== 'SEMUA') {
-      list = list.filter(function(item) {
-        return (item.unitKerja || '').toUpperCase() === unit.toUpperCase();
-      });
-    }
-
-    if (namaPegawai && namaPegawai !== 'SEMUA') {
-      var nAlpha = getAlphaOnly(namaPegawai);
-      list = list.filter(function(item) {
-        return getAlphaOnly(item.namaPegawai) === nAlpha || getAlphaOnly(item.username) === nAlpha;
-      });
-    }
-
-    list.sort(function(a, b) {
-      return (b.tanggal || 0) - (a.tanggal || 0);
-    });
-
-    return {
-      success: true,
-      data: list
-    };
-
-  } catch (err) {
-    return {
-      success: false,
-      message: "Gagal memuat data bukti dukung: " + err.message
-    };
-  }
-}
-
-/**
- * ========================================================================
- * FUNGSI DIAGNOSTIK & OTORISASI GOOGLE DRIVE
- * ========================================================================
- * Jalankan fungsi ini langsung dari Editor Google Apps Script (Run / Jalankan)
- * untuk:
- * 1. Memicu dialog otorisasi izin Drive (Review Permissions -> Allow) jika belum.
- * 2. Menguji apakah akun deployer dapat mengakses folder target 1WvFEHzdredv8wQEBRivNY9iDk5C6iktR.
- * 3. Menguji hak akses baca, tulis (create folder/file), dan hapus.
- * 4. Menghasilkan rekomendasi tindakan jika ada kendala hak akses.
- */
-function testGoogleDriveAccess() {
-  var report = {
-    timestamp: new Date().toISOString(),
-    configuredFolderId: (typeof GOOGLE_DRIVE_ROOT_FOLDER_ID !== 'undefined') ? GOOGLE_DRIVE_ROOT_FOLDER_ID : '',
-    activeUser: '',
-    effectiveUser: '',
-    driveServiceReady: false,
-    targetFolderAccessible: false,
-    targetFolderName: '',
-    canCreateFile: false,
-    fallbackFolderAccessible: false,
-    recommendations: []
-  };
-
-  try {
-    report.effectiveUser = Session.getEffectiveUser().getEmail() || '(Akun Deployer)';
-    report.activeUser = Session.getActiveUser().getEmail() || '(Akun Aktif)';
-  } catch (e) {
-    report.effectiveUser = 'Tidak terdeteksi';
-  }
-
-  // 1. Uji Layanan Drive Dasar
-  try {
-    var rootDrive = DriveApp.getRootFolder();
-    report.driveServiceReady = !!rootDrive;
-    Logger.log("[OK] Layanan DriveApp berhasil diakses oleh akun: " + report.effectiveUser);
-  } catch (eDrive) {
-    report.driveServiceReady = false;
-    report.recommendations.push(
-      "KRUSIAL: Izin akses Google Drive belum diotorisasi di Apps Script. " +
-      "Klik tombol 'Run / Jalankan' pada fungsi testGoogleDriveAccess di editor Apps Script, " +
-      "lalu klik 'Review Permissions' dan 'Allow' untuk memberikan izin akses Google Drive."
-    );
-    Logger.log("[FAIL] Layanan DriveApp gagal: " + eDrive.message);
-    return report;
-  }
-
-  // 2. Uji Akses Folder Target yang Dikonfigurasi
-  var folderId = report.configuredFolderId;
-  if (!folderId) {
-    report.recommendations.push("Konfigurasi GOOGLE_DRIVE_ROOT_FOLDER_ID masih kosong.");
-  } else {
-    try {
-      var targetFolder = DriveApp.getFolderById(folderId);
-      report.targetFolderAccessible = true;
-      report.targetFolderName = targetFolder.getName();
-      Logger.log("[OK] Folder target terdeteksi: " + report.targetFolderName + " (ID: " + folderId + ")");
-
-      // Uji izin tulis (membuat file dummy sementara)
-      try {
-        var testBlob = Utilities.newBlob("SIMPEL-KU Test Access: " + new Date().toISOString(), "text/plain", "simpelku_test_write.tmp");
-        var testFile = targetFolder.createFile(testBlob);
-        report.canCreateFile = true;
-        testFile.setTrashed(true); // Langsung hapus file uji
-        Logger.log("[OK] Berhasil membuat dan menghapus file uji di folder target. Hak akses Editor LENGKAP & VALID!");
-      } catch (eWrite) {
-        report.canCreateFile = false;
-        report.recommendations.push(
-          "Folder target dapat dilihat tapi TIDAK DAPAT DITULIS (Read-Only): " + eWrite.message + ". " +
-          "Pastikan folder induk dibagikan sebagai 'Editor' ke email: " + report.effectiveUser
-        );
-        Logger.log("[FAIL] Gagal menulis ke folder target: " + eWrite.message);
-      }
-
-    } catch (eTarget) {
-      report.targetFolderAccessible = false;
-      Logger.log("[FAIL] Folder target ID '" + folderId + "' tidak dapat diakses: " + eTarget.message);
-      report.recommendations.push(
-        "PENYEBAB: Folder Google Drive (" + folderId + ") dibagikan dengan link 'Siapa saja yang memiliki link', " +
-        "tetapi akun Google script (" + report.effectiveUser + ") belum memiliki folder tersebut di inventaris Drive-nya.\n" +
-        "SOLUSI:\n" +
-        "1. Buka folder di browser: https://drive.google.com/drive/folders/" + folderId + "\n" +
-        "2. Klik 'Bagikan' (Share) dan masukkan email akun deployer script (" + report.effectiveUser + ") sebagai 'Editor'.\n" +
-        "3. ATAU buka link tersebut saat login dengan akun script (" + report.effectiveUser + "), lalu klik 'Tambahkan pintasan ke Drive' (Add shortcut to Drive)."
-      );
-    }
-  }
-
-  // 3. Uji Kesiapan Folder Cadangan Fallback
-  try {
-    var fallbackName = (typeof GOOGLE_DRIVE_FALLBACK_FOLDER_NAME !== 'undefined') ? GOOGLE_DRIVE_FALLBACK_FOLDER_NAME : '[SIMPEL-KU] Bukti Dukung Foto';
-    var fallbackFolders = DriveApp.getFoldersByName(fallbackName);
-    report.fallbackFolderAccessible = true;
-    if (fallbackFolders.hasNext()) {
-      Logger.log("[OK] Folder cadangan fallback siap di Drive: " + fallbackName);
-    } else {
-      Logger.log("[INFO] Folder cadangan fallback akan dibuat otomatis saat pertama kali upload diperlukan.");
-    }
-  } catch (eFb) {
-    report.fallbackFolderAccessible = false;
-    Logger.log("[FAIL] Folder fallback bermasalah: " + eFb.message);
-  }
-
-  Logger.log("=== LAPORAN DIAGNOSTIK GOOGLE DRIVE SELESAI ===");
-  Logger.log(JSON.stringify(report, null, 2));
-  return report;
-}
-
-// <<<<<<<<<< END MODUL: backend/BuktiDukung.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/InspeksiMutu.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - INSPEKSI MUTU / QUALITY INSPECTION MODULE
- * ========================================================================
- */
-
-/**
- * ========================================================================
- * 7. AUDIT & INSPEKSI STANDAR MUTU LAYANAN
- * ========================================================================
- */
-function setupInspeksiMutuSheet(ss) {
-  if (!ss) ss = getDb();
-  let sh = findSheet(ss, "InspeksiMutu");
-  if (!sh) {
-    sh = ss.insertSheet("InspeksiMutu");
-    sh.appendRow([
-      "Timestamp", "Tanggal Inspeksi", "Bulan", "Tahun", "Unit", "Pegawai / Area",
-      "Kerapihan & Kebersihan (1-5)", "Ketepatan Waktu (1-5)", "Kepatuhan SOP (1-5)",
-      "Kelengkapan Atribut/Alat (1-5)", "Skor Rata-Rata", "Catatan Temuan",
-      "Status Rekomendasi", "Inspektor"
-    ]);
-    sh.getRange(1, 1, 1, 14).setBackground("#4f46e5").setFontColor("#ffffff").setFontWeight("bold");
-    sh.setFrozenRows(1);
-  }
-  return sh;
-}
-
-function getInspeksiMutuData(token, bulan, tahun, unit) {
-  try {
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
-
-    const sh = findSheet(ss, "InspeksiMutu");
-    if (!sh) return { success: true, data: [] };
-
-    const values = sh.getDataRange().getValues();
-    if (values.length < 2) return { success: true, data: [] };
-
-    const list = [];
-    const selectedMonth = bulan ? Number(bulan) : null;
-    const selectedYear = tahun ? Number(tahun) : null;
-
-    for (let r = 1; r < values.length; r++) {
-      const row = values[r];
-      const rowBulan = Number(row[2]);
-      const rowTahun = Number(row[3]);
-      const rowUnit = cleanStr(row[4]);
-
-      if (selectedMonth && rowBulan && rowBulan !== selectedMonth) continue;
-      if (selectedYear && rowTahun && rowTahun !== selectedYear) continue;
-      if (unit && unit !== 'SEMUA' && rowUnit && rowUnit.toUpperCase() !== unit.toUpperCase()) continue;
-
-      list.push({
-        rowIndex: r + 1,
-        timestamp: row[0] ? new Date(row[0]).toISOString() : '',
-        tanggal: row[1],
-        bulan: rowBulan,
-        tahun: rowTahun,
-        unit: rowUnit,
-        pegawaiArea: row[5],
-        skorKerapihan: Number(row[6] || 0),
-        skorKetepatan: Number(row[7] || 0),
-        skorKepatuhan: Number(row[8] || 0),
-        skorKelengkapan: Number(row[9] || 0),
-        skorRataRata: Number(row[10] || 0),
-        catatan: row[11] || '',
-        statusRekomendasi: row[12] || 'Sesuai Standar',
-        inspektor: row[13] || 'Supervisor'
-      });
-    }
-
-    list.reverse();
-    return { success: true, data: list };
-  } catch (err) {
-    return { success: false, message: "Gagal memuat data inspeksi: " + err.message };
-  }
-}
-
-function saveInspeksiMutu(token, payload) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) return { success: false, message: "Sesi telah berakhir." };
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
-
-    const sh = setupInspeksiMutuSheet(ss);
-    const now = new Date();
-    const bulan = payload.bulan || (now.getMonth() + 1);
-    const tahun = payload.tahun || now.getFullYear();
-    const tanggal = payload.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
-
-    const skor1 = Number(payload.skorKerapihan || 5);
-    const skor2 = Number(payload.skorKetepatan || 5);
-    const skor3 = Number(payload.skorKepatuhan || 5);
-    const skor4 = Number(payload.skorKelengkapan || 5);
-    const avg = Number(((skor1 + skor2 + skor3 + skor4) / 4).toFixed(2));
-
-    sh.appendRow([
-      now,
-      tanggal,
-      bulan,
-      tahun,
-      payload.unit || 'Kebersihan',
-      payload.pegawaiArea || 'Semua Area',
-      skor1,
-      skor2,
-      skor3,
-      skor4,
-      avg,
-      payload.catatan || '-',
-      payload.statusRekomendasi || 'Sesuai Standar',
-      session.namaPegawai || session.username || 'Supervisor'
-    ]);
-
-    clearScriptCacheKeys([
-      "cache_spv_dash_" + bulan + "_" + tahun,
-      "cache_rekap_terpadu_" + bulan + "_" + tahun
-    ]);
-    resetMemoryCache();
-
-    return { success: true, message: "Data inspeksi mutu berhasil disimpan!", skorRataRata: avg };
-  } catch (err) {
-    return { success: false, message: "Gagal menyimpan inspeksi: " + err.message };
-  }
-}
-
-// <<<<<<<<<< END MODUL: backend/InspeksiMutu.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/StaffMonitoring.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - STAFF MONITORING MODULE (CLEANING, RECEPTIONIST, ETC.)
- * ========================================================================
- */
-
-/**
- * Mengambil Data Dashboard Ringkasan Pegawai
- */
-
-function getDashboardData(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    const sheet = findEmployeeSheet(ss, session.namaSheet, session.namaPegawai, session.username);
-    if (!sheet) {
-      // Jika petugas keamanan dan belum memiliki sheet kebersihan terpisah
-      if (session.jenis === 'KEAMANAN KANTOR') {
-        const resKeamanan = getJadwalKeamanan(token, bulan, tahun);
-        if (resKeamanan && resKeamanan.success && resKeamanan.data) {
-          const kData = resKeamanan.data;
-          const totalHari = kData.totalHariKerja || 0;
-          return {
-            success: true,
-            data: {
-              namaPegawai: session.namaPegawai,
-              username: session.username,
-              jenis: session.jenis,
-              totalKegiatan: totalHari,
-              kegiatanSelesai: totalHari,
-              kegiatanBelum: 0,
-              persenPenyelesaian: 100,
-              progressRuangan: [
-                { ruangan: 'Jadwal Shift Keamanan', total: totalHari, selesai: totalHari, persen: 100 }
-              ],
-              totalItemMonitoring: kData.jadwal ? kData.jadwal.length : 0
-            }
-          };
-        }
-      }
-
-      return {
-        success: true,
-        data: {
-          namaPegawai: session.namaPegawai,
-          username: session.username,
-          jenis: session.jenis || 'Kebersihan',
-          totalKegiatan: 0,
-          kegiatanSelesai: 0,
-          kegiatanBelum: 0,
-          persenPenyelesaian: 0,
-          progressRuangan: [],
-          totalItemMonitoring: 0
-        }
-      };
-    }
-
-    const parsedData = readSheetMonitoring(sheet, bulan, tahun);
-
-    let totalKegiatan = 0;
-    let kegiatanSelesai = 0;
-    let kegiatanBelum = 0;
-    const progressPerRuangan = {};
-
-    parsedData.items.forEach(item => {
-      totalKegiatan += item.totalHariAktif;
-      kegiatanSelesai += item.selesaiCount;
-      kegiatanBelum += (item.totalHariAktif - item.selesaiCount);
-
-      if (!progressPerRuangan[item.ruangan]) {
-        progressPerRuangan[item.ruangan] = {
-          ruangan: item.ruangan,
-          total: 0,
-          selesai: 0
-        };
-      }
-      progressPerRuangan[item.ruangan].total += item.totalHariAktif;
-      progressPerRuangan[item.ruangan].selesai += item.selesaiCount;
-    });
-
-    const persenTotal = totalKegiatan > 0 ? Math.round((kegiatanSelesai / totalKegiatan) * 100) : 0;
-
-    const listRuangan = Object.values(progressPerRuangan).map(r => ({
-      ruangan: r.ruangan,
-      total: r.total,
-      selesai: r.selesai,
-      persen: r.total > 0 ? Math.round((r.selesai / r.total) * 100) : 0
-    }));
-
-    return {
-      success: true,
-      data: {
-        namaPegawai: session.namaPegawai,
-        username: session.username,
-        jenis: parsedData.jenis,
-        totalKegiatan: totalKegiatan,
-        kegiatanSelesai: kegiatanSelesai,
-        kegiatanBelum: kegiatanBelum,
-        persenPenyelesaian: persenTotal,
-        progressRuangan: listRuangan,
-        totalItemMonitoring: parsedData.items.length
-      }
-    };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * Mengambil Data Matriks Monitoring Lengkap
- */
-
-function getMonitoringData(token, jenis, bulan, tahun, filterRuangan, filterStatus) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    const sheet = findEmployeeSheet(ss, session.namaSheet, session.namaPegawai, session.username);
-    if (!sheet) {
-      return { success: false, message: "Sheet monitoring '" + session.namaSheet + "' tidak ditemukan pada spreadsheet." };
-    }
-
-    const parsedData = readSheetMonitoring(sheet, bulan, tahun);
-
-    let filteredItems = parsedData.items;
-    if (filterRuangan && filterRuangan !== "SEMUA") {
-      filteredItems = filteredItems.filter(item => item.ruangan === filterRuangan);
-    }
-
-    if (filterStatus && filterStatus !== "SEMUA") {
-      filteredItems = filteredItems.filter(item => {
-        const isCompleted = item.selesaiCount === item.totalHariAktif && item.totalHariAktif > 0;
-        if (filterStatus === "SELESAI") return isCompleted;
-        if (filterStatus === "BELUM") return !isCompleted;
-        return true;
-      });
-    }
-
-    const bMap = getBuktiDukungMap(ss, bulan, tahun);
-    filteredItems.forEach(item => {
-      item.dailyEvidence = {};
-      parsedData.activeDays.forEach(d => {
-        const tKey = generateTaskKey(tahun, bulan, d, session.username || session.namaPegawai, item.ruangan, item.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(item.ruangan), getAlphaOnly(item.kegiatan)].join('_');
-        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
-        if (rec) {
-          item.dailyEvidence[d] = {
-            adaBukti: rec.adaBuktiDukung,
-            fileId: rec.fileIdDrive,
-            fileUrl: rec.fileUrlDrive,
-            fileName: rec.fileName,
-            koordinat: rec.koordinat,
-            lokasi: rec.lokasi,
-            waktu: rec.waktu,
-            statusPengawas: rec.statusPengawas,
-            namaPengawas: rec.namaPengawas,
-            waktuValidasiPengawas: rec.waktuValidasiPengawas,
-            taskKey: rec.taskKey || tKey
-          };
-        } else {
-          item.dailyEvidence[d] = {
-            adaBukti: false,
-            fileId: '',
-            fileUrl: '',
-            fileName: '',
-            koordinat: '',
-            lokasi: '',
-            waktu: '',
-            statusPengawas: false,
-            namaPengawas: '',
-            waktuValidasiPengawas: '',
-            taskKey: tKey
-          };
-        }
-      });
-    });
-
-    return {
-      success: true,
-      data: {
-        namaPegawai: session.namaPegawai,
-        jenis: parsedData.jenis,
-        daysInMonth: parsedData.daysInMonth,
-        activeDays: parsedData.activeDays,
-        headers: parsedData.headers,
-        items: filteredItems,
-        daftarRuangan: parsedData.daftarRuangan
-      }
-    };
-
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * Toggle Status Checklist
- */
-
-/**
- * Memperbarui status monitoring (Centang checkbox) secara aman & atomik
- * Mendukung pembatalan untuk hari ini, dan mengunci tanggal lampau
- * Mendukung targetSheetName jika dipanggil oleh Admin / Supervisor
- */
-function updateMonitoringStatus(token, rowIndex, colIndex, newStatus, dayNum, monthNum, yearNum, targetSheetName) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    if (!ss) {
-      return { success: false, message: "Koneksi spreadsheet gagal." };
-    }
-
-    let sheet = null;
-    const isManager = (session.role === 'Admin' || session.role === 'Supervisor' || session.role === 'Tim Umum dan Humas' || session.role === 'Koordinator Lapangan');
-    if (targetSheetName && isManager) {
-      sheet = findSheet(ss, targetSheetName);
-    }
-    if (!sheet) {
-      sheet = findEmployeeSheet(ss, session.namaSheet, session.namaPegawai, session.username);
-    }
-    if (!sheet) {
-      return { success: false, message: "Sheet data pegawai tidak ditemukan." };
-    }
-
-    const rIdx = Number(rowIndex);
-    const cIdx = Number(colIndex);
-
-    if (!rIdx || !cIdx || rIdx < 1 || cIdx < 1) {
-      return { success: false, message: "Koordinat cell tidak valid (Baris: " + rIdx + ", Kolom: " + cIdx + ")." };
-    }
-
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-    const currentDay = now.getDate();
-
-    const targetDay = Number(dayNum);
-    const targetMonth = Number(monthNum);
-    const targetYear = Number(yearNum);
-
-    const isToday = (targetYear === currentYear && targetMonth === currentMonth && targetDay === currentDay);
-    const isPastDate = (
-      targetYear < currentYear ||
-      (targetYear === currentYear && targetMonth < currentMonth) ||
-      (targetYear === currentYear && targetMonth === currentMonth && targetDay < currentDay)
-    );
-
-    const cellRange = sheet.getRange(rIdx, cIdx);
-    const rawVal = cellRange.getValue();
-    const currentValUpper = String(rawVal || '').toUpperCase().trim();
-    const isCurrentlyChecked = (rawVal === true || rawVal === 1 || rawVal === '1' || currentValUpper === 'TRUE' || currentValUpper === 'V');
-
-    // Validasi aturan bisnis: Tanggal lampau yang sudah TRUE tidak boleh diubah kecuali oleh Admin
-    if (isPastDate && isCurrentlyChecked && !isManager) {
-      return {
-        success: false,
-        message: "Data tanggal lampau (" + targetDay + "/" + targetMonth + "/" + targetYear + ") yang telah selesai tidak dapat diubah kembali."
-      };
-    }
-
-    // Tentukan nilai baru yang akan disimpan ke cell spreadsheet
-    const valToSet = (newStatus === true || newStatus === '1' || newStatus === 1 || String(newStatus).toUpperCase() === 'TRUE') ? true : false;
-
-    cellRange.setValue(valToSet);
-    SpreadsheetApp.flush();
-
-    return {
-      success: true,
-      message: valToSet ? "Checklist berhasil ditandai selesai." : "Checklist berhasil dibatalkan.",
-      newStatus: valToSet,
-      rowIndex: rIdx,
-      colIndex: cIdx,
-      isToday: isToday
-    };
-
-  } catch (err) {
-    return { success: false, message: "Gagal memperbarui status checklist: " + err.message };
-  }
-}
-
-function getRekapMonitoring(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi tidak valid." };
-    }
-
-    const ss = getDb();
-    const sheet = findEmployeeSheet(ss, session.namaSheet, session.namaPegawai, session.username);
-    if (!sheet) {
-      return { success: false, message: "Sheet tidak ditemukan." };
-    }
-
-    const parsedData = readSheetMonitoring(sheet, bulan, tahun);
-
-    const rekapJenis = {};
-    const rekapRuangan = {};
-
-    const rekapHarianMap = {};
-    const rekapHarian = parsedData.activeDays.map((d, i) => {
-      rekapHarianMap[d] = i;
-      return { hari: d, tanggal: d, total: 0, selesai: 0, done: 0 };
-    });
-
-    parsedData.items.forEach(item => {
-      const jns = item.jenis || "Kebersihan";
-      if (!rekapJenis[jns]) rekapJenis[jns] = { total: 0, selesai: 0 };
-      rekapJenis[jns].total += item.totalHariAktif;
-      rekapJenis[jns].selesai += item.selesaiCount;
-
-      if (!rekapRuangan[item.ruangan]) {
-        rekapRuangan[item.ruangan] = { ruangan: item.ruangan, total: 0, selesai: 0, itemCount: 0 };
-      }
-      rekapRuangan[item.ruangan].total += item.totalHariAktif;
-      rekapRuangan[item.ruangan].selesai += item.selesaiCount;
-      rekapRuangan[item.ruangan].itemCount += 1;
-
-      parsedData.activeDays.forEach(d => {
-        const st = item.dailyStatus[d];
-        if (st === "1" || st === "0" || st === 1 || st === 0) {
-          const idx = rekapHarianMap[d];
-          if (idx !== undefined) {
-            rekapHarian[idx].total += 1;
-            if (st === "1" || st === 1) {
-              rekapHarian[idx].selesai += 1;
-              rekapHarian[idx].done += 1;
-            }
-          }
-        }
-      });
-    });
-
-    return {
-      success: true,
-      data: {
-        namaPegawai: session.namaPegawai,
-        jenis: parsedData.jenis,
-        rekapJenis: rekapJenis,
-        rekapRuangan: Object.values(rekapRuangan),
-        rekapHarian: rekapHarian,
-        totalItems: parsedData.items.length
-      }
-    };
-  } catch (err) {
-    return { success: false, message: err.message };
-  }
-}
-
-/**
- * ENGINE PARSER DATA SPREADSHEET (Dengan Caching Pintar untuk Akselerasi Cepat)
- */
-
-function readSheetMonitoring(sheet, bulan, tahun) {
-  const now = new Date();
-  const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-  const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-
-  // Cek in-memory cache dan Script Cache untuk menghindari re-parsing berulang
-  const memKey = sheet.getName() + "_" + selectedMonth + "_" + selectedYear;
-  if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring && _cachedParsedMonitoring[memKey]) {
-    return _cachedParsedMonitoring[memKey];
-  }
-
-  const cacheKey = "cache_m_" + sheet.getName() + "_" + selectedMonth + "_" + selectedYear;
-  try {
-    const cached = CacheService.getScriptCache().get(cacheKey);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring) {
-        _cachedParsedMonitoring[memKey] = parsed;
-      }
-      return parsed;
-    }
-  } catch (ce) { /* ignore cache read error */ }
-
-  const values = sheet.getDataRange().getValues();
-  if (!values || values.length < 3) {
-    return { items: [], daysInMonth: 30, activeDays: [], daftarRuangan: [], headers: [], jenis: 'Kebersihan' };
-  }
-
-  function isDayValue(v) {
-    if (typeof v === 'number' && v >= 1 && v <= 31) return true;
-    if (typeof v === 'string') {
-      const s = v.trim();
-      if (/^\d{1,2}$/.test(s)) {
-        const n = Number(s);
-        return n >= 1 && n <= 31;
-      }
-    }
-    return false;
-  }
-
-  function parseDayNum(v) {
-    if (typeof v === 'number') return v;
-    if (typeof v === 'string') {
-      const s = v.trim();
-      if (/^\d{1,2}$/.test(s)) return Number(s);
-    }
-    return null;
-  }
-
-  // 1. Temukan baris tanggal
-  let dateRowIdx = -1;
-  for (let r = 0; r < Math.min(8, values.length); r++) {
-    const numCount = values[r].filter(v => isDayValue(v)).length;
-    if (numCount >= 15) {
-      dateRowIdx = r;
-      break;
-    }
-  }
-
-  if (dateRowIdx === -1) {
-    let maxCount = 0;
-    for (let r = 0; r < Math.min(8, values.length); r++) {
-      const numCount = values[r].filter(v => isDayValue(v)).length;
-      if (numCount > maxCount) { maxCount = numCount; dateRowIdx = r; }
-    }
-    if (maxCount < 5) {
-      return { items: [], daysInMonth: 30, activeDays: [], daftarRuangan: [], headers: [], jenis: 'Kebersihan' };
-    }
-  }
-
-  const monthHeaderRowIdx = dateRowIdx - 1;
-
-  // 2. Ekstrak jenis monitoring
-  let jenis = 'Kebersihan';
-  for (let r = 0; r <= Math.max(0, monthHeaderRowIdx); r++) {
-    for (let c = 0; c < Math.min(values[r].length, 6); c++) {
-      const cellVal = String(values[r][c] || '').toUpperCase().trim();
-      if (cellVal.includes('RESEPSIONIS') || cellVal.includes('PELAYANAN') || cellVal.includes('PST') || cellVal.includes('STANDAR PELAYANAN')) {
-        jenis = 'Pelayanan';
-        break;
-      } else if (cellVal.includes('KEAMANAN') || cellVal.includes('SECURITY')) {
-        jenis = 'Keamanan';
-        break;
-      } else if (cellVal.includes('KEBERSIHAN')) {
-        jenis = 'Kebersihan';
-      }
-    }
-  }
-
-  if (jenis === 'Kebersihan' && sheet) {
-    const sNameUpper = String(sheet.getName() || '').toUpperCase();
-    const sNameAlpha = getAlphaOnly(sNameUpper);
-    if (sNameUpper.includes('PELAYANAN') || sNameUpper.includes('RESEPSIONIS') || sNameUpper.includes('PST')) {
-      jenis = 'Pelayanan';
-    } else if (sNameUpper.includes('KEAMANAN') || sNameUpper.includes('SECURITY')) {
-      jenis = 'Keamanan';
-    } else {
-      const pelayananNames = ['mawardi', 'ardi', 'ranianailahusna', 'rania', 'alfianaayuni', 'alfiana'];
-      for (let p = 0; p < pelayananNames.length; p++) {
-        const pAlpha = getAlphaOnly(pelayananNames[p]);
-        if (sNameAlpha === pAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(pAlpha) >= 0 || pAlpha.indexOf(sNameAlpha) >= 0))) {
-          jenis = 'Pelayanan';
-          break;
-        }
-      }
-      if (jenis === 'Kebersihan') {
-        const securityNames = ['eddysuryadi', 'eddy', 'syarifrezanopriadrianalkadri', 'syarifreza', 'syreza', 'reza', 'feriyustami', 'feri', 'rizkifadil', 'rizki', 'ekoprasetyo', 'eko', 'agustetriansyah', 'agus'];
-        for (let s = 0; s < securityNames.length; s++) {
-          const sAlpha = getAlphaOnly(securityNames[s]);
-          if (sNameAlpha === sAlpha || (sNameAlpha.length >= 4 && (sNameAlpha.indexOf(sAlpha) >= 0 || sAlpha.indexOf(sNameAlpha) >= 0))) {
-            jenis = 'Keamanan';
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // 3. Bangun peta bulan
-  const monthStartColMap = {};
-  if (monthHeaderRowIdx >= 0) {
-    values[monthHeaderRowIdx].forEach((cell, colIdx) => {
-      if (cell && typeof cell === 'string') {
-        const cellUpper = cell.trim().toUpperCase();
-        for (const mName in MONTH_MAP_ID) {
-          if (cellUpper === mName || cellUpper.indexOf(mName) >= 0) {
-            monthStartColMap[MONTH_MAP_ID[mName]] = colIdx;
-          }
-        }
-      }
-    });
-  }
-
-  // 4. Kolom kegiatan
-  const dateRow = values[dateRowIdx];
-  let firstDateColIdx = -1;
-  for (let c = 0; c < dateRow.length; c++) {
-    if (isDayValue(dateRow[c])) {
-      firstDateColIdx = c;
-      break;
-    }
-  }
-
-  if (firstDateColIdx < 0) {
-    return { items: [], daysInMonth: 30, activeDays: [], daftarRuangan: [], headers: [], jenis };
-  }
-
-  const kegiatanColIdx = firstDateColIdx > 0 ? firstDateColIdx - 1 : 0;
-
-  // 5. Rentang kolom bulan terpilih
-  let monthStartCol = monthStartColMap[selectedMonth];
-
-  if (monthStartCol === undefined) {
-    if (Object.keys(monthStartColMap).length === 0) {
-      monthStartCol = firstDateColIdx;
-    } else {
-      return { items: [], daysInMonth: 30, activeDays: [], daftarRuangan: [], headers: [], jenis };
-    }
-  }
-
-  let monthEndCol = dateRow.length - 1;
-  Object.values(monthStartColMap).forEach(startCol => {
-    if (startCol > monthStartCol && startCol <= monthEndCol) {
-      monthEndCol = startCol - 1;
-    }
-  });
-
-  // 6. Peta hari -> kolom aktual
-  const dayColMap = {};
-  const activeDays = [];
-
-  for (let c = monthStartCol; c <= monthEndCol; c++) {
-    const dayNum = parseDayNum(dateRow[c]);
-    if (dayNum !== null && dayNum >= 1 && dayNum <= 31) {
-      dayColMap[dayNum] = c + 1;
-      activeDays.push(dayNum);
-    }
-  }
-
-  activeDays.sort((a, b) => a - b);
-  const daysInMonth = activeDays.length > 0 ? Math.max.apply(null, activeDays) : 30;
-
-  // 7. Parse baris kegiatan
-  let dataStartRow = dateRowIdx + 1;
-  if (dataStartRow < values.length) {
-    const nextRow = values[dataStartRow];
-    const HARI_REGEX = /^(sen|sel|rab|kam|jum|sab|min|senin|selasa|rabu|kamis|jumat|sabtu|minggu|s|r|k|j|m|ju|sa|mi|ra|ka)$/i;
-    let hariCount = 0;
-    for (let c = 0; c < nextRow.length; c++) {
-      const cell = String(nextRow[c] || '').trim();
-      if (cell && HARI_REGEX.test(cell)) hariCount++;
-    }
-    if (hariCount >= 4) {
-      dataStartRow = dateRowIdx + 2;
-    }
-  }
-  let currentRuangan = 'Umum';
-  const items = [];
-  const ruanganSet = new Set();
-
-  for (let r = dataStartRow; r < values.length; r++) {
-    const row = values[r];
-    const kegiatanRaw = row[kegiatanColIdx];
-    const kegiatanText = String(kegiatanRaw !== null && kegiatanRaw !== undefined ? kegiatanRaw : '').trim();
-
-    if (!kegiatanText) continue;
-
-    const upperText = kegiatanText.toUpperCase();
-    let shouldSkip = false;
-    for (let k = 0; k < SKIP_ROW_KEYWORDS.length; k++) {
-      if (upperText === SKIP_ROW_KEYWORDS[k] || upperText.indexOf(SKIP_ROW_KEYWORDS[k]) === 0) {
-        shouldSkip = true;
-        break;
-      }
-    }
-    if (shouldSkip) continue;
-
-    let hasCheckboxData = false;
-    for (let di = 0; di < activeDays.length; di++) {
-      const d = activeDays[di];
-      const val = row[dayColMap[d] - 1];
-      const valStr = String(val || '').trim().toUpperCase();
-      if (val === true || val === false || val === 1 || val === 0 || val === '1' || val === '0' || val === '✓' || valStr === 'TRUE' || valStr === 'FALSE' || valStr === 'V') {
-        hasCheckboxData = true;
-        break;
-      }
-    }
-
-    if (!hasCheckboxData) {
-      currentRuangan = kegiatanText;
-      ruanganSet.add(currentRuangan);
-      continue;
-    }
-
-    ruanganSet.add(currentRuangan);
-
-    const dailyStatus = {};
-    let selesaiCount = 0;
-    let scheduledDaysCount = 0;
-
-    activeDays.forEach(d => {
-      const colIdx0 = dayColMap[d] - 1;
-      const val = row[colIdx0];
-      const dateObj = new Date(selectedYear, selectedMonth - 1, d);
-      const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
-
-      if (val === true || val === 1 || val === '1' || val === '✓') {
-        dailyStatus[d] = '1';
-        selesaiCount++;
-        scheduledDaysCount++;
-      } else if (val === false || val === 0 || val === '0') {
-        // Jika akhir pekan (Sabtu/Minggu) pada unit Kebersihan/Pelayanan dan tidak ada tugas khusus, tandai non-aktif
-        if (isWeekend && jenis !== 'Keamanan') {
-          dailyStatus[d] = '-';
-        } else {
-          dailyStatus[d] = '0';
-          scheduledDaysCount++;
-        }
-      } else {
-        dailyStatus[d] = '-';
-      }
-    });
-
-    items.push({
-      sheetRowIndex: r + 1,
-      ruangan: currentRuangan,
-      jenis: jenis,
-      kegiatan: kegiatanText,
-      dailyStatus: dailyStatus,
-      colMapping: dayColMap,
-      totalHariAktif: scheduledDaysCount,
-      selesaiCount: selesaiCount
-    });
-  }
-
-  const result = {
-    items: items,
-    daysInMonth: daysInMonth,
-    activeDays: activeDays,
-    headers: dateRow,
-    daftarRuangan: Array.from(ruanganSet),
-    jenis: jenis
-  };
-
-  // Simpan ke in-memory cache dan CacheService untuk akselerasi
-  if (typeof _cachedParsedMonitoring !== 'undefined' && _cachedParsedMonitoring) {
-    _cachedParsedMonitoring[memKey] = result;
-  }
-
-  try {
-    const ttl = (typeof CACHE_TTL_SEC !== 'undefined' && CACHE_TTL_SEC) ? CACHE_TTL_SEC : 60;
-    CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), ttl);
-  } catch (ce) { /* ignore cache write error */ }
-
-  return result;
-}
-
-// <<<<<<<<<< END MODUL: backend/StaffMonitoring.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/Security.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - SECURITY SCHEDULE & SHIFT MANAGEMENT MODULE
- * ========================================================================
- */
-
-function findEmployeeRowInJadwal(values, session, dataStartRow) {
-  let bestMatch = { rowIdx: -1, score: 0, cellText: '' };
-  const startRow = (typeof dataStartRow === 'number' && dataStartRow >= 0) ? dataStartRow : 0;
-
-  for (let r = startRow; r < values.length; r++) {
-    const row = values[r];
-    if (!row || row.length === 0) continue;
-
-    for (let c = 0; c < Math.min(row.length, 6); c++) {
-      const cellVal = row[c];
-      const score = calculateMatchScore(cellVal, session);
-      if (score > bestMatch.score) {
-        bestMatch = { rowIdx: r, score: score, cellText: String(cellVal) };
-        if (score === 100) break;
-      }
-    }
-    if (bestMatch.score === 100) break;
-  }
-
-  return (bestMatch.score >= 85) ? bestMatch.rowIdx : -1;
-}
-
-/**
- * Dynamic Grid Parser untuk Sheet Jadwal Piket
- * Mampu mendeteksi posisi baris tanggal, baris hari, serta mempartisi kolom per bulan
- * sehingga hanya menampilkan hari aktif untuk bulan terpilih (tidak berulang 105 hari).
- */
-
-function parseJadwalGrid(values, selectedMonth) {
-  if (!values || values.length < 3) return null;
-
-  // 1. Temukan baris tanggal (mencari baris dengan jumlah angka 1..31 terbanyak pada 8 baris pertama)
-  let dateRowIdx = -1;
-  let maxDateCount = 0;
-
-  for (let r = 0; r < Math.min(8, values.length); r++) {
-    let count = 0;
-    const row = values[r] || [];
-    for (let c = 0; c < row.length; c++) {
-      const v = row[c];
-      const num = typeof v === 'number' ? v : (typeof v === 'string' && /^\d{1,2}$/.test(v.trim()) ? Number(v.trim()) : null);
-      if (num !== null && num >= 1 && num <= 31) {
-        count++;
-      }
-    }
-    if (count > maxDateCount) {
-      maxDateCount = count;
-      dateRowIdx = r;
-    }
-  }
-
-  if (dateRowIdx === -1 || maxDateCount < 5) {
-    return { error: "Baris tanggal tidak ditemukan pada sheet jadwal." };
-  }
-
-  const dateRow = values[dateRowIdx];
-
-  // 2. Temukan baris nama hari (Sen, Sel, Rab, Kam, Jum, Sab, Min / Ju, Sa, Mi, dll)
-  let dayRowIdx = -1;
-  const HARI_REGEX = /^(sen|sel|rab|kam|jum|sab|min|senin|selasa|rabu|kamis|jumat|sabtu|minggu|s|r|k|j|m|ju|sa|mi|ra|ka)$/i;
-
-  const candidateRows = [dateRowIdx + 1, dateRowIdx - 1];
-  for (let ci = 0; ci < candidateRows.length; ci++) {
-    const cr = candidateRows[ci];
-    if (cr >= 0 && cr < values.length) {
-      let hariCount = 0;
-      for (let c = 0; c < values[cr].length; c++) {
-        const cell = String(values[cr][c] || '').trim();
-        if (cell && HARI_REGEX.test(cell)) hariCount++;
-      }
-      if (hariCount >= 4) {
-        dayRowIdx = cr;
-        break;
-      }
-    }
-  }
-
-  const dayRow = dayRowIdx !== -1 ? values[dayRowIdx] : [];
-
-  // 3. Peta kolom awal per bulan dari baris-baris di atas baris tanggal
-  const monthStartColMap = {};
-  for (let r = 0; r < dateRowIdx; r++) {
-    const row = values[r] || [];
-    for (let c = 0; c < row.length; c++) {
-      const cellVal = row[c];
-      if (cellVal && typeof cellVal === 'string') {
-        const cellUpper = cellVal.trim().toUpperCase();
-        for (const mName in MONTH_MAP_ID) {
-          if (cellUpper === mName || cellUpper.indexOf(mName) >= 0) {
-            const mNum = MONTH_MAP_ID[mName];
-            if (monthStartColMap[mNum] === undefined || c < monthStartColMap[mNum]) {
-              monthStartColMap[mNum] = c;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 4. Deteksi semua kolom tanggal yang valid
-  const allDateCols = [];
-  for (let c = 0; c < dateRow.length; c++) {
-    const v = dateRow[c];
-    const dayNum = typeof v === 'number' ? v : (typeof v === 'string' && /^\d{1,2}$/.test(v.trim()) ? Number(v.trim()) : null);
-    if (dayNum !== null && dayNum >= 1 && dayNum <= 31) {
-      allDateCols.push({
-        colIdx: c,
-        tanggal: dayNum,
-        hari: dayRow[c] ? String(dayRow[c]).trim() : ''
-      });
-    }
-  }
-
-  if (allDateCols.length === 0) {
-    return { error: "Tidak ada kolom tanggal yang ditemukan." };
-  }
-
-  let targetCols = [];
-
-  // 5. Filter kolom sesuai selectedMonth jika ada monthStartColMap
-  const monthKeys = Object.keys(monthStartColMap).map(Number).sort(function(a, b) { return a - b; });
-
-  if (monthKeys.length > 0 && monthStartColMap[selectedMonth] !== undefined) {
-    const startCol = monthStartColMap[selectedMonth];
-    let nextStartCol = Infinity;
-    for (let k = 0; k < monthKeys.length; k++) {
-      const m = monthKeys[k];
-      if (monthStartColMap[m] > startCol && monthStartColMap[m] < nextStartCol) {
-        nextStartCol = monthStartColMap[m];
-      }
-    }
-
-    targetCols = allDateCols.filter(function(col) {
-      return col.colIdx >= startCol && col.colIdx < nextStartCol;
-    });
-  }
-
-  // 6. Jika tidak ditemukan lewat monthStartColMap, partisi berdasarkan blok siklus tanggal
-  if (targetCols.length === 0) {
-    const blocks = [];
-    let currentBlock = [];
-
-    for (let i = 0; i < allDateCols.length; i++) {
-      const curr = allDateCols[i];
-      const prev = allDateCols[i - 1];
-
-      if (prev) {
-        if ((prev.tanggal >= 28 && curr.tanggal === 1) || (curr.colIdx - prev.colIdx > 3)) {
-          blocks.push(currentBlock);
-          currentBlock = [];
-        }
-      }
-      currentBlock.push(curr);
-    }
-    if (currentBlock.length > 0) {
-      blocks.push(currentBlock);
-    }
-
-    if (blocks.length > 1) {
-      const blockIdx = (selectedMonth - 1) % blocks.length;
-      targetCols = blocks[blockIdx];
-    } else {
-      targetCols = blocks[0] || allDateCols;
-    }
-  }
-
-  // 7. Bersihkan duplikasi tanggal agar pas 1 bulan penuh (28..31 hari)
-  const schedCols = [];
-  for (let i = 0; i < targetCols.length; i++) {
-    const col = targetCols[i];
-    if (schedCols.length >= 28 && col.tanggal === 1) {
-      break;
-    }
-    schedCols.push(col);
-  }
-
-  const dataStartRow = Math.max(dateRowIdx, dayRowIdx) + 1;
-
-  return {
-    schedCols: schedCols,
-    dataStartRow: dataStartRow
-  };
-}
-
-/**
- * Mengambil Jadwal Piket Keamanan dari sheet JadwalPiketSecurity / JadwalPiket
- */
-
-function getJadwalKeamanan(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi tidak valid. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    const jadwalSheet = findJadwalSheet(ss);
-    if (!jadwalSheet) {
-      return { success: false, message: "Sheet jadwal piket keamanan tidak ditemukan pada spreadsheet." };
-    }
-
-    const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
-
-    let rawValues = (typeof _cachedJadwalRawValues !== 'undefined' && _cachedJadwalRawValues) ? _cachedJadwalRawValues : null;
-    let displayValues = (typeof _cachedJadwalDispValues !== 'undefined' && _cachedJadwalDispValues) ? _cachedJadwalDispValues : null;
-    if (!rawValues || !displayValues) {
-      rawValues = jadwalSheet.getDataRange().getValues();
-      displayValues = jadwalSheet.getDataRange().getDisplayValues();
-      if (typeof _cachedJadwalRawValues !== 'undefined') _cachedJadwalRawValues = rawValues;
-      if (typeof _cachedJadwalDispValues !== 'undefined') _cachedJadwalDispValues = displayValues;
-    }
-
-    let gridResult = (typeof _cachedJadwalGrid !== 'undefined' && _cachedJadwalGrid[selectedMonth]) ? _cachedJadwalGrid[selectedMonth] : null;
-    if (!gridResult) {
-      gridResult = parseJadwalGrid(rawValues, selectedMonth);
-      if (typeof _cachedJadwalGrid !== 'undefined' && gridResult && !gridResult.error) {
-        _cachedJadwalGrid[selectedMonth] = gridResult;
-      }
-    }
-    if (!gridResult || gridResult.error) {
-      return { success: false, message: gridResult ? gridResult.error : "Format tabel jadwal tidak dapat dibaca." };
-    }
-
-    const schedCols = gridResult.schedCols;
-    if (!schedCols || schedCols.length === 0) {
-      return { success: false, message: "Data tanggal jadwal untuk bulan terpilih belum tersedia." };
-    }
-
-    // Pencarian baris pegawai dengan smart matching di seluruh baris sheet
-    let employeeRowIdx = findEmployeeRowInJadwal(rawValues, session, 0);
-    if (employeeRowIdx === -1 && displayValues) {
-      employeeRowIdx = findEmployeeRowInJadwal(displayValues, session, 0);
-    }
-
-    if (employeeRowIdx === -1) {
-      return {
-        success: false,
-        message: "Jadwal piket untuk '" + session.namaPegawai + "' (" + session.username + ") tidak ditemukan pada sheet " + jadwalSheet.getName() + "."
-      };
-    }
-
-    const SHIFT_LABEL = { 'P': 'Pagi', 'S': 'Sore', 'M': 'Malam', 'O': 'Libur' };
-    const empRow = rawValues[employeeRowIdx];
-    const empDispRow = displayValues && displayValues[employeeRowIdx] ? displayValues[employeeRowIdx] : empRow;
-
-    const jadwal = schedCols.map(function(col) {
-      var rawKode = String(empRow[col.colIdx] !== undefined && empRow[col.colIdx] !== null ? empRow[col.colIdx] : (empDispRow[col.colIdx] || '')).trim().toUpperCase();
-      var kode = 'O';
-
-      if (rawKode === 'P' || rawKode.indexOf('PAGI') >= 0 || rawKode === '1') {
-        kode = 'P';
-      } else if (rawKode === 'S' || rawKode.indexOf('SORE') >= 0 || rawKode.indexOf('SIANG') >= 0 || rawKode === '2') {
-        kode = 'S';
-      } else if (rawKode === 'M' || rawKode.indexOf('MALAM') >= 0 || rawKode === '3') {
-        kode = 'M';
-      } else {
-        kode = 'O';
-      }
-
-      return {
-        tanggal: col.tanggal,
-        hari: col.hari,
-        kodeShift: kode,
-        namaShift: SHIFT_LABEL[kode] || 'Libur',
-        isLibur: kode === 'O'
-      };
-    });
-
-    var summary = { P: 0, S: 0, M: 0, O: 0 };
-    jadwal.forEach(function(j) {
-      if (j.kodeShift in summary) summary[j.kodeShift]++;
-    });
-
-    let taskItems = [];
-    const empSheet = findEmployeeSheet(ss, session.namaSheet, session.namaPegawai, session.username);
-    if (empSheet) {
-      const parsedTasks = readSheetMonitoring(empSheet, bulan, tahun);
-      taskItems = parsedTasks.items || [];
-    } else {
-      // Standar checklist tugas keamanan jika belum memiliki sheet personal terpisah
-      const defaultTasks = [
-        { row: 101, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Mengatur lalu lintas dan membantu menyeberangkan karyawan ke kantor' },
-        { row: 102, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Mengatur dan mengarahkan parkiran kendaraan roda-4' },
-        { row: 103, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Menyambut dan membukakan pintu kendaraan pimpinan' },
-        { row: 104, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Merapikan susunan kendaraan roda 2 di parkiran samping dan belakang' },
-        { row: 105, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Patroli keamanan gedung, aset dan karyawan kantor secara berkala setiap 2 jam dan memeriksa area kantor melalui CCTV' },
-        { row: 106, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Mengawasi keluar masuk orang, barang dan kendaraan, mendokumentasikan dan melaporkan hal mencurigakan' },
-        { row: 107, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Menyambut tamu, memeriksa identitas dan mengarahkan tamu ke front office/ruang tunggu' },
-        { row: 108, ruangan: 'MALAM', kegiatan: 'Patroli keamanan gedung secara berkala dan memeriksa area kantor melalui CCTV' },
-        { row: 109, ruangan: 'MALAM', kegiatan: 'Memastikan pintu, jendela, dan ruangan penting terkunci dengan baik' },
-        { row: 110, ruangan: 'MALAM', kegiatan: 'Mencegah potensi bahaya seperti kebakaran atau pencurian' }
-      ];
-
-      const colMapping = {};
-      schedCols.forEach(function(sc) { colMapping[sc.tanggal] = sc.colIdx + 1; });
-
-      taskItems = defaultTasks.map(function(t) {
-        const dailyStatus = {};
-        schedCols.forEach(function(sc) { dailyStatus[sc.tanggal] = '0'; });
-        return {
-          sheetRowIndex: t.row,
-          ruangan: t.ruangan,
-          jenis: 'Keamanan',
-          kegiatan: t.kegiatan,
-          dailyStatus: dailyStatus,
-          colMapping: colMapping
-        };
-      });
-    }
-
-    const curYearNum = tahun ? Number(tahun) : new Date().getFullYear();
-    const bMap = getBuktiDukungMap(ss, selectedMonth, curYearNum);
-    taskItems.forEach(function(t) {
-      t.dailyEvidence = {};
-      schedCols.forEach(function(sc) {
-        const d = sc.tanggal;
-        const tKey = generateTaskKey(curYearNum, selectedMonth, d, session.username || session.namaPegawai, t.ruangan, t.kegiatan);
-        const fKey = [d, getAlphaOnly(session.namaPegawai || session.username), getAlphaOnly(t.ruangan), getAlphaOnly(t.kegiatan)].join('_');
-        const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
-        if (rec) {
-          t.dailyEvidence[d] = {
-            adaBukti: rec.adaBuktiDukung,
-            fileId: rec.fileIdDrive,
-            fileUrl: rec.fileUrlDrive,
-            fileName: rec.fileName,
-            koordinat: rec.koordinat,
-            lokasi: rec.lokasi,
-            waktu: rec.waktu,
-            statusPengawas: rec.statusPengawas,
-            namaPengawas: rec.namaPengawas,
-            waktuValidasiPengawas: rec.waktuValidasiPengawas,
-            taskKey: rec.taskKey || tKey
-          };
-        } else {
-          t.dailyEvidence[d] = {
-            adaBukti: false,
-            fileId: '',
-            fileUrl: '',
-            fileName: '',
-            koordinat: '',
-            lokasi: '',
-            waktu: '',
-            statusPengawas: false,
-            namaPengawas: '',
-            waktuValidasiPengawas: '',
-            taskKey: tKey
-          };
-        }
-      });
-    });
-
-    return {
-      success: true,
-      data: {
-        namaPegawai: session.namaPegawai,
-        jadwal: jadwal,
-        summary: summary,
-        totalHariKerja: (summary.P || 0) + (summary.S || 0) + (summary.M || 0),
-        taskItems: taskItems
-      }
-    };
-
-  } catch (err) {
-    return { success: false, message: "Gagal memuat jadwal: " + err.message };
-  }
-}
-
-function getJadwalKeamananInternal(ss, userObj, bulan, tahun) {
-  try {
-    const jadwalSheet = findJadwalSheet(ss);
-    if (!jadwalSheet) return null;
-
-    const rawValues = jadwalSheet.getDataRange().getValues();
-    const displayValues = jadwalSheet.getDataRange().getDisplayValues();
-    const grid = parseJadwalGrid(rawValues, bulan);
-    if (!grid || !grid.schedCols) return null;
-
-    let employeeRowIdx = findEmployeeRowInJadwal(rawValues, userObj, 0);
-    if (employeeRowIdx === -1 && displayValues) {
-      employeeRowIdx = findEmployeeRowInJadwal(displayValues, userObj, 0);
-    }
-    if (employeeRowIdx === -1) return null;
-
-    const SHIFT_LABEL = { 'P': 'Pagi', 'S': 'Sore', 'M': 'Malam', 'O': 'Libur' };
-    const empRow = rawValues[employeeRowIdx];
-    const empDispRow = (displayValues && displayValues[employeeRowIdx]) ? displayValues[employeeRowIdx] : empRow;
-
-    const jadwal = grid.schedCols.map(col => {
-      const rawKode = String(empRow[col.colIdx] !== undefined && empRow[col.colIdx] !== null ? empRow[col.colIdx] : (empDispRow[col.colIdx] || '')).trim().toUpperCase();
-      let kode = 'O';
-      if (rawKode === 'P' || rawKode.includes('PAGI') || rawKode === '1') kode = 'P';
-      else if (rawKode === 'S' || rawKode.includes('SORE') || rawKode.includes('SIANG') || rawKode === '2') kode = 'S';
-      else if (rawKode === 'M' || rawKode.includes('MALAM') || rawKode === '3') kode = 'M';
-      else kode = 'O';
-
-      return {
-        tanggal: col.tanggal,
-        hari: col.hari,
-        kodeShift: kode,
-        namaShift: SHIFT_LABEL[kode] || 'Libur',
-        isLibur: kode === 'O'
-      };
-    });
-
-    const defaultTasks = [
-      { row: 101, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Mengatur lalu lintas dan membantu menyeberangkan karyawan ke kantor' },
-      { row: 102, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Mengatur dan mengarahkan parkiran kendaraan roda-4' },
-      { row: 103, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Menyambut dan membukakan pintu kendaraan pimpinan' },
-      { row: 104, ruangan: 'PAGI (06.00-07.30)', kegiatan: 'Merapikan susunan kendaraan roda 2 di parkiran samping dan belakang' },
-      { row: 105, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Patroli keamanan gedung, aset dan karyawan kantor secara berkala setiap 2 jam dan memeriksa area kantor melalui CCTV' },
-      { row: 106, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Mengawasi keluar masuk orang, barang dan kendaraan, mendokumentasikan dan melaporkan hal mencurigakan' },
-      { row: 107, ruangan: 'SELAMA JAM KERJA (07.30-16.00)', kegiatan: 'Menyambut tamu, memeriksa identitas dan mengarahkan tamu ke front office/ruang tunggu' },
-      { row: 108, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Patroli keamanan gedung secara berkala dan memeriksa area kantor melalui CCTV' },
-      { row: 109, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Memastikan pintu, jendela, dan ruangan penting terkunci dengan baik' },
-      { row: 110, ruangan: 'MALAM (23.00-07.30)', kegiatan: 'Mencegah potensi bahaya seperti kebakaran atau pencurian' }
-    ];
-
-    const colMapping = {};
-    grid.schedCols.forEach(sc => { colMapping[sc.tanggal] = sc.colIdx + 1; });
-
-    let finalTasks = defaultTasks;
-    const empSheet = findEmployeeSheet(ss, userObj.namaSheet, userObj.namaPegawai, userObj.username);
-    if (empSheet) {
-      const parsedTasks = readSheetMonitoring(empSheet, bulan, tahun);
-      if (parsedTasks && parsedTasks.items && parsedTasks.items.length > 0) {
-        finalTasks = parsedTasks.items;
-      }
-    }
-
-    return {
-      success: true,
-      jadwal: jadwal,
-      taskItems: finalTasks,
-      colMapping: colMapping,
-      sheetRowIndex: employeeRowIdx + 1
-    };
-  } catch (err) {
-    return null;
-  }
-}
-
-function getJadwalPiketSecurityMatrix(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) return { success: false, message: "Sesi tidak valid." };
-
-    const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
-
-    const cacheKey = "cache_sec_matrix_" + selectedMonth + "_" + selectedYear;
-    const cached = getScriptCacheData(cacheKey);
-    if (cached) return { success: true, data: cached };
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const jadwalSheet = findJadwalSheet(ss);
-    if (!jadwalSheet) {
-      return { success: false, message: "Sheet JadwalPiketSecurity tidak ditemukan." };
-    }
-
-    const rawValues = jadwalSheet.getDataRange().getValues();
-    const dispValues = jadwalSheet.getDataRange().getDisplayValues();
-    const grid = parseJadwalGrid(rawValues, selectedMonth);
-
-    if (!grid || !grid.schedCols || !grid.schedCols.length) {
-      return { success: false, message: "Format kolom tanggal pada jadwal security bulan " + selectedMonth + " tidak terdeteksi." };
-    }
-
-    const allUsers = getAllUsersList(ss);
-    const secOfficers = allUsers.filter(u => {
-      const r = (u.role || '').toLowerCase();
-      const unit = (u.unit || '').toLowerCase();
-      return r.includes('keamanan') || unit.includes('keamanan') || r.includes('satpam') || r.includes('security');
-    });
-
-    const officersMatrix = [];
-
-    secOfficers.forEach(officer => {
-      const empRowIdx = findEmployeeRowInJadwal(rawValues, officer, 0);
-      const rowData = empRowIdx !== -1 ? rawValues[empRowIdx] : null;
-      const rowDisp = empRowIdx !== -1 ? (dispValues[empRowIdx] || rowData) : null;
-
-      const schedule = grid.schedCols.map(col => {
-        let kode = 'O';
-        if (rowData) {
-          const rawKode = String(rowData[col.colIdx] !== undefined && rowData[col.colIdx] !== null ? rowData[col.colIdx] : (rowDisp[col.colIdx] || '')).trim().toUpperCase();
-          if (rawKode === 'P' || rawKode.includes('PAGI') || rawKode === '1') kode = 'P';
-          else if (rawKode === 'S' || rawKode.includes('SORE') || rawKode.includes('SIANG') || rawKode === '2') kode = 'S';
-          else if (rawKode === 'M' || rawKode.includes('MALAM') || rawKode === '3') kode = 'M';
-          else kode = 'O';
-        }
-        return {
-          tanggal: col.tanggal,
-          hari: col.hari,
-          colIdx: col.colIdx,
-          kodeShift: kode
-        };
-      });
-
-      const summary = { P: 0, S: 0, M: 0, O: 0, totalHariKerja: 0 };
-      schedule.forEach(s => {
-        summary[s.kodeShift] = (summary[s.kodeShift] || 0) + 1;
-        if (s.kodeShift !== 'O') summary.totalHariKerja++;
-      });
-
-      officersMatrix.push({
-        namaPegawai: officer.namaPegawai,
-        username: officer.username,
-        nip: officer.nip,
-        rowIdx: empRowIdx + 1,
-        schedule: schedule,
-        summary: summary
-      });
-    });
-
-    const resultPayload = {
-      bulan: selectedMonth,
-      tahun: selectedYear,
-      schedCols: grid.schedCols,
-      officers: officersMatrix
-    };
-
-    putScriptCacheData(cacheKey, resultPayload, 120);
-
-    return {
-      success: true,
-      data: resultPayload
-    };
-
-  } catch (err) {
-    return { success: false, message: "Gagal memuat matriks jadwal security: " + err.message };
-  }
-}
-
-function updateSecurityShift(token, namaPegawai, tanggal, shiftBaru, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) return { success: false, message: "Sesi telah berakhir." };
-
-    const role = (session.role || '').toLowerCase();
-    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap') && !role.includes('koordinator') && !role.includes('humas')) {
-      return { success: false, message: "Akses ditolak. Anda tidak memiliki wewenang mengubah jadwal." };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const empName = (typeof namaPegawai === 'object' && namaPegawai !== null)
-      ? (namaPegawai.namaPegawai || namaPegawai.nama || namaPegawai.username)
-      : namaPegawai;
-    const targetDay = (typeof tanggal === 'object' && tanggal !== null)
-      ? (tanggal.tanggal || tanggal.dayNum)
-      : Number(tanggal);
-    const newShiftCode = String(shiftBaru || 'O').toUpperCase();
-
-    const jadwalSheet = findJadwalSheet(ss);
-    if (!jadwalSheet) return { success: false, message: "Sheet JadwalPiketSecurity tidak ditemukan." };
-
-    const rawValues = jadwalSheet.getDataRange().getValues();
-    const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
-    const grid = parseJadwalGrid(rawValues, selectedMonth);
-
-    if (!grid || !grid.schedCols) return { success: false, message: "Kolom jadwal tidak valid." };
-
-    const targetCol = grid.schedCols.find(c => c.tanggal === Number(targetDay));
-    if (!targetCol) return { success: false, message: "Kolom tanggal " + targetDay + " tidak ditemukan." };
-
-    const fakeUser = { username: empName, namaPegawai: empName };
-    const employeeRowIdx = findEmployeeRowInJadwal(rawValues, fakeUser, 0);
-
-    if (employeeRowIdx === -1) {
-      return { success: false, message: "Pegawai " + empName + " tidak ditemukan dalam sheet jadwal." };
-    }
-
-    const rowNum = employeeRowIdx + 1;
-    const colNum = targetCol.colIdx + 1;
-
-    jadwalSheet.getRange(rowNum, colNum).setValue(newShiftCode);
-
-    clearScriptCacheKeys([
-      "cache_sec_matrix_" + selectedMonth + "_" + selectedYear,
-      "cache_spv_dash_" + selectedMonth + "_" + selectedYear,
-      "cache_rekap_terpadu_" + selectedMonth + "_" + selectedYear
-    ]);
-    resetMemoryCache();
-
-    return {
-      success: true,
-      message: `Jadwal ${empName} tgl ${targetDay} berhasil diubah ke Shift ${newShiftCode}.`,
-      updated: { namaPegawai: empName, tanggal: targetDay, shiftBaru: newShiftCode }
-    };
-  } catch (err) {
-    return { success: false, message: "Gagal memperbarui shift: " + err.message };
-  }
-}
-
-function swapSecurityShift(token, pegawai1, pegawai2, tanggal1, tanggal2, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) return { success: false, message: "Sesi telah berakhir." };
-
-    const role = (session.role || '').toLowerCase();
-    if (!role.includes('admin') && !role.includes('supervisor') && !role.includes('kabag') && !role.includes('korlap') && !role.includes('koordinator') && !role.includes('humas')) {
-      return { success: false, message: "Akses ditolak." };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    // Support flexible arguments (objects, single date vs two dates, etc.)
-    let name1 = pegawai1;
-    let name2 = pegawai2;
-    let d1 = tanggal1;
-    let d2 = tanggal2;
-    let m = bulan;
-    let y = tahun;
-
-    if (pegawai1 && typeof pegawai1 === 'object') {
-      name1 = pegawai1.namaPegawai || pegawai1.nama || pegawai1.username;
-      d1 = pegawai1.tanggal || pegawai1.dayNum;
-      if (pegawai2 && typeof pegawai2 === 'object') {
-        name2 = pegawai2.namaPegawai || pegawai2.nama || pegawai2.username;
-        d2 = pegawai2.tanggal || pegawai2.dayNum;
-      }
-      m = tanggal1;
-      y = tanggal2;
-    } else if (y === undefined) {
-      if (typeof tanggal2 === 'number' && typeof bulan === 'number' && bulan >= 2020) {
-        y = bulan;
-        m = tanggal2;
-        d2 = d1;
-      } else if (d2 === undefined || d2 === null) {
-        d2 = d1;
-      }
-    }
-    if (!d2) d2 = d1;
-
-    const jadwalSheet = findJadwalSheet(ss);
-    if (!jadwalSheet) return { success: false, message: "Sheet jadwal tidak ditemukan." };
-
-    const rawValues = jadwalSheet.getDataRange().getValues();
-    const selectedMonth = m ? Number(m) : (new Date().getMonth() + 1);
-    const selectedYear = y ? Number(y) : new Date().getFullYear();
-    const grid = parseJadwalGrid(rawValues, selectedMonth);
-
-    if (!grid || !grid.schedCols) return { success: false, message: "Kolom jadwal tidak valid." };
-
-    const targetCol1 = grid.schedCols.find(c => c.tanggal === Number(d1));
-    const targetCol2 = grid.schedCols.find(c => c.tanggal === Number(d2));
-    if (!targetCol1 || !targetCol2) return { success: false, message: "Tanggal tidak ditemukan dalam sheet jadwal." };
-
-    const rIdx1 = findEmployeeRowInJadwal(rawValues, { username: name1, namaPegawai: name1 }, 0);
-    const rIdx2 = findEmployeeRowInJadwal(rawValues, { username: name2, namaPegawai: name2 }, 0);
-
-    if (rIdx1 === -1 || rIdx2 === -1) {
-      return { success: false, message: "Salah satu pegawai tidak ditemukan dalam jadwal." };
-    }
-
-    const val1 = rawValues[rIdx1][targetCol1.colIdx] || 'O';
-    const val2 = rawValues[rIdx2][targetCol2.colIdx] || 'O';
-
-    jadwalSheet.getRange(rIdx1 + 1, targetCol1.colIdx + 1).setValue(val2);
-    jadwalSheet.getRange(rIdx2 + 1, targetCol2.colIdx + 1).setValue(val1);
-
-    clearScriptCacheKeys([
-      "cache_sec_matrix_" + selectedMonth + "_" + selectedYear,
-      "cache_spv_dash_" + selectedMonth + "_" + selectedYear,
-      "cache_rekap_terpadu_" + selectedMonth + "_" + selectedYear
-    ]);
-    resetMemoryCache();
-
-    const tglInfo = (d1 === d2) ? `tgl ${d1}` : `tgl ${d1} dan tgl ${d2}`;
-    return {
-      success: true,
-      message: `Shift antara ${name1} (${val1}) dan ${name2} (${val2}) pada ${tglInfo} berhasil ditukar.`
-    };
-  } catch (err) {
-    return { success: false, message: "Gagal menukar shift: " + err.message };
-  }
-}
-
-// <<<<<<<<<< END MODUL: backend/Security.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/Supervisor.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - SUPERVISOR & ADMIN DASHBOARD / REKAPITULASI MODULE
- * ========================================================================
- */
-
-/**
- * ========================================================================
- * 2. DASHBOARD SUPERVISOR / KASUBBAG UMUM DATA AGGREGATOR (OPTIMIZED & ROBUST)
- * ========================================================================
- */
-function getSupervisorDashboardData(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const now = new Date();
-    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-
-    const cacheKey = "cache_spv_dash_" + selectedMonth + "_" + selectedYear;
-    const cachedData = getScriptCacheData(cacheKey);
-    if (cachedData) {
-      return { success: true, data: cachedData };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const allUsers = getAllUsersList(ss);
-    const nonManagementStaff = allUsers.filter(u => {
-      const r = (u.role || '').toLowerCase();
-      return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
-    });
-
-    let totalGlobalTarget = 0;
-    let totalGlobalSelesai = 0;
-    let totalGlobalBelum = 0;
-
-    const unitSummary = {
-      'Kebersihan': { unit: 'Kebersihan', total: 0, selesai: 0, done: 0, belum: 0, persen: 0, totalPegawai: 0 },
-      'Pelayanan':  { unit: 'Pelayanan',  total: 0, selesai: 0, done: 0, belum: 0, persen: 0, totalPegawai: 0 },
-      'Keamanan':   { unit: 'Keamanan',   total: 0, selesai: 0, done: 0, belum: 0, persen: 0, totalPegawai: 0 }
-    };
-
-    const rekapPegawaiList = [];
-    const dataTindakLanjut = [];
-
-    const jadwalSheet = findJadwalSheet(ss);
-    let securityGrid = null;
-    let secRawValues = [];
-    let secDispValues = [];
-    if (jadwalSheet) {
-      secRawValues = jadwalSheet.getDataRange().getValues();
-      secDispValues = jadwalSheet.getDataRange().getDisplayValues();
-      securityGrid = parseJadwalGrid(secRawValues, selectedMonth);
-    }
-
-    const shiftSecuritySummary = {
-      P: 0, S: 0, M: 0, O: 0,
-      todayP: 0, todayS: 0, todayM: 0, todayO: 0,
-      totalHariKerja: 0,
-      petugasAktifHariIni: { P: [], S: [], M: [], O: [] },
-      satpamTodayList: []
-    };
-
-    const todayDateNum = (now.getMonth() + 1 === selectedMonth && now.getFullYear() === selectedYear) ? now.getDate() : 31;
-
-    // Process all staff
-    nonManagementStaff.forEach(emp => {
-      const empUnit = emp.unit || 'Kebersihan';
-      if (unitSummary[empUnit]) unitSummary[empUnit].totalPegawai++;
-
-      let empTotal = 0;
-      let empSelesai = 0;
-      let empBelum = 0;
-
-      if (empUnit === 'Keamanan') {
-        const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
-        let tasksToUse = (resK && resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
-        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-        if (empSheet) {
-          const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-          if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
-            tasksToUse = parsedSecSheet.items;
-          }
-        }
-
-        if (resK && resK.jadwal && resK.jadwal.length > 0) {
-          resK.jadwal.forEach(j => {
-            const d = j.tanggal;
-            const shiftKode = j.kodeShift || 'O';
-            const namaShift = j.namaShift || (shiftKode === 'P' ? 'Pagi' : shiftKode === 'S' ? 'Sore' : shiftKode === 'M' ? 'Malam' : 'Libur');
-
-            shiftSecuritySummary[shiftKode] = (shiftSecuritySummary[shiftKode] || 0) + 1;
-            if (d === todayDateNum) {
-              if (shiftKode === 'P') shiftSecuritySummary.todayP++;
-              else if (shiftKode === 'S') shiftSecuritySummary.todayS++;
-              else if (shiftKode === 'M') shiftSecuritySummary.todayM++;
-              else if (shiftKode === 'O') shiftSecuritySummary.todayO++;
-
-              shiftSecuritySummary.petugasAktifHariIni[shiftKode].push(emp.namaPegawai);
-              if (shiftKode !== 'O') {
-                shiftSecuritySummary.satpamTodayList.push({
-                  nama: emp.namaPegawai,
-                  username: emp.username,
-                  shift: shiftKode,
-                  posisi: shiftKode === 'P' ? 'Piket Pagi (06.00 - 16.00)' : (shiftKode === 'S' ? 'Piket Sore (15.30 - 23.30)' : 'Piket Malam (23.00 - 07.30)')
-                });
-              }
-            }
-
-            if (shiftKode === 'O') return;
-            shiftSecuritySummary.totalHariKerja++;
-
-            const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, shiftKode));
-            shiftTasks.forEach(t => {
-              empTotal++;
-              let isDone = false;
-              if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
-                const st = t.dailyStatus[d];
-                isDone = (st === '1' || st === 1 || st === true);
-              } else {
-                const isPastOrToday = (selectedYear < now.getFullYear()) ||
-                  (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
-                  (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
-                isDone = isPastOrToday;
-              }
-
-              if (isDone) {
-                empSelesai++;
-              } else {
-                empBelum++;
-                if (d === todayDateNum && dataTindakLanjut.length < 15) {
-                  dataTindakLanjut.push({
-                    unit: 'Keamanan',
-                    namaPegawai: emp.namaPegawai,
-                    ruangan: t.ruangan || ('Shift ' + namaShift),
-                    kegiatan: t.kegiatan,
-                    status: 'Belum Selesai',
-                    tanggal: `${todayDateNum}/${selectedMonth}/${selectedYear}`
-                  });
-                }
-              }
-            });
-          });
-        }
-      } else {
-        // Kebersihan & Pelayanan
-        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-        let parsedSheet = null;
-        if (empSheet) {
-          parsedSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-        }
-
-        if (parsedSheet && parsedSheet.items && parsedSheet.items.length > 0) {
-          parsedSheet.items.forEach(it => {
-            empTotal += (it.totalHariAktif || 0);
-            empSelesai += (it.selesaiCount || 0);
-            empBelum += Math.max(0, (it.totalHariAktif || 0) - (it.selesaiCount || 0));
-
-            const stToday = it.dailyStatus ? it.dailyStatus[todayDateNum] : '-';
-            if ((stToday === '0' || stToday === 0) && dataTindakLanjut.length < 15) {
-              dataTindakLanjut.push({
-                unit: empUnit,
-                namaPegawai: emp.namaPegawai,
-                ruangan: it.ruangan,
-                kegiatan: it.kegiatan,
-                status: 'Belum Selesai',
-                tanggal: `${todayDateNum}/${selectedMonth}/${selectedYear}`
-              });
-            }
-          });
-        }
-      }
-
-      empBelum = Math.max(0, empTotal - empSelesai);
-      const empPersen = (empTotal > 0 && !isNaN(empTotal)) ? Math.round((empSelesai / empTotal) * 100) : 0;
-
-      totalGlobalTarget += empTotal;
-      totalGlobalSelesai += empSelesai;
-      totalGlobalBelum += empBelum;
-
-      if (unitSummary[empUnit]) {
-        unitSummary[empUnit].total += empTotal;
-        unitSummary[empUnit].selesai += empSelesai;
-        unitSummary[empUnit].done = unitSummary[empUnit].selesai;
-        unitSummary[empUnit].belum += empBelum;
-      }
-
-      rekapPegawaiList.push({
-        username: emp.username,
-        namaPegawai: emp.namaPegawai,
-        unit: empUnit,
-        role: emp.role,
-        total: empTotal,
-        selesai: empSelesai,
-        done: empSelesai,
-        belum: empBelum,
-        persen: empPersen,
-        statusBadge: empPersen >= 90 ? 'Optimal' : (empPersen >= 70 ? 'Cukup' : 'Perlu Perhatian')
-      });
-    });
-
-    Object.keys(unitSummary).forEach(k => {
-      const u = unitSummary[k];
-      u.done = u.selesai;
-      u.belum = Math.max(0, u.total - u.selesai);
-      u.persen = (u.total > 0 && !isNaN(u.total)) ? Math.round((u.selesai / u.total) * 100) : 0;
-    });
-
-    const persenGlobal = (totalGlobalTarget > 0 && !isNaN(totalGlobalTarget)) ? Math.round((totalGlobalSelesai / totalGlobalTarget) * 100) : 0;
-
-    const resultPayload = {
-      bulan: selectedMonth,
-      tahun: selectedYear,
-      totalTarget: totalGlobalTarget,
-      totalSelesai: totalGlobalSelesai,
-      totalDone: totalGlobalSelesai,
-      totalBelum: totalGlobalBelum,
-      persenSelesai: persenGlobal,
-      persen: persenGlobal,
-      unitSummary: unitSummary,
-      shiftSecurity: shiftSecuritySummary,
-      rekapPegawai: rekapPegawaiList,
-      tindakLanjut: dataTindakLanjut
-    };
-
-    putScriptCacheData(cacheKey, resultPayload, 60);
-
-    return {
-      success: true,
-      data: resultPayload
-    };
-
-  } catch (err) {
-    return { success: false, message: "Gagal memuat dashboard supervisor: " + err.message };
-  }
-}
-
-/**
- * ========================================================================
- * 3. MONITORING TERPADU ADMIN & SUPERVISOR (FILTER MULTI-KRITERIA)
- * ========================================================================
- */
-function getIntegratedMonitoringData(token, bulan, tahun, filterUnit, filterPegawai, filterRuangan, filterStatus) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const now = new Date();
-    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-
-    const allUsers = getAllUsersList(ss);
-    let targetUsers = allUsers.filter(u => {
-      const r = (u.role || '').toLowerCase();
-      return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
-    });
-
-    if (filterUnit && filterUnit !== 'SEMUA') {
-      targetUsers = targetUsers.filter(u => u.unit === filterUnit);
-    }
-
-    if (filterPegawai && filterPegawai !== 'SEMUA') {
-      targetUsers = targetUsers.filter(u => u.username === filterPegawai || u.namaPegawai === filterPegawai);
-    }
-
-    let aggregatedItems = [];
-    const activeDaysSet = new Set();
-    const allRuanganSet = new Set();
-    const daftarPegawaiFilter = [];
-
-    allUsers.forEach(u => {
-      const r = (u.role || '').toLowerCase();
-      if (!r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag')) {
-        daftarPegawaiFilter.push({ username: u.username, namaPegawai: u.namaPegawai, unit: u.unit });
-      }
-    });
-
-    targetUsers.forEach(emp => {
-      const empUnit = emp.unit || 'Kebersihan';
-
-      if (empUnit === 'Keamanan') {
-        const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
-        if (resK && resK.jadwal && resK.jadwal.length > 0) {
-          // Kumpulkan task items: gunakan sheet pegawai jika tersedia, atau standar defaultTasks
-          let tasksToUse = (resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
-          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-          if (empSheet) {
-            const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-            if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
-              tasksToUse = parsedSecSheet.items;
-            }
-          }
-
-          resK.jadwal.forEach(j => {
-            const d = j.tanggal;
-            activeDaysSet.add(d);
-
-            const shiftKode = j.kodeShift || 'O';
-            const namaShift = j.namaShift || (shiftKode === 'P' ? 'Pagi' : shiftKode === 'S' ? 'Sore' : shiftKode === 'M' ? 'Malam' : 'Libur');
-
-            // 1. Jika shift Off / Libur ('O'): pegawai bebas tugas, tidak ada checklist tugas yang muncul pada tanggal ini
-            if (shiftKode === 'O') {
-              return;
-            }
-
-            // 2. Filter checklist terpadu per tanggal HANYA memunculkan tugas yang harus dilakukan pada shift pegawai tersebut
-            const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, shiftKode));
-
-            shiftTasks.forEach(t => {
-              const rName = t.ruangan || ('Shift ' + namaShift);
-              allRuanganSet.add(rName);
-
-              let isDone = false;
-              if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
-                const st = t.dailyStatus[d];
-                isDone = (st === '1' || st === 1 || st === true);
-              } else {
-                // Jika jadwal terisi dan tanggal sudah berjalan/hari ini, tandai telah terlaksana sesuai shift
-                const isPastOrToday = (selectedYear < now.getFullYear()) ||
-                  (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
-                  (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
-                isDone = isPastOrToday;
-              }
-
-              aggregatedItems.push({
-                unit: 'Keamanan',
-                pegawai: emp.namaPegawai,
-                namaPegawai: emp.namaPegawai,
-                username: emp.username,
-                ruangan: rName,
-                item: t.kegiatan,
-                dayNum: d,
-                weekNum: Math.min(5, Math.ceil(d / 7)),
-                shift: shiftKode,
-                namaShift: namaShift,
-                isDone: isDone,
-                sheetRowIndex: t.sheetRowIndex || null,
-                colIndex: (t.colMapping && t.colMapping[d]) ? t.colMapping[d] : (d + 1),
-                targetSheetName: emp.namaSheet || null,
-                updatedAt: isDone
-                  ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} (Shift ${shiftKode})`
-                  : `Shift ${shiftKode} (Belum)`
-              });
-            });
-          });
-        }
-      } else {
-        // Unit Kerja lain (Kebersihan, Pelayanan, dll.)
-        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-        let parsed = null;
-        if (empSheet) {
-          parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-        }
-
-        if (parsed && parsed.items && parsed.items.length > 0) {
-          parsed.activeDays.forEach(d => activeDaysSet.add(d));
-
-          parsed.items.forEach(it => {
-            parsed.activeDays.forEach(d => {
-              const st = it.dailyStatus ? it.dailyStatus[d] : null;
-
-              // Cek apakah hari tersebut adalah akhir pekan (Sabtu / Minggu)
-              const dateObj = new Date(selectedYear, selectedMonth - 1, d);
-              const dow = dateObj.getDay(); // 0 = Minggu, 6 = Sabtu
-              const isWeekend = (dow === 0 || dow === 6);
-
-              // Aturan kemunculan tugas yang harus dikerjakan pada hari tersebut:
-              // - Jika status '-' / null / kosong: tugas tidak dijadwalkan pada hari tersebut, jangan munculkan
-              // - Jika akhir pekan (Sabtu/Minggu) dan tidak ditandai selesai (st !== '1'): hari libur operasional, jangan munculkan
-              const isDone = (st === '1' || st === 1 || st === true);
-              const isScheduled = (st === '1' || st === 1 || st === true || st === '0' || st === 0 || st === false);
-
-              if (!isScheduled || st === '-') {
-                return; // Tidak ada kewajiban tugas pada hari dan tanggal ini
-              }
-
-              if (isWeekend && !isDone) {
-                return; // Libur akhir pekan operasional kantor
-              }
-
-              allRuanganSet.add(it.ruangan);
-
-              aggregatedItems.push({
-                unit: empUnit,
-                pegawai: emp.namaPegawai,
-                namaPegawai: emp.namaPegawai,
-                username: emp.username,
-                ruangan: it.ruangan,
-                item: it.kegiatan,
-                dayNum: d,
-                weekNum: Math.min(5, Math.ceil(d / 7)),
-                isDone: isDone,
-                sheetRowIndex: it.sheetRowIndex || null,
-                colIndex: (it.colMapping && it.colMapping[d]) ? it.colMapping[d] : (d + 1),
-                targetSheetName: emp.namaSheet || null,
-                updatedAt: isDone
-                  ? `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')} 16:00`
-                  : '-'
-              });
-            });
-          });
-        }
-      }
-    });
-
-    // Perkaya data dengan status bukti dukung foto & checklist pengawas
-    const bMap = getBuktiDukungMap(ss, selectedMonth, selectedYear);
-    aggregatedItems.forEach(it => {
-      const tKey = generateTaskKey(selectedYear, selectedMonth, it.dayNum, it.username || it.pegawai, it.ruangan, it.item);
-      const fKey = [it.dayNum, getAlphaOnly(it.pegawai || it.username), getAlphaOnly(it.ruangan), getAlphaOnly(it.item)].join('_');
-      const rec = bMap.map[tKey] || bMap.fallbackMap[fKey];
-      if (rec) {
-        it.taskKey = rec.taskKey || tKey;
-        it.statusPengawas = rec.statusPengawas;
-        it.namaPengawas = rec.namaPengawas;
-        it.waktuValidasi = rec.waktuValidasiPengawas;
-        it.adaBukti = rec.adaBuktiDukung;
-        it.fileId = rec.fileIdDrive;
-        it.fileUrl = rec.fileUrlDrive;
-        it.fileName = rec.fileName;
-        it.koordinat = rec.koordinat;
-        it.lokasi = rec.lokasi;
-        it.waktuPelaksanaan = rec.waktu;
-      } else {
-        it.taskKey = tKey;
-        it.statusPengawas = false;
-        it.namaPengawas = '';
-        it.waktuValidasi = '';
-        it.adaBukti = false;
-        it.fileId = '';
-        it.fileUrl = '';
-        it.fileName = '';
-        it.koordinat = '';
-        it.lokasi = '';
-        it.waktuPelaksanaan = '';
-      }
-    });
-
-    if (filterRuangan && filterRuangan !== 'SEMUA') {
-      aggregatedItems = aggregatedItems.filter(it => it.ruangan === filterRuangan);
-    }
-
-    if (filterStatus && filterStatus !== 'SEMUA') {
-      aggregatedItems = aggregatedItems.filter(it => {
-        if (filterStatus === 'SELESAI') return it.isDone;
-        if (filterStatus === 'BELUM') return !it.isDone;
-        if (filterStatus === 'VALID' || filterStatus === 'TERVALIDASI') return it.statusPengawas === true;
-        if (filterStatus === 'BELUM_VALID' || filterStatus === 'BELUM_TERVALIDASI') return it.statusPengawas !== true;
-        if (filterStatus === 'ADA_BUKTI') return it.adaBukti === true;
-        if (filterStatus === 'TANPA_BUKTI') return it.adaBukti !== true;
-        return true;
-      });
-    }
-
-    const sortedActiveDays = Array.from(activeDaysSet).sort((a, b) => a - b);
-    const distinctPegawai = Array.from(new Set(daftarPegawaiFilter.map(p => p.namaPegawai)));
-    const distinctRuangan = Array.from(allRuanganSet);
-
-    return {
-      success: true,
-      data: {
-        bulan: selectedMonth,
-        tahun: selectedYear,
-        activeDays: sortedActiveDays.length > 0 ? sortedActiveDays : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        daysInMonth: sortedActiveDays.length > 0 ? Math.max.apply(null, sortedActiveDays) : 30,
-        items: aggregatedItems,
-        pegawaiList: distinctPegawai,
-        ruanganList: distinctRuangan,
-        daftarPegawai: daftarPegawaiFilter,
-        daftarRuangan: distinctRuangan,
-        totalItems: aggregatedItems.length
-      }
-    };
-
-  } catch (err) {
-    return { success: false, message: "Gagal memuat monitoring terpadu: " + err.message };
-  }
-}
-
-/**
- * ========================================================================
- * 4. REKAPITULASI MONITORING TERPADU (KEBERSIHAN, PELAYANAN, KEAMANAN)
- * ========================================================================
- */
-function getIntegratedRekapMonitoring(token, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const now = new Date();
-    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-
-    const cacheKey = "cache_rekap_terpadu_" + selectedMonth + "_" + selectedYear;
-    const cachedData = getScriptCacheData(cacheKey);
-    if (cachedData) {
-      return { success: true, data: cachedData };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const allUsers = getAllUsersList(ss);
-    const nonManagementStaff = allUsers.filter(u => {
-      const r = (u.role || '').toLowerCase();
-      return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
-    });
-
-    let globalTotal = 0;
-    let globalSelesai = 0;
-
-    const unitSummary = {
-      'Kebersihan': { unit: 'Kebersihan', total: 0, selesai: 0, done: 0, belum: 0, persen: 0 },
-      'Pelayanan':  { unit: 'Pelayanan',  total: 0, selesai: 0, done: 0, belum: 0, persen: 0 },
-      'Keamanan':   { unit: 'Keamanan',   total: 0, selesai: 0, done: 0, belum: 0, persen: 0 }
-    };
-
-    const rekapRuanganMap = {};
-    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-    const rekapHarian = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      rekapHarian.push({ tanggal: d, total: 0, selesai: 0, done: 0 });
-    }
-
-    const todayDateNum = (now.getMonth() + 1 === selectedMonth && now.getFullYear() === selectedYear) ? now.getDate() : 31;
-
-    // Process all staff
-    nonManagementStaff.forEach(emp => {
-      const empUnit = emp.unit || 'Kebersihan';
-
-      if (empUnit === 'Keamanan') {
-        const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
-        if (resK && resK.jadwal && resK.jadwal.length > 0) {
-          let tasksToUse = (resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
-          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-          if (empSheet) {
-            const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-            if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
-              tasksToUse = parsedSecSheet.items;
-            }
-          }
-
-          resK.jadwal.forEach(j => {
-            const d = j.tanggal;
-            const shiftKode = j.kodeShift || 'O';
-            const namaShift = j.namaShift || (shiftKode === 'P' ? 'Pagi' : shiftKode === 'S' ? 'Sore' : shiftKode === 'M' ? 'Malam' : 'Libur');
-
-            if (shiftKode === 'O') return;
-
-            const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, shiftKode));
-            shiftTasks.forEach(t => {
-              const rName = t.ruangan || ('Shift ' + namaShift);
-              if (!rekapRuanganMap[rName]) {
-                rekapRuanganMap[rName] = { ruangan: rName, unit: 'Keamanan', total: 0, selesai: 0, done: 0, belum: 0, persen: 0, itemCount: 0 };
-              }
-              rekapRuanganMap[rName].itemCount++;
-
-              let isDone = false;
-              if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
-                const st = t.dailyStatus[d];
-                isDone = (st === '1' || st === 1 || st === true);
-              } else {
-                const isPastOrToday = (selectedYear < now.getFullYear()) ||
-                  (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
-                  (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
-                isDone = isPastOrToday;
-              }
-
-              rekapRuanganMap[rName].total++;
-              globalTotal++;
-              if (unitSummary['Keamanan']) unitSummary['Keamanan'].total++;
-              if (d >= 1 && d <= daysInMonth) {
-                rekapHarian[d - 1].total++;
-              }
-
-              if (isDone) {
-                rekapRuanganMap[rName].selesai++;
-                globalSelesai++;
-                if (unitSummary['Keamanan']) unitSummary['Keamanan'].selesai++;
-                if (d >= 1 && d <= daysInMonth) {
-                  rekapHarian[d - 1].selesai++;
-                  rekapHarian[d - 1].done++;
-                }
-              }
-            });
-          });
-        }
-      } else {
-        // Kebersihan & Pelayanan
-        const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-        let parsed = null;
-        if (empSheet) {
-          parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-        }
-
-        if (parsed && parsed.items && parsed.items.length > 0) {
-          parsed.items.forEach(it => {
-            const rName = it.ruangan || 'Umum';
-            if (!rekapRuanganMap[rName]) {
-              rekapRuanganMap[rName] = { ruangan: rName, unit: empUnit, total: 0, selesai: 0, done: 0, belum: 0, persen: 0, itemCount: 0 };
-            }
-            rekapRuanganMap[rName].itemCount++;
-
-            if (parsed.activeDays) {
-              parsed.activeDays.forEach(d => {
-                const st = it.dailyStatus ? it.dailyStatus[d] : null;
-
-                const dateObj = new Date(selectedYear, selectedMonth - 1, d);
-                const dow = dateObj.getDay(); // 0 = Minggu, 6 = Sabtu
-                const isWeekend = (dow === 0 || dow === 6);
-                const isDone = (st === '1' || st === 1 || st === true);
-                const isScheduled = (st === '1' || st === 1 || st === true || st === '0' || st === 0 || st === false);
-
-                if (!isScheduled || st === '-') return;
-                if (isWeekend && !isDone) return; // Libur akhir pekan operasional
-
-                rekapRuanganMap[rName].total++;
-                globalTotal++;
-                if (unitSummary[empUnit]) unitSummary[empUnit].total++;
-                if (d >= 1 && d <= daysInMonth) {
-                  rekapHarian[d - 1].total++;
-                }
-
-                if (isDone) {
-                  rekapRuanganMap[rName].selesai++;
-                  globalSelesai++;
-                  if (unitSummary[empUnit]) unitSummary[empUnit].selesai++;
-                  if (d >= 1 && d <= daysInMonth) {
-                    rekapHarian[d - 1].selesai++;
-                    rekapHarian[d - 1].done++;
-                  }
-                }
-              });
-            }
-          });
-        }
-      }
-    });
-
-    Object.keys(unitSummary).forEach(k => {
-      const u = unitSummary[k];
-      u.done = u.selesai;
-      u.belum = Math.max(0, u.total - u.selesai);
-      u.persen = (u.total > 0 && !isNaN(u.total)) ? Math.round((u.selesai / u.total) * 100) : 0;
-    });
-
-    const rekapRuanganList = Object.values(rekapRuanganMap).map(r => {
-      r.done = r.selesai;
-      r.belum = Math.max(0, r.total - r.selesai);
-      r.persen = (r.total > 0 && !isNaN(r.total)) ? Math.round((r.selesai / r.total) * 100) : 0;
-      return r;
-    });
-
-    rekapHarian.forEach(h => {
-      h.hari = h.tanggal;
-      h.done = h.selesai;
-    });
-
-    const resultPayload = {
-      bulan: selectedMonth,
-      tahun: selectedYear,
-      totalMonitoring: globalTotal,
-      totalDone: globalSelesai,
-      monitoringSelesai: globalSelesai,
-      monitoringBelum: Math.max(0, globalTotal - globalSelesai),
-      progresPersen: (globalTotal > 0 && !isNaN(globalTotal)) ? Math.round((globalSelesai / globalTotal) * 100) : 0,
-      rekapUnit: Object.values(unitSummary),
-      rekapRuangan: rekapRuanganList,
-      rekapHarian: rekapHarian
-    };
-
-    putScriptCacheData(cacheKey, resultPayload, 60);
-
-    return {
-      success: true,
-      data: resultPayload
-    };
-  } catch (err) {
-    return { success: false, message: "Gagal memuat rekap terpadu: " + err.message };
-  }
-}
-
-function getEmployeeDetailProgress(token, employeeIdentifier, bulan, tahun) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) return { success: false, message: "Sesi tidak valid." };
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    if (!employeeIdentifier) {
-      return { success: false, message: "Nama pegawai tidak boleh kosong." };
-    }
-
-    const allUsers = getAllUsersList(ss);
-    const empAlpha = getAlphaOnly(employeeIdentifier);
-
-    let targetUser = allUsers.find(u =>
-      u.username === employeeIdentifier ||
-      u.namaPegawai === employeeIdentifier ||
-      getAlphaOnly(u.username) === empAlpha ||
-      getAlphaOnly(u.namaPegawai) === empAlpha
-    );
-
-    if (!targetUser) {
-      targetUser = allUsers.find(u => {
-        const uAlpha = getAlphaOnly(u.namaPegawai || u.username);
-        return uAlpha && empAlpha && (uAlpha.includes(empAlpha) || empAlpha.includes(uAlpha));
-      });
-    }
-
-    if (!targetUser) {
-      // Fallback: create temporary user target
-      targetUser = {
-        username: employeeIdentifier,
-        namaPegawai: employeeIdentifier,
-        namaSheet: employeeIdentifier,
-        unit: 'Kebersihan',
-        role: 'Petugas Kebersihan'
-      };
-      const testSh = findEmployeeSheet(ss, employeeIdentifier, employeeIdentifier, employeeIdentifier);
-      if (testSh) {
-        targetUser.jenis = getSheetJenis(testSh, targetUser, ss);
-        targetUser.unit = determineUnit(targetUser.jenis, targetUser.role, targetUser.unit);
-      }
-    }
-
-    const selectedMonth = bulan ? Number(bulan) : (new Date().getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : new Date().getFullYear();
-    const todayDate = (new Date().getMonth() + 1 === selectedMonth) ? new Date().getDate() : 1;
-
-    if (targetUser.unit === 'Keamanan') {
-      const resK = getJadwalKeamananInternal(ss, targetUser, selectedMonth, selectedYear);
-      const allSecTasks = (resK && resK.taskItems) ? resK.taskItems : [];
-
-      let todayShift = 'O';
-      if (resK && resK.jadwal) {
-        const jToday = resK.jadwal.find(j => j.tanggal === todayDate);
-        if (jToday) todayShift = jToday.kodeShift;
-      }
-
-      const formattedTasks = allSecTasks.map(t => {
-        const rUpper = String(t.ruangan || '').toUpperCase();
-        let appliesToShift = false;
-        if (todayShift === 'P' && (rUpper.includes('PAGI') || rUpper.includes('JAM KERJA'))) appliesToShift = true;
-        else if ((todayShift === 'S' || todayShift === 'M') && rUpper.includes('MALAM')) appliesToShift = true;
-        else if (todayShift === 'S' && rUpper.includes('JAM KERJA')) appliesToShift = true;
-
-        return {
-          item: t.kegiatan,
-          ruangan: t.ruangan,
-          periode: 'Shift ' + todayShift,
-          isDone: appliesToShift
-        };
-      });
-
-      const totalTasks = formattedTasks.length;
-      const doneTasks = formattedTasks.filter(t => t.isDone).length;
-      const pct = (totalTasks > 0 && !isNaN(totalTasks)) ? Math.round((doneTasks / totalTasks) * 100) : 0;
-
-      return {
-        success: true,
-        data: {
-          namaPegawai: targetUser.namaPegawai,
-          username: targetUser.username,
-          unit: targetUser.unit,
-          role: targetUser.role || 'Petugas Keamanan',
-          totalTasks: totalTasks,
-          doneTasks: doneTasks,
-          persen: pct,
-          isKeamanan: true,
-          todayShift: todayShift,
-          jadwalShift: resK ? resK.jadwal : [],
-          tasks: formattedTasks
-        }
-      };
-    } else {
-      const empSheet = findEmployeeSheet(ss, targetUser.namaSheet, targetUser.namaPegawai, targetUser.username);
-      if (!empSheet) {
-        return {
-          success: true,
-          data: {
-            namaPegawai: targetUser.namaPegawai,
-            username: targetUser.username,
-            unit: targetUser.unit,
-            role: targetUser.role || 'Petugas Teknis',
-            totalTasks: 0,
-            doneTasks: 0,
-            persen: 0,
-            isKeamanan: false,
-            tasks: []
-          }
-        };
-      }
-      const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-
-      const formattedTasks = (parsed.items || []).map(it => {
-        const isDoneToday = it.dailyStatus && (it.dailyStatus[todayDate] === '1' || it.dailyStatus[todayDate] === 1);
-        return {
-          item: it.kegiatan,
-          ruangan: it.ruangan,
-          periode: it.periode || 'Harian',
-          isDone: isDoneToday
-        };
-      });
-
-      const totalTasks = formattedTasks.length;
-      const doneTasks = formattedTasks.filter(t => t.isDone).length;
-      const pct = (totalTasks > 0 && !isNaN(totalTasks)) ? Math.round((doneTasks / totalTasks) * 100) : 0;
-
-      return {
-        success: true,
-        data: {
-          namaPegawai: targetUser.namaPegawai,
-          username: targetUser.username,
-          unit: targetUser.unit,
-          role: targetUser.role || 'Petugas Kebersihan',
-          totalTasks: totalTasks,
-          doneTasks: doneTasks,
-          persen: pct,
-          isKeamanan: false,
-          tasks: formattedTasks
-        }
-      };
-    }
-
-  } catch (err) {
-    return { success: false, message: "Gagal memuat detail pegawai: " + err.message };
-  }
-}
-
-/**
- * ========================================================================
- * 6. FITUR EXPORT LAPORAN (SEMUA PEGAWAI / INDIVIDU SETIAP BULAN)
- * ========================================================================
- */
-/**
- * Mengambil seluruh data bukti dukung foto dari sheet ValidasiDanBuktiDukung untuk periode laporan
- */
-function getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, tipe) {
-  try {
-    var sheetName = (typeof SHEET_NAMES !== 'undefined' && SHEET_NAMES.BUKTI_DUKUNG) ? SHEET_NAMES.BUKTI_DUKUNG : 'ValidasiDanBuktiDukung';
-    var sheetBukti = findSheet(ss, sheetName);
-    if (!sheetBukti) return [];
-
-    var bValues = sheetBukti.getDataRange().getValues();
-    if (!bValues || bValues.length < 2) return [];
-
-    var buktiList = [];
-    var targetAlpha = targetUser ? getAlphaOnly(targetUser.namaPegawai || targetUser.username || '') : '';
-    var targetUserClean = (targetUser && targetUser.username) ? String(targetUser.username).toLowerCase().trim() : '';
-
-    for (var i = 1; i < bValues.length; i++) {
-      var bRow = bValues[i];
-      var bYear = Number(bRow[2] || 0);
-      var bMonth = Number(bRow[3] || 0);
-      if (selectedYear && bYear && bYear !== selectedYear) continue;
-      if (selectedMonth && bMonth && bMonth !== selectedMonth) continue;
-
-      var fileId = String(bRow[17] || '').trim();
-      var fileUrl = String(bRow[18] || '').trim();
-      var adaBukti = (bRow[16] === true || bRow[16] === 1 || String(bRow[16]).toUpperCase() === 'TRUE' || Boolean(fileId) || Boolean(fileUrl));
-      if (!adaBukti) continue;
-
-      var bUsername = String(bRow[9] || '').trim();
-      var bNamaPegawai = String(bRow[8] || '').trim();
-
-      if (tipe === 'individu' && targetUser) {
-        var uMatch = targetUserClean && (bUsername.toLowerCase() === targetUserClean);
-        var nMatch = targetAlpha && (getAlphaOnly(bNamaPegawai) === targetAlpha || getAlphaOnly(bUsername) === targetAlpha);
-        if (!uMatch && !nMatch) continue;
-      }
-
-      var thumbUrl = fileId ? ("https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1000") : (fileUrl || '');
-
-      buktiList.push({
-        taskKey: String(bRow[0] || ''),
-        tanggal: Number(bRow[5] || 0),
-        waktu: String(bRow[6] || ''),
-        unitKerja: String(bRow[7] || ''),
-        namaPegawai: bNamaPegawai,
-        username: bUsername,
-        ruangan: String(bRow[10] || '-'),
-        namaTugas: String(bRow[11] || '-'),
-        statusPetugas: (bRow[12] === true || bRow[12] === 1 || String(bRow[12]).toUpperCase() === 'TRUE'),
-        statusPengawas: (bRow[13] === true || bRow[13] === 1 || String(bRow[13]).toUpperCase() === 'TRUE'),
-        namaPengawas: String(bRow[14] || ''),
-        waktuValidasiPengawas: String(bRow[15] || ''),
-        fileId: fileId,
-        fileUrl: fileUrl || (fileId ? ("https://drive.google.com/file/d/" + fileId + "/view") : ''),
-        fileName: String(bRow[19] || ''),
-        koordinat: String(bRow[20] || ''),
-        lokasi: String(bRow[21] || ''),
-        catatan: String(bRow[22] || ''),
-        thumbnailUrl: thumbUrl
-      });
-    }
-
-    buktiList.sort(function(a, b) {
-      return (a.tanggal || 0) - (b.tanggal || 0);
-    });
-
-    return buktiList;
-  } catch (e) {
-    return [];
-  }
-}
-
-function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const now = new Date();
-    const selectedMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
-    const selectedYear = tahun ? Number(tahun) : now.getFullYear();
-    const NAMA_BULAN = [
-      "", "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-    ];
-    const namaBulanStr = NAMA_BULAN[selectedMonth] || ("Bulan " + selectedMonth);
-    const userRoleLower = (session.role || '').toLowerCase();
-    const isManager = userRoleLower.includes('admin') || userRoleLower.includes('supervisor') || userRoleLower.includes('kabag') || userRoleLower.includes('humas') || userRoleLower.includes('koordinator') || userRoleLower.includes('korlap');
-
-    // JIKA TIPE 'semua' (Hanya untuk Admin / Supervisor)
-    if (tipe === 'semua' && isManager) {
-      const allUsers = getAllUsersList(ss);
-      const nonManagementStaff = allUsers.filter(u => {
-        const r = (u.role || '').toLowerCase();
-        return !r.includes('admin') && !r.includes('supervisor') && !r.includes('kabag');
-      });
-
-      const rekapPegawai = [];
-      let totalSemua = 0;
-      let selesaiSemua = 0;
-
-      nonManagementStaff.forEach(emp => {
-        const empUnit = emp.unit || 'Kebersihan';
-        let empTotal = 0;
-        let empSelesai = 0;
-
-        if (empUnit === 'Keamanan') {
-          const resK = getJadwalKeamananInternal(ss, emp, selectedMonth, selectedYear);
-          let tasksToUse = (resK && resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
-          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-          if (empSheet) {
-            const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-            if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
-              tasksToUse = parsedSecSheet.items;
-            }
-          }
-
-          if (resK && resK.jadwal) {
-            resK.jadwal.forEach(j => {
-              if (j.kodeShift === 'O') return;
-              const shiftTasks = tasksToUse.filter(t => isKeamananTaskForShift(t, j.kodeShift));
-              shiftTasks.forEach(t => {
-                empTotal++;
-                let isDone = false;
-                if (t.dailyStatus && (t.dailyStatus[j.tanggal] !== undefined && t.dailyStatus[j.tanggal] !== null)) {
-                  const st = t.dailyStatus[j.tanggal];
-                  isDone = (st === '1' || st === 1 || st === true);
-                } else {
-                  const isPastOrToday = (selectedYear < now.getFullYear()) ||
-                    (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
-                    (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && j.tanggal <= now.getDate());
-                  isDone = isPastOrToday;
-                }
-                if (isDone) empSelesai++;
-              });
-            });
-          }
-        } else {
-          const empSheet = findEmployeeSheet(ss, emp.namaSheet, emp.namaPegawai, emp.username);
-          if (empSheet) {
-            const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-            if (parsed && parsed.items) {
-              parsed.items.forEach(it => {
-                empTotal += (it.totalHariAktif || 0);
-                empSelesai += (it.selesaiCount || 0);
-              });
-            }
-          }
-        }
-
-        const belum = Math.max(0, empTotal - empSelesai);
-        const persen = (empTotal > 0 && !isNaN(empTotal)) ? Math.round((empSelesai / empTotal) * 100) : 0;
-        totalSemua += empTotal;
-        selesaiSemua += empSelesai;
-
-        rekapPegawai.push({
-          namaPegawai: emp.namaPegawai,
-          username: emp.username,
-          unit: empUnit,
-          role: emp.role || empUnit,
-          totalTarget: empTotal,
-          selesai: empSelesai,
-          belum: belum,
-          persen: persen,
-          status: persen >= 90 ? 'Optimal' : (persen >= 70 ? 'Cukup' : 'Perlu Perhatian')
-        });
-      });
-
-      const persenSemua = (totalSemua > 0 && !isNaN(totalSemua)) ? Math.round((selesaiSemua / totalSemua) * 100) : 0;
-
-      return {
-        success: true,
-        data: {
-          tipe: 'semua',
-          periode: {
-            bulan: selectedMonth,
-            tahun: selectedYear,
-            namaBulan: namaBulanStr,
-            labelPeriode: namaBulanStr + " " + selectedYear
-          },
-          summary: {
-            totalPegawai: rekapPegawai.length,
-            totalTarget: totalSemua,
-            totalSelesai: selesaiSemua,
-            totalBelum: Math.max(0, totalSemua - selesaiSemua),
-            persen: persenSemua
-          },
-          rekapPegawai: rekapPegawai,
-          buktiDukung: getBuktiDukungForExport(ss, selectedMonth, selectedYear, null, 'semua')
-        }
-      };
-    } else {
-      // EXPORT PER PEGAWAI (INDIVIDU)
-      let targetUser = null;
-      const allUsers = getAllUsersList(ss);
-      const queryUsername = (isManager && targetUsername) ? targetUsername : session.username;
-      const queryAlpha = getAlphaOnly(queryUsername);
-
-      targetUser = allUsers.find(u =>
-        u.username === queryUsername ||
-        u.namaPegawai === queryUsername ||
-        (queryAlpha && getAlphaOnly(u.username) === queryAlpha) ||
-        (queryAlpha && getAlphaOnly(u.namaPegawai) === queryAlpha)
-      );
-      if (!targetUser) {
-        targetUser = session;
-      }
-
-      const empUnit = targetUser.unit || 'Kebersihan';
-      const itemsList = [];
-      let jadwalSatpam = [];
-      let totalTarget = 0;
-      let totalSelesai = 0;
-      const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-
-      if (empUnit === 'Keamanan') {
-        const resK = getJadwalKeamananInternal(ss, targetUser, selectedMonth, selectedYear);
-        let tasksToUse = (resK && resK.taskItems && resK.taskItems.length > 0) ? resK.taskItems : [];
-        const empSheet = findEmployeeSheet(ss, targetUser.namaSheet, targetUser.namaPegawai, targetUser.username);
-        if (empSheet) {
-          const parsedSecSheet = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-          if (parsedSecSheet && parsedSecSheet.items && parsedSecSheet.items.length > 0) {
-            tasksToUse = parsedSecSheet.items;
-          }
-        }
-
-        if (resK && resK.jadwal) {
-          jadwalSatpam = resK.jadwal;
-          tasksToUse.forEach((t, idx) => {
-            let taskTarget = 0;
-            let taskSelesai = 0;
-            const dailyMap = {};
-
-            resK.jadwal.forEach(j => {
-              const d = j.tanggal;
-              if (j.kodeShift === 'O') {
-                dailyMap[d] = '-';
-                return;
-              }
-              const applies = isKeamananTaskForShift(t, j.kodeShift);
-              if (applies) {
-                taskTarget++;
-                let isDone = false;
-                if (t.dailyStatus && (t.dailyStatus[d] !== undefined && t.dailyStatus[d] !== null)) {
-                  isDone = (t.dailyStatus[d] === '1' || t.dailyStatus[d] === 1 || t.dailyStatus[d] === true);
-                } else {
-                  const isPastOrToday = (selectedYear < now.getFullYear()) ||
-                    (selectedYear === now.getFullYear() && selectedMonth < (now.getMonth() + 1)) ||
-                    (selectedYear === now.getFullYear() && selectedMonth === (now.getMonth() + 1) && d <= now.getDate());
-                  isDone = isPastOrToday;
-                }
-                dailyMap[d] = isDone ? '1' : '0';
-                if (isDone) taskSelesai++;
-              } else {
-                dailyMap[d] = '-';
-              }
-            });
-
-            totalTarget += taskTarget;
-            totalSelesai += taskSelesai;
-
-            itemsList.push({
-              no: idx + 1,
-              ruangan: t.ruangan || 'Area Satpam',
-              kegiatan: t.kegiatan,
-              target: taskTarget,
-              selesai: taskSelesai,
-              belum: Math.max(0, taskTarget - taskSelesai),
-              persen: taskTarget > 0 ? Math.round((taskSelesai / taskTarget) * 100) : 0,
-              dailyStatus: dailyMap
-            });
-          });
-        }
-      } else {
-        // Kebersihan & Pelayanan
-        const empSheet = findEmployeeSheet(ss, targetUser.namaSheet, targetUser.namaPegawai, targetUser.username);
-        if (empSheet) {
-          const parsed = readSheetMonitoring(empSheet, selectedMonth, selectedYear);
-          if (parsed && parsed.items) {
-            parsed.items.forEach((it, idx) => {
-              totalTarget += (it.totalHariAktif || 0);
-              totalSelesai += (it.selesaiCount || 0);
-              itemsList.push({
-                no: idx + 1,
-                ruangan: it.ruangan,
-                kegiatan: it.kegiatan,
-                target: it.totalHariAktif || 0,
-                selesai: it.selesaiCount || 0,
-                belum: Math.max(0, (it.totalHariAktif || 0) - (it.selesaiCount || 0)),
-                persen: (it.totalHariAktif > 0) ? Math.round(((it.selesaiCount || 0) / it.totalHariAktif) * 100) : 0,
-                dailyStatus: it.dailyStatus || {}
-              });
-            });
-          }
-        }
-      }
-
-      const totalBelum = Math.max(0, totalTarget - totalSelesai);
-      const persen = (totalTarget > 0 && !isNaN(totalTarget)) ? Math.round((totalSelesai / totalTarget) * 100) : 0;
-
-      return {
-        success: true,
-        data: {
-          tipe: 'individu',
-          pegawai: {
-            namaPegawai: targetUser.namaPegawai,
-            username: targetUser.username,
-            unit: empUnit,
-            role: targetUser.role || ('Petugas ' + empUnit)
-          },
-          periode: {
-            bulan: selectedMonth,
-            tahun: selectedYear,
-            namaBulan: namaBulanStr,
-            labelPeriode: namaBulanStr + " " + selectedYear,
-            daysInMonth: daysInMonth
-          },
-          summary: {
-            totalTarget: totalTarget,
-            totalSelesai: totalSelesai,
-            totalBelum: totalBelum,
-            persen: persen,
-            status: persen >= 90 ? 'Optimal' : (persen >= 70 ? 'Cukup' : 'Perlu Perhatian')
-          },
-          jadwalShift: jadwalSatpam,
-          items: itemsList,
-          buktiDukung: getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, 'individu')
-        }
-      };
-    }
-  } catch (err) {
-    return { success: false, message: "Gagal menyiapkan data export: " + err.message };
-  }
-}
-
-/**
- * ========================================================================
- * 7. FITUR PENGAWAS MENCENTANG TUGAS PEGAWAI (YANG BELUM DICEKLIST PEGAWAI)
- * ========================================================================
- */
-function supervisorToggleStaffTaskCheck(token, payload) {
-  try {
-    const session = getSessionUser(token);
-    if (!session) {
-      return { success: false, message: "Sesi telah berakhir. Silakan login kembali." };
-    }
-
-    const isManager = (session.role === 'Admin' ||
-                       session.role === 'Supervisor' ||
-                       session.role === 'Tim Umum dan Humas' ||
-                       session.role === 'Koordinator Lapangan');
-
-    if (!isManager) {
-      return { success: false, message: "Akses ditolak. Hanya Pengawas atau Admin yang dapat mencentang tugas pegawai." };
-    }
-
-    if (!payload) {
-      return { success: false, message: "Data checklist tidak lengkap." };
-    }
-
-    const ss = getDb();
-    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
-
-    const targetUsername = cleanStr(payload.username || '');
-    const targetNamaPegawai = cleanStr(payload.namaPegawai || payload.pegawai || '');
-    const targetSheetName = cleanStr(payload.targetSheetName || '');
-    const dayNum = Number(payload.dayNum || payload.tanggal || new Date().getDate());
-    const monthNum = Number(payload.bulan || (new Date().getMonth() + 1));
-    const yearNum = Number(payload.tahun || new Date().getFullYear());
-    const newStatus = (payload.newStatus === true || payload.newStatus === 1 || payload.newStatus === '1' || String(payload.newStatus).toUpperCase() === 'TRUE');
-    let rIdx = Number(payload.sheetRowIndex || 0);
-    let cIdx = Number(payload.colIndex || 0);
-    const namaTugas = cleanStr(payload.namaTugas || payload.item || payload.kegiatan || '');
-    const ruangan = cleanStr(payload.ruangan || 'Area Umum');
-    const unitKerja = cleanStr(payload.unit || 'Kebersihan');
-
-    // 1. Temukan sheet pegawai & perbarui cell jika sheet personal ada
-    let sheetUpdated = false;
-    let empSheet = null;
-    if (targetSheetName) empSheet = findSheet(ss, targetSheetName);
-    if (!empSheet) empSheet = findEmployeeSheet(ss, targetSheetName, targetNamaPegawai, targetUsername);
-
-    if (empSheet) {
-      if (!rIdx || rIdx < 1 || !cIdx || cIdx < 1) {
-        const parsed = readSheetMonitoring(empSheet, monthNum, yearNum);
-        if (parsed && parsed.items) {
-          const found = parsed.items.find(i => i.kegiatan === namaTugas || getAlphaOnly(i.kegiatan) === getAlphaOnly(namaTugas));
-          if (found) {
-            rIdx = found.sheetRowIndex;
-            cIdx = (found.colMapping && found.colMapping[dayNum]) ? found.colMapping[dayNum] : (dayNum + 1);
-          }
-        }
-      }
-
-      if (rIdx >= 1 && cIdx >= 1) {
-        empSheet.getRange(rIdx, cIdx).setValue(newStatus);
-        sheetUpdated = true;
-      }
-    }
-
-    // 2. Simpan / Perbarui statusPetugas di sheet ValidasiDanBuktiDukung
-    const sh = setupBuktiDukungSheet(ss);
-    const taskKey = payload.taskKey || generateTaskKey(yearNum, monthNum, dayNum, targetUsername || targetNamaPegawai, ruangan, namaTugas);
-    const values = sh.getDataRange().getValues();
-    let existingRowIdx = -1;
-
-    for (let r = 1; r < values.length; r++) {
-      if (String(values[r][0] || '').trim() === taskKey) {
-        existingRowIdx = r + 1;
-        break;
-      }
-    }
-
-    if (existingRowIdx === -1 && targetNamaPegawai && namaTugas) {
-      for (let r = 1; r < values.length; r++) {
-        const row = values[r];
-        const rDay = Number(row[5] || 0);
-        const rUser = getAlphaOnly(String(row[9] || row[8] || ''));
-        const rTugas = getAlphaOnly(String(row[11] || ''));
-        if (rDay === dayNum && rUser === getAlphaOnly(targetUsername || targetNamaPegawai) && rTugas === getAlphaOnly(namaTugas)) {
-          existingRowIdx = r + 1;
-          break;
-        }
-      }
-    }
-
-    const now = new Date();
-    const supervisorName = session.namaPegawai || session.username || 'Pengawas';
-
-    if (existingRowIdx > 0) {
-      sh.getRange(existingRowIdx, 2).setValue(now); // Timestamp
-      sh.getRange(existingRowIdx, 13).setValue(newStatus); // StatusPetugas
-      if (!values[existingRowIdx - 1][14] && newStatus) {
-        sh.getRange(existingRowIdx, 23).setValue('Diceklist oleh Pengawas (' + supervisorName + ')');
-      }
-    } else {
-      const NAMA_BULAN = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      const newRow = [
-        taskKey,
-        now,
-        yearNum,
-        monthNum,
-        NAMA_BULAN[monthNum] || ('Bulan_' + monthNum),
-        dayNum,
-        Utilities.formatDate(now, "GMT+7", "HH:mm:ss") + " WIB",
-        unitKerja,
-        targetNamaPegawai,
-        targetUsername,
-        ruangan,
-        namaTugas,
-        newStatus, // StatusPetugas
-        false,     // StatusPengawas
-        '',        // NamaPengawas
-        '',        // WaktuValidasiPengawas
-        false,     // AdaBuktiDukung
-        '', '', '', '', '',
-        'Checklist diisi oleh Pengawas (' + supervisorName + ')'
-      ];
-      sh.appendRow(newRow);
-    }
-
-    SpreadsheetApp.flush();
-
-    // Invalidate script caches
-    clearScriptCacheKeys([
-      "cache_spv_dash_" + monthNum + "_" + yearNum,
-      "cache_rekap_terpadu_" + monthNum + "_" + yearNum,
-      empSheet ? ("cache_m_" + empSheet.getName() + "_" + monthNum + "_" + yearNum) : null
-    ]);
-    resetMemoryCache();
-
-    return {
-      success: true,
-      message: newStatus ? "Tugas pegawai berhasil dicentang selesai oleh Pengawas!" : "Centang tugas pegawai berhasil dibatalkan.",
-      data: {
-        taskKey: taskKey,
-        isDone: newStatus,
-        sheetUpdated: sheetUpdated,
-        namaPegawai: targetNamaPegawai,
-        namaTugas: namaTugas,
-        dayNum: dayNum
-      }
-    };
-  } catch (err) {
-    return { success: false, message: "Gagal memperbarui status tugas pegawai: " + err.message };
-  }
-}
-
-// <<<<<<<<<< END MODUL: backend/Supervisor.gs <<<<<<<<<<
-
-
-// >>>>>>>>>> MODUL: backend/ApiRouter.gs >>>>>>>>>>
-
-/**
- * ========================================================================
- * SIMPEL-KU - API ROUTER & DISPATCHER MODULE
- * ========================================================================
- */
-
-function doGet(e) {
-  if (e && e.parameter && e.parameter.action) {
-    return handleApiRequest(e.parameter);
-  }
-  const template = HtmlService.createTemplateFromFile('Index');
-  return template.evaluate()
-    .setTitle('Sistem Monitoring Pelayanan, Keamanan & Kebersihan (SIMPEL-KU)')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/**
- * Entry point untuk request POST API dari deployment eksternal
- */
-function doPost(e) {
-  var params = {};
-  try {
-    if (e && e.postData && e.postData.contents) {
-      params = JSON.parse(e.postData.contents);
-    } else if (e && e.parameter) {
-      params = e.parameter;
-    }
-  } catch (err) {
-    params = (e && e.parameter) || {};
-  }
-  return handleApiRequest(params);
-}
-
-/**
- * Handler pemrosesan API untuk integrasi deployment standalone / eksternal
- */
-function handleApiRequest(params) {
-  var result = { success: false, message: 'Invalid action' };
-  var action = params.action;
-  try {
-    if (action === 'login') {
-      result = login(params.username, params.password);
-    } else if (action === 'logout') {
-      result = logout(params.token);
-    } else if (action === 'getDashboardData') {
-      result = getDashboardData(params.token, params.bulan, params.tahun);
-    } else if (action === 'getSupervisorDashboardData') {
-      result = getSupervisorDashboardData(params.token, params.bulan, params.tahun);
-    } else if (action === 'getMonitoringData') {
-      result = getMonitoringData(
-        params.token,
-        params.jenis,
-        params.bulan,
-        params.tahun,
-        params.filterRuangan || 'SEMUA',
-        params.filterStatus || 'SEMUA'
-      );
-    } else if (action === 'getIntegratedMonitoringData') {
-      result = getIntegratedMonitoringData(
-        params.token,
-        params.bulan,
-        params.tahun,
-        params.filterUnit || 'SEMUA',
-        params.filterPegawai || 'SEMUA',
-        params.filterRuangan || 'SEMUA',
-        params.filterStatus || 'SEMUA'
-      );
-    } else if (action === 'updateMonitoringStatus') {
-      result = updateMonitoringStatus(
-        params.token,
-        params.rowIndex || params.sheetRowIndex,
-        params.colIndex,
-        params.newStatus,
-        params.dayNum,
-        params.monthNum || params.bulan,
-        params.yearNum || params.tahun,
-        params.targetSheetName
-      );
-    } else if (action === 'getRekapMonitoring') {
-      result = getRekapMonitoring(params.token, params.bulan, params.tahun);
-    } else if (action === 'getIntegratedRekapMonitoring') {
-      result = getIntegratedRekapMonitoring(params.token, params.bulan, params.tahun);
-    } else if (action === 'getEmployeeDetailProgress') {
-      result = getEmployeeDetailProgress(
-        params.token,
-        params.employeeIdentifier || params.namaPegawai || params.username || params.employeeName,
-        params.bulan,
-        params.tahun
-      );
-    } else if (action === 'getJadwalKeamanan') {
-      result = getJadwalKeamanan(params.token, params.bulan, params.tahun);
-    } else if (action === 'getJadwalPiketSecurityMatrix') {
-      result = getJadwalPiketSecurityMatrix(params.token, params.bulan, params.tahun);
-    } else if (action === 'updateSecurityShift') {
-      result = updateSecurityShift(
-        params.token,
-        params.namaPegawai || params.nama || params.employeeNameOrId || params.employeeIdentifier,
-        params.tanggal || params.dayNum,
-        params.shiftBaru || params.newShift,
-        params.bulan,
-        params.tahun
-      );
-    } else if (action === 'swapSecurityShift') {
-      const p1 = params.petugas1 ? (params.petugas1.namaPegawai || params.petugas1.nama) : (params.pegawai1 || params.nama1 || params.emp1Name);
-      const t1 = params.petugas1 ? params.petugas1.tanggal : (params.tanggal1 || params.tanggal || params.dayNum);
-      const p2 = params.petugas2 ? (params.petugas2.namaPegawai || params.petugas2.nama) : (params.pegawai2 || params.nama2 || params.emp2Name);
-      const t2 = params.petugas2 ? params.petugas2.tanggal : (params.tanggal2 || params.tanggal || params.dayNum);
-      result = swapSecurityShift(
-        params.token,
-        p1,
-        p2,
-        t1,
-        t2,
-        params.bulan,
-        params.tahun
-      );
-    } else if (action === 'getExportLaporanData') {
-      result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
-    } else if (action === 'uploadBuktiDukung') {
-      result = uploadBuktiDukungFoto(params.token, params);
-    } else if (action === 'updateSupervisorChecklist') {
-      result = updateSupervisorChecklist(params.token, params);
-    } else if (action === 'supervisorToggleStaffTaskCheck') {
-      result = supervisorToggleStaffTaskCheck(params.token, params);
-    } else if (action === 'getBuktiDukungData') {
-      result = getBuktiDukungData(params.token, params.bulan, params.tahun, params.unit, params.namaPegawai);
-    } else if (action === 'getInspeksiMutuData') {
-      result = getInspeksiMutuData(params.token, params.bulan, params.tahun, params.unit);
-    } else if (action === 'saveInspeksiMutu') {
-      result = saveInspeksiMutu(params.token, params);
-    } else if (action === 'changeCredentials') {
-      result = changeCredentials(params.token, params.oldPassword, params.newUsername, params.newPassword);
-    } else if (action === 'setupAllUsers') {
-      // Proteksi otorisasi Admin
-      var sUser = getSessionUser(params.token);
-      if (!sUser || (sUser.role || '').toLowerCase() !== 'admin') {
-        result = { success: false, message: 'Akses ditolak. Tindakan ini memerlukan otorisasi Admin.' };
-      } else {
-        result = { success: true, message: setupAllUsers() };
-      }
-    } else if (action === 'testGoogleDriveAccess') {
-      // Proteksi otorisasi Pengawas / Admin
-      var sUser = getSessionUser(params.token);
-      var rLower = sUser ? (sUser.role || '').toLowerCase() : '';
-      if (!sUser || (!rLower.includes('admin') && !rLower.includes('supervisor') && !rLower.includes('kabag'))) {
-        result = { success: false, message: 'Akses ditolak. Tindakan ini memerlukan otorisasi Pengawas/Admin.' };
-      } else {
-        result = { success: true, data: testGoogleDriveAccess() };
-      }
-    } else {
-      result = { success: false, message: 'Aksi "' + action + '" tidak dikenali.' };
-    }
-  } catch (e) {
-    result = { success: false, message: 'Server error: ' + e.message };
-  }
-
-  return ContentService.createTextOutput(JSON.stringify(result))
+// ======================= RESPONSE HELPER =======================
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+function errorResponse(message, code) {
+  return jsonResponse({ success: false, error: true, message: message, code: code || 400 });
 }
 
-// <<<<<<<<<< END MODUL: backend/ApiRouter.gs <<<<<<<<<<
+// ======================= doGet ROUTER =======================
+function doGet(e) {
+  if (!e || !e.parameter || !e.parameter.action) {
+    return HtmlService.createHtmlOutputFromFile('index')
+      .setTitle('SIDAK6100 BPS Kalbar - Smart Credit Point System')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  try {
+    const action  = e.parameter.action  || '';
+    const nipUser = e.parameter.nipUser || '';
+    const payload = e.parameter.payload ? JSON.parse(e.parameter.payload) : {};
+
+    return routeAction(action, nipUser, payload, e.parameter);
+  } catch (err) {
+    return errorResponse('Server error: ' + err.message, 500);
+  }
+}
+
+function doPost(e) {
+  try {
+    let body = {};
+    if (e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+    const action  = body.action  || (e.parameter && e.parameter.action)  || '';
+    const nipUser = body.nipUser || (e.parameter && e.parameter.nipUser) || '';
+    return routeAction(action, nipUser, body, e.parameter || {});
+  } catch (err) {
+    return errorResponse('Server error: ' + err.message, 500);
+  }
+}
+
+// ======================= ROUTER =======================
+function routeAction(action, nipUser, payload, params) {
+  if (action === 'authenticate') return handleAuthenticate(payload);
+  if (action === 'ping')         return jsonResponse({ success: true, message: 'pong' });
+
+  const session = validateSession(nipUser);
+  if (!session) return errorResponse('Sesi tidak valid atau tidak memiliki akses.', 401);
+
+  // Inisialisasi sheet pendukung jika belum ada
+  checkAndInitSheets();
+
+  const targetNipParam = params.targetNip || payload.targetNip || payload.nip || params.nip || '';
+
+  switch (action) {
+    case 'getAllPegawai':          return handleGetAllPegawai(session);
+    case 'generateOfficialDocument': return handleGenerateOfficialDocument(payload, session);
+    case 'recordDocIssuance':      return handleRecordDocIssuance(payload, session);
+    case 'getPegawai':             return handleGetPegawai(targetNipParam, session);
+    case 'getProyeksiFromSheet':   return handleGetProyeksiFromSheet(targetNipParam, session);
+    case 'getAllRiwayatAK':        return handleGetAllRiwayatAK(session);
+    case 'getSatker':              return handleGetSatker();
+    case 'getKategoriKinerja':     return handleGetKategoriKinerja();
+    case 'getAmbangPangkat':       return handleGetAmbangPangkat();
+    case 'getRiwayatAK':           return handleGetRiwayatAK(targetNipParam, session);
+    case 'getProyeksi':            return handleGetProyeksi(targetNipParam, payload.scenario || params.scenario, session);
+    case 'getRekomendasi':         return handleGetRekomendasi(session);
+    case 'getRiwayatAKTimeline':   return handleGetRiwayatAKTimeline(targetNipParam, session);
+    case 'createPegawai':          return handleCreatePegawai(payload, session);
+    case 'updatePegawai':          return handleUpdatePegawai(payload, session);
+    case 'updateAKBulanan':        return handleUpdateAKBulanan(payload, session);
+    case 'deletePegawai':          return handleDeletePegawai(payload.nip || payload.NIP || targetNipParam, session);
+    case 'hitungProyeksi':         return handleHitungProyeksi(session);
+    case 'getHistoryPAKData':      return handleGetHistoryPAKData(session);
+    case 'simpanDokumenPAK':       return handleSimpanDokumenPAK(payload, session);
+    case 'importPegawai':          return handleImportPegawai(payload, session);
+    case 'importKinerja':          return handleImportKinerja(payload, session);
+// FITUR HISTORY & ARSIP PAK
+    case 'getRiwayatPAKTerbit':    return handleGetRiwayatPAKTerbit(session);
+    case 'simpanRiwayatPAKTerbit': return handleSimpanRiwayatPAKTerbit(payload, session);
+    case 'hapusRiwayatPAKTerbit':  return handleHapusRiwayatPAKTerbit(payload, session);
+    case 'getArsipDokumen':        return handleGetArsipDokumen(session);
+    case 'uploadArsipDokumen':     return handleUploadArsipDokumen(payload, session);
+    case 'hapusArsipDokumen':      return handleHapusArsipDokumen(payload, session);
+// FITUR JADWAL (ASSESSMENT & UKOM)
+    case 'getJadwal':              return handleGetJadwal(session);
+    case 'simpanJadwal':           return handleSimpanJadwal(payload, session);
+    case 'hapusJadwal':            return handleHapusJadwal(payload, session);
+    default:
+      return errorResponse('Action tidak dikenal: ' + action, 404);
+  }
+}
+
+// ======================= HELPER: USER SYNC =======================
+function syncUserToSheet(nip, nama, role, password, kodeSatker) {
+  if (!role || role.toString().trim() === '') return;
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(SHEET_NAMES.USERS) || ss.getSheetByName('Users');
+    if (!sheet) {
+      sheet = ss.insertSheet(SHEET_NAMES.USERS || 'Users');
+      sheet.getRange(1, 1, 1, 5).setValues([['NIP', 'Nama', 'Kode_Satker', 'Role', 'Password']]).setFontWeight('bold').setBackground('#f1f5f9');
+      sheet.setFrozenRows(1);
+    }
+    
+    const data = sheet.getDataRange().getValues();
+    const header = data.length > 0 ? data[0].map(h => h ? h.toString().trim().toUpperCase() : '') : [];
+    
+    let colNIP = header.indexOf('NIP');
+    let colNama = header.indexOf('NAMA');
+    let colKode = header.findIndex(h => h === 'KODE_SATKER' || h === 'KODESATKER' || h === 'SATKER' || h === 'UNITKERJA');
+    let colRole = header.indexOf('ROLE');
+    let colPw = header.indexOf('PASSWORD');
+    if (colPw === -1) colPw = header.indexOf('PASSWORDHASH');
+    
+    if (colNIP === -1) {
+      sheet.getRange(1, 1, 1, 5).setValues([['NIP', 'Nama', 'Kode_Satker', 'Role', 'Password']]);
+      colNIP = 0; colNama = 1; colKode = 2; colRole = 3; colPw = 4;
+    }
+    
+    const nipStr = (nip || '').toString().trim();
+    if (!nipStr) return;
+    
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      const rowNIP = data[i][colNIP] ? data[i][colNIP].toString().trim() : '';
+      if (rowNIP === nipStr) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+    
+    const hashedPw = password ? (password.length === 64 && /^[a-f0-9]+$/i.test(password) ? password : sha256Hex(password)) : '';
+    
+    if (rowIndex > 0) {
+      if (nama && colNama !== -1) sheet.getRange(rowIndex, colNama + 1).setValue(nama);
+      if (kodeSatker !== undefined && kodeSatker !== null && colKode !== -1) sheet.getRange(rowIndex, colKode + 1).setValue(kodeSatker);
+      if (role && colRole !== -1) sheet.getRange(rowIndex, colRole + 1).setValue(role);
+      if (hashedPw && colPw !== -1) sheet.getRange(rowIndex, colPw + 1).setValue(hashedPw);
+    } else {
+      const newRow = [];
+      newRow[colNIP] = nipStr;
+      if (colNama !== -1) newRow[colNama] = nama || '';
+      if (colKode !== -1) newRow[colKode] = kodeSatker || '';
+      if (colRole !== -1) newRow[colRole] = role || 'Viewer';
+      if (colPw !== -1) newRow[colPw] = hashedPw || sha256Hex(nipStr);
+      sheet.appendRow(newRow);
+    }
+  } catch(e) {
+    console.error('Error syncUserToSheet: ' + e.message);
+  }
+}
+
+// ======================= AUTHENTICATION =======================
+function handleAuthenticate(payload) {
+  const { nip, password } = payload;
+  
+  if (!nip || !password) {
+    return jsonResponse({ success: false, message: 'NIP dan password wajib diisi.' });
+  }
+
+  // Pastikan sheet Users sudah terinisialisasi
+  checkAndInitSheets();
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.USERS) || ss.getSheetByName('Users');
+  if (!sheet) {
+    return jsonResponse({ success: false, message: 'Sheet Users tidak ditemukan.' });
+  }
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) {
+    return jsonResponse({ success: false, message: 'Data pengguna pada sheet Users kosong.' });
+  }
+  
+  const header = data[0].map(h => h ? h.toString().trim() : '');
+  
+  const colNIP = header.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colNama = header.findIndex(h => h && h.toUpperCase() === 'NAMA');
+  const colKode = header.findIndex(h => h && (h.toUpperCase() === 'KODE_SATKER' || h.toUpperCase() === 'KODESATKER' || h.toUpperCase() === 'SATKER' || h.toUpperCase() === 'UNITKERJA'));
+  const colRole = header.findIndex(h => h && h.toUpperCase() === 'ROLE');
+  
+  let colPassword = header.findIndex(h => h && h.toUpperCase() === 'PASSWORD');
+  if (colPassword === -1) {
+    colPassword = header.findIndex(h => h && h.toUpperCase() === 'PASSWORDHASH');
+  }
+  
+  if (colNIP === -1) {
+    return jsonResponse({ success: false, message: 'Kolom NIP tidak ditemukan di sheet Users.' });
+  }
+  
+  if (colPassword === -1) {
+    return jsonResponse({ success: false, message: 'Kolom Password tidak ditemukan di sheet Users.' });
+  }
+
+  const inputHash = sha256Hex(password);
+  const nipTarget = nip.toString().trim();
+  const nipTargetClean = nipTarget.replace(/[^\d]/g, '');
+  const nipTargetPrefix = nipTargetClean.substring(0, 12);
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const rowNIP = row[colNIP] ? row[colNIP].toString().trim() : '';
+    const rowNIPClean = rowNIP.replace(/[^\d]/g, '');
+    
+    const isNipMatch = (rowNIP === nipTarget) ||
+      (nipTargetClean !== '' && rowNIPClean === nipTargetClean) ||
+      (nipTargetPrefix.length >= 12 && rowNIPClean.length >= 12 && rowNIPClean.substring(0, 12) === nipTargetPrefix);
+
+    if (isNipMatch) {
+      let rowPassword = '';
+      if (row[colPassword] !== undefined && row[colPassword] !== null) {
+        rowPassword = row[colPassword].toString().trim();
+      }
+      
+      let isMatch = false;
+      
+      if (rowPassword.length === 64 && /^[a-f0-9]+$/i.test(rowPassword)) {
+        isMatch = (rowPassword === inputHash);
+      } 
+      else if (rowPassword !== '') {
+        isMatch = (rowPassword === password);
+        if (isMatch && rowPassword !== inputHash) {
+          try {
+            sheet.getRange(i + 1, colPassword + 1).setValue(inputHash);
+          } catch(e) {
+            console.log('Gagal update hash password pada sheet Users: ' + e.message);
+          }
+        }
+      }
+      
+      if (isMatch) {
+        const nama = (colNama !== -1 && row[colNama]) ? row[colNama].toString() : 'User';
+        const role = (colRole !== -1 && row[colRole]) ? row[colRole].toString().trim() : 'Viewer';
+        
+        let unitKerja = (colKode !== -1 && row[colKode]) ? row[colKode].toString().trim() : '';
+        let jabatan = '';
+
+        if (!unitKerja) {
+          const pegSheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+          if (pegSheet) {
+            const pegData = pegSheet.getDataRange().getValues();
+            if (pegData.length >= 2) {
+              const pegHeader = pegData[0].map(h => h ? h.toString().trim().toUpperCase() : '');
+              const pNipIdx = pegHeader.indexOf('NIP');
+              const pKodeIdx = pegHeader.findIndex(h => h === 'KODE_SATKER' || h === 'KODESATKER' || h === 'SATKER' || h === 'UNITKERJA');
+              const pJabIdx = pegHeader.indexOf('JABATAN');
+              if (pNipIdx !== -1) {
+                for (let j = 1; j < pegData.length; j++) {
+                  const pRow = pegData[j];
+                  const pNip = pRow[pNipIdx] ? pRow[pNipIdx].toString().trim() : '';
+                  const pNipClean = pNip.replace(/[^\d]/g, '');
+                  if (pNip === rowNIP || (nipTargetClean !== '' && pNipClean === nipTargetClean)) {
+                    if (!unitKerja && pKodeIdx !== -1 && pRow[pKodeIdx]) unitKerja = pRow[pKodeIdx].toString().trim();
+                    if (pJabIdx !== -1 && pRow[pJabIdx]) jabatan = pRow[pJabIdx].toString();
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        return jsonResponse({
+          success: true,
+          nip: rowNIP,
+          nama: nama,
+          role: role,
+          unitKerja: unitKerja,
+          kodeSatker: unitKerja,
+          jabatan: jabatan
+        });
+      } else {
+        return jsonResponse({ success: false, message: 'Password salah.' });
+      }
+    }
+  }
+  
+  return jsonResponse({ success: false, message: 'NIP tidak ditemukan pada sheet Users.' });
+}
+
+// ======================= VALIDATE SESSION =======================
+function validateSession(nipUser) {
+  if (!nipUser) return null;
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. Cek di sheet Users terlebih dahulu
+  let usersSheet = ss.getSheetByName(SHEET_NAMES.USERS) || ss.getSheetByName('Users');
+  let userRecord = null;
+  
+  const targetNipStr = nipUser.toString().trim();
+  const targetNipClean = targetNipStr.replace(/[^\d]/g, '');
+  const targetNipPrefix = targetNipClean.substring(0, 12);
+  
+  if (usersSheet) {
+    const data = usersSheet.getDataRange().getValues();
+    if (data.length >= 2) {
+      const header = data[0].map(h => h ? h.toString().trim().toUpperCase() : '');
+      const colNIP = header.indexOf('NIP');
+      const colNama = header.indexOf('NAMA');
+      const colRole = header.indexOf('ROLE');
+      const colGol = header.indexOf('GOLONGAN');
+      const colJab = header.indexOf('JABATAN');
+      const colKode = header.findIndex(h => h === 'KODE_SATKER' || h === 'KODESATKER' || h === 'SATKER' || h === 'UNITKERJA');
+      
+      if (colNIP !== -1) {
+        for (let i = 1; i < data.length; i++) {
+          const row = data[i];
+          const rowNIPStr = row[colNIP] ? row[colNIP].toString().trim() : '';
+          const rowNIPClean = rowNIPStr.replace(/[^\d]/g, '');
+          
+          const isMatch = (rowNIPStr === targetNipStr) ||
+            (targetNipClean !== '' && rowNIPClean === targetNipClean) ||
+            (targetNipPrefix.length >= 12 && rowNIPClean.length >= 12 && rowNIPClean.substring(0, 12) === targetNipPrefix);
+
+          if (isMatch) {
+            userRecord = {
+              nip: rowNIPStr,
+              nama: (colNama !== -1 && row[colNama]) ? row[colNama].toString() : '',
+              role: (colRole !== -1 && row[colRole]) ? row[colRole].toString().trim() : 'Viewer',
+              golongan: (colGol !== -1 && row[colGol]) ? row[colGol].toString() : '',
+              jabatan: (colJab !== -1 && row[colJab]) ? row[colJab].toString() : '',
+              satker: (colKode !== -1 && row[colKode]) ? row[colKode].toString().trim() : ''
+            };
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Jika ada di Pegawai, lengkapi atribut tambahan (golongan, jabatan, satker) atau fallback
+  const pegSheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+  if (pegSheet) {
+    const pegData = pegSheet.getDataRange().getValues();
+    if (pegData.length >= 2) {
+      const pegHeader = pegData[0].map(h => h ? h.toString().trim().toUpperCase() : '');
+      const pNipIdx = pegHeader.indexOf('NIP');
+      const pNamaIdx = pegHeader.indexOf('NAMA');
+      const pRoleIdx = pegHeader.indexOf('ROLE');
+      const pGolIdx = pegHeader.indexOf('GOLONGAN');
+      const pJabIdx = pegHeader.indexOf('JABATAN');
+      const pKodeIdx = pegHeader.findIndex(h => h === 'KODE_SATKER' || h === 'KODESATKER' || h === 'SATKER' || h === 'UNITKERJA');
+      
+      if (pNipIdx !== -1) {
+        for (let i = 1; i < pegData.length; i++) {
+          const pRow = pegData[i];
+          const pNipStr = pRow[pNipIdx] ? pRow[pNipIdx].toString().trim() : '';
+          const pNipClean = pNipStr.replace(/[^\d]/g, '');
+          
+          const isMatch = (pNipStr === targetNipStr) ||
+            (targetNipClean !== '' && pNipClean === targetNipClean) ||
+            (targetNipPrefix.length >= 12 && pNipClean.length >= 12 && pNipClean.substring(0, 12) === targetNipPrefix);
+
+          if (isMatch) {
+            if (!userRecord) {
+              userRecord = {
+                nip: pNipStr,
+                nama: (pNamaIdx !== -1 && pRow[pNamaIdx]) ? pRow[pNamaIdx].toString() : '',
+                role: (pRoleIdx !== -1 && pRow[pRoleIdx]) ? pRow[pRoleIdx].toString().trim() : 'Viewer',
+                golongan: (pGolIdx !== -1 && pRow[pGolIdx]) ? pRow[pGolIdx].toString() : '',
+                jabatan: (pJabIdx !== -1 && pRow[pJabIdx]) ? pRow[pJabIdx].toString() : '',
+                satker: (pKodeIdx !== -1 && pRow[pKodeIdx]) ? pRow[pKodeIdx].toString().trim() : ''
+              };
+            } else {
+              if (!userRecord.golongan && pGolIdx !== -1 && pRow[pGolIdx]) userRecord.golongan = pRow[pGolIdx].toString();
+              if (!userRecord.jabatan && pJabIdx !== -1 && pRow[pJabIdx]) userRecord.jabatan = pRow[pJabIdx].toString();
+              if (!userRecord.satker && pKodeIdx !== -1 && pRow[pKodeIdx]) userRecord.satker = pRow[pKodeIdx].toString().trim();
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return userRecord;
+}
+
+// ======================= HELPER: SHEET DATA =======================
+function getSheetData(sheetName) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { sheet: null, data: [], header: [] };
+    
+    const rawData = sheet.getDataRange().getValues();
+    if (!rawData || rawData.length === 0) return { sheet, data: [], header: [] };
+
+    const header = rawData[0].map(h => h && h.toString ? h.toString().trim() : '');
+    
+    // Filter hanya baris yang memiliki setidaknya 1 sel bernilai (mengabaikan baris kosong total/whitespace)
+    const data = rawData.filter((row, idx) => {
+      if (idx === 0) return true; // Keep header row
+      return row.some(cell => cell !== null && cell !== undefined && cell.toString().trim() !== '');
+    });
+      
+    return { sheet, data, header };
+  } catch(e) {
+    console.error('Error getSheetData: ' + e.message);
+    return { sheet: null, data: [], header: [] };
+  }
+}
+
+function rowToObject(header, row) {
+  const obj = {};
+  header.forEach((h, i) => { 
+    if (h) obj[h] = row[i] !== undefined ? row[i] : '';
+  });
+  return obj;
+}
+
+// ======================= HELPER: SYARAT AK =======================
+function getSyaratAKFromReg(jabatan, golongan) {
+  const match = (golongan || '').toString().trim().match(/[IVX]+\/[a-e]/i);
+  const golClean = match ? match[0] : (golongan || '').toString().trim();
+  for (const key in REGULASI) {
+    const parts = key.split(' ');
+    const gol = parts[parts.length - 1];
+    const jenjang = parts.slice(0, parts.length - 1).join(' ');
+    if (jabatan.includes(jenjang) && golClean === gol.trim()) {
+      return REGULASI[key].akJab;
+    }
+  }
+  return null;
+}
+
+function getMinSyaratAK(jabatan, golongan) {
+  const match = (golongan || '').toString().trim().match(/[IVX]+\/[a-e]/i);
+  const golClean = match ? match[0] : (golongan || '').toString().trim();
+  for (const key in REGULASI) {
+    const parts = key.split(' ');
+    const gol = parts[parts.length - 1];
+    const jenjang = parts.slice(0, parts.length - 1).join(' ');
+    if (jabatan.includes(jenjang) && golClean === gol.trim()) {
+      const info = REGULASI[key];
+      const p = (info.akPang !== null && info.akPang !== undefined) ? info.akPang : 9999;
+      const j = (info.akJab !== null && info.akJab !== undefined) ? info.akJab : 9999;
+      const min = Math.min(p, j);
+      return min === 9999 ? null : min;
+    }
+  }
+  return null;
+}
+
+// ======================= FILTER BERDASARKAN ROLE & KODE SATKER =======================
+function filterPegawaiByRole(allRows, session) {
+  if (!allRows || !Array.isArray(allRows)) return [];
+  if (!session) return allRows;
+
+  if (session.role === 'Admin BPS Provinsi' || session.role === 'Superadmin') return allRows;
+
+  if (session.satker && session.satker.toString().trim() !== '') {
+    const targetSatker = session.satker.toString().trim();
+    return allRows.filter(p => {
+      const pSatker = (p.KodeSatker || p.Kode_Satker || p.satker || p.unitKerja || '').toString().trim();
+      const pNip = (p.NIP || p.nip || '').toString().trim();
+      if (session.role === 'Admin KabKot') {
+        return pSatker === targetSatker;
+      }
+      if (session.role === 'Pegawai' || session.role === 'Viewer') {
+        return pNip === session.nip || pSatker === targetSatker;
+      }
+      return pSatker === targetSatker;
+    });
+  }
+
+  if (session.role === 'Admin KabKot') {
+    return allRows.filter(p => {
+      const pSatker = (p.KodeSatker || p.Kode_Satker || p.satker || p.unitKerja || '').toString().trim();
+      return pSatker === session.satker;
+    });
+  }
+
+  return allRows.filter(p => (p.NIP || p.nip || '').toString().trim() === session.nip);
+}
+
+// ======================= READ =======================
+function handleGetAllPegawai(session) {
+  const { data, header } = getSheetData(SHEET_NAMES.PEGAWAI);
+  if (!data.length) return jsonResponse([]);
+
+  const excludeColumns = ['PASSWORD', 'PASSWORDHASH', 'Password', 'password'];
+  const safeHeader = header.filter(h => {
+    if (!h) return false;
+    return !excludeColumns.some(ex => ex.toUpperCase() === h.toUpperCase());
+  });
+  
+  const colNIP = header.findIndex(h => h && h.toUpperCase() === 'NIP');
+  if (colNIP === -1) return jsonResponse([]);
+  
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[colNIP]) continue;
+    
+    const obj = {};
+    for (const h of safeHeader) {
+      const idx = header.findIndex(headerH => headerH && headerH.toUpperCase() === h.toUpperCase());
+      if (idx !== -1 && row[idx] !== undefined && row[idx] !== null) {
+        obj[h] = row[idx];
+      } else {
+        obj[h] = '';
+      }
+    }
+    if (obj['TMT Jabatan'] !== undefined && obj.TMTJabatan === undefined) obj.TMTJabatan = obj['TMT Jabatan'];
+    if (obj['TMT Golongan'] !== undefined && obj.TMTGolongan === undefined) obj.TMTGolongan = obj['TMT Golongan'];
+    if (obj.TMTJabatan && obj['TMT Jabatan'] === undefined) obj['TMT Jabatan'] = obj.TMTJabatan;
+    if (obj.TMTGolongan && obj['TMT Golongan'] === undefined) obj['TMT Golongan'] = obj.TMTGolongan;
+    if (obj.TMT === undefined || obj.TMT === '') obj.TMT = obj.TMTGolongan || obj.TMTJabatan || '';
+    rows.push(obj);
+  }
+
+  return jsonResponse(filterPegawaiByRole(rows, session));
+}
+
+function handleGetPegawai(targetNip, session) {
+  if (!targetNip) return errorResponse('NIP target wajib diisi.');
+  if (session.role === 'Viewer' && session.nip !== targetNip) {
+    return errorResponse('Tidak memiliki akses ke data pegawai lain.', 403);
+  }
+
+  const { data, header } = getSheetData(SHEET_NAMES.PEGAWAI);
+  if (!data.length) return errorResponse('Data pegawai tidak ditemukan.', 404);
+  
+  const colNIP = header.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colKode = header.findIndex(h => h && h.toUpperCase() === 'KODESATKER');
+  
+  if (colNIP === -1) return errorResponse('Kolom NIP tidak ditemukan.', 404);
+  
+  const excludeColumns = ['PASSWORD', 'PASSWORDHASH', 'Password', 'password'];
+  const safeHeader = header.filter(h => {
+    if (!h) return false;
+    return !excludeColumns.some(ex => ex.toUpperCase() === h.toUpperCase());
+  });
+
+  const targetNipStr = targetNip.toString().trim();
+  
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const rowNIP = row[colNIP] ? row[colNIP].toString().trim() : '';
+    
+    if (rowNIP === targetNipStr) {
+      if (session.role === 'Admin KabKot' && colKode !== -1) {
+        const rowSatker = row[colKode] ? row[colKode].toString().trim() : '';
+        if (rowSatker !== session.satker) {
+          return errorResponse('Tidak memiliki akses ke pegawai satker lain.', 403);
+        }
+      }
+      
+      const obj = {};
+      for (const h of safeHeader) {
+        const idx = header.findIndex(headerH => headerH && headerH.toUpperCase() === h.toUpperCase());
+        if (idx !== -1 && row[idx] !== undefined && row[idx] !== null) {
+          obj[h] = row[idx];
+        } else {
+          obj[h] = '';
+        }
+      }
+      if (obj['TMT Jabatan'] !== undefined && obj.TMTJabatan === undefined) obj.TMTJabatan = obj['TMT Jabatan'];
+      if (obj['TMT Golongan'] !== undefined && obj.TMTGolongan === undefined) obj.TMTGolongan = obj['TMT Golongan'];
+      if (obj.TMTJabatan && obj['TMT Jabatan'] === undefined) obj['TMT Jabatan'] = obj.TMTJabatan;
+      if (obj.TMTGolongan && obj['TMT Golongan'] === undefined) obj['TMT Golongan'] = obj.TMTGolongan;
+      if (obj.TMT === undefined || obj.TMT === '') obj.TMT = obj.TMTGolongan || obj.TMTJabatan || '';
+      return jsonResponse(obj);
+    }
+  }
+  return errorResponse('Pegawai tidak ditemukan.', 404);
+}
+
+// ======================= GET RIWAYAT AK TIMELINE (BARU) =======================
+// Mengambil data AK per bulan dari sheet Riwayat_AK (kolom H = Jan 2026 s/d BO = Des 2030)
+// untuk ditampilkan langsung di halaman Detail Pegawai sebagai data historis aktual
+function handleGetRiwayatAKTimeline(targetNip, session) {
+  if (!targetNip) return errorResponse('NIP target wajib diisi.');
+  if (session.role === 'Viewer' && session.nip !== targetNip) {
+    return errorResponse('Akses ditolak.', 403);
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetRiw = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+  if (!sheetRiw) return errorResponse('Sheet Riwayat_AK tidak ditemukan.', 404);
+
+  const lastRow = sheetRiw.getLastRow();
+  const lastCol = sheetRiw.getLastColumn();
+  if (lastRow < 2) return errorResponse('Data riwayat kosong.', 404);
+
+  const allData = sheetRiw.getRange(1, 1, lastRow, Math.max(lastCol, 67)).getValues();
+  const rawHeader = allData[0];
+
+  // Kolom 1-7 = NIP, Nama, ..., AK 2025
+  // Kolom 8 (index 7) = Jan 2026 ... Kolom 67 (index 66) = Des 2030
+  const PROJ_START_IDX = 7;
+  const PROJ_COUNT = 60;
+
+  const colNIP = rawHeader.findIndex(h => h && h.toString().trim().toUpperCase() === 'NIP');
+  if (colNIP === -1) return errorResponse('Kolom NIP tidak ditemukan.', 404);
+
+  const targetStr = targetNip ? targetNip.toString().trim() : '';
+  const targetClean = targetStr.replace(/[^\d]/g, '');
+
+  if (session && session.role === 'Viewer') {
+    const sessionNipClean = (session.nip || '').toString().trim().replace(/[^\d]/g, '');
+    if (sessionNipClean !== targetClean && session.nip !== targetStr) {
+      return errorResponse('Akses ditolak.', 403);
+    }
+  }
+
+  let rowFound = null;
+  for (let i = 1; i < allData.length; i++) {
+    const cellVal = allData[i][colNIP] ? allData[i][colNIP].toString().trim() : '';
+    const cellClean = cellVal.replace(/[^\d]/g, '');
+    if ((targetClean !== '' && cellClean === targetClean) || cellVal === targetStr) {
+      rowFound = allData[i];
+      break;
+    }
+  }
+  if (!rowFound) return errorResponse('Data riwayat tidak ditemukan untuk NIP tersebut.', 404);
+
+  // Baca data pegawai untuk info jabatan & golongan
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colGolPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'GOLONGAN');
+  const colJabPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'JABATAN');
+  let jabatan = '', golongan = '';
+  if (dataPeg && dataPeg.length > 1) {
+    for (let i = 1; i < dataPeg.length; i++) {
+      const cellVal = dataPeg[i][colNIPPeg] ? dataPeg[i][colNIPPeg].toString().trim() : '';
+      const cellClean = cellVal.replace(/[^\d]/g, '');
+      if ((targetClean !== '' && cellClean === targetClean) || cellVal === targetStr) {
+        jabatan  = colJabPeg !== -1 ? dataPeg[i][colJabPeg].toString() : '';
+        golongan = colGolPeg !== -1 ? dataPeg[i][colGolPeg].toString() : '';
+        break;
+      }
+    }
+  }
+
+  const golMatch = (golongan || '').toString().trim().match(/[IVX]+\/[a-e]/i);
+  const golClean = golMatch ? golMatch[0] : (golongan || '').toString().trim();
+
+  // Bangun array proyeksi dari data aktual sheet
+  const syaratJab = getSyaratAKFromReg(jabatan, golClean);
+
+  // Tentukan syarat kenaikan pangkat dari REGULASI
+  let syaratPang = null;
+  const keyReg = Object.keys(REGULASI).find(k => {
+    const parts = k.split(' ');
+    const gol = parts[parts.length - 1];
+    const jenj = parts.slice(0, parts.length - 1).join(' ');
+    return jabatan.includes(jenj) && golClean === gol.trim();
+  });
+  if (keyReg) syaratPang = REGULASI[keyReg].akPang;
+
+  const { data: dataInput, header: headerInput } = getSheetData(SHEET_NAMES.INPUT_KINERJA);
+  const colNIPInput = headerInput ? headerInput.indexOf('NIP') : -1;
+  let predikatList = [];
+  if (dataInput && colNIPInput !== -1) {
+    for (let i = 1; i < dataInput.length; i++) {
+      const cellVal = dataInput[i][colNIPInput] ? dataInput[i][colNIPInput].toString().trim() : '';
+      const cellClean = cellVal.replace(/[^\d]/g, '');
+      if ((targetClean !== '' && cellClean === targetClean) || cellVal === targetStr) {
+        predikatList = dataInput[i].slice(2);
+        break;
+      }
+    }
+  }
+
+  const projections = [];
+  for (let m = 0; m < PROJ_COUNT; m++) {
+    const colIdx = PROJ_START_IDX + m;
+    const akVal = parseFloat(rowFound[colIdx]) || 0;
+    const year  = 2026 + Math.floor(m / 12);
+    const month = (m % 12) + 1;
+
+    let status = 'Normal';
+    if (syaratJab !== null && akVal >= syaratJab) status = 'Layak Naik Jabatan';
+    else if (syaratPang !== null && akVal >= syaratPang) status = 'Layak Naik Pangkat';
+
+    const rawPred = (predikatList[m] !== undefined && predikatList[m] !== null) ? predikatList[m].toString().trim() : '';
+    const hasInput = rawPred !== '' && rawPred !== '-' && rawPred !== '—';
+    const predikat = hasInput ? rawPred : 'Baik';
+    const isDefault = !hasInput;
+
+    projections.push({ month, year, akKumulatif: akVal, status, predikat, rawPredikat: rawPred, isDefault });
+  }
+
+  // Dasar AK (kolom ke-7, index 6 = AK 2025)
+  const ak2025 = parseFloat(rowFound[6]) || 0;
+
+  // Cari perkiraan bulan layak dari data aktual
+  let bulanLayak = '> Des 2030';
+  let matchedTargetAK = syaratJab;
+  let targetLabel = '-';
+
+  for (const p of projections) {
+    if (p.status !== 'Normal') {
+      bulanLayak = `${p.month}/${p.year}`;
+      if (p.status === 'Layak Naik Pangkat') {
+        matchedTargetAK = syaratPang;
+        targetLabel = keyReg ? (REGULASI[keyReg].nextPang || REGULASI[keyReg].next || '-') : '-';
+      } else {
+        matchedTargetAK = syaratJab;
+        targetLabel = keyReg ? (REGULASI[keyReg].nextJab || REGULASI[keyReg].next || '-') : '-';
+      }
+      break;
+    }
+  }
+
+  if (bulanLayak === '> Des 2030') {
+    const p = syaratPang !== null ? syaratPang : 9999;
+    const j = syaratJab !== null ? syaratJab : 9999;
+    const min = Math.min(p, j);
+    matchedTargetAK = min === 9999 ? '-' : min;
+    if (keyReg) {
+      targetLabel = min === syaratPang ? (REGULASI[keyReg].nextPang || '-') : (REGULASI[keyReg].nextJab || '-');
+    }
+  }
+
+  return jsonResponse({
+    success: true,
+    nip: targetStr,
+    jabatan,
+    golongan,
+    ak2025,
+    targetAK: matchedTargetAK || '-',
+    targetAKPang: syaratPang || '-',
+    targetJabatan: targetLabel,
+    bulanLayak,
+    totalAKAkhir: projections[59]?.akKumulatif || ak2025,
+    projections
+  });
+}
+
+// ======================= GET ALL RIWAYAT AK =======================
+function handleGetAllRiwayatAK(session) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetRiw = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+  if (!sheetRiw) return jsonResponse([]);
+
+  const lastRow = sheetRiw.getLastRow();
+  const lastCol = sheetRiw.getLastColumn();
+  if (lastRow < 2) return jsonResponse([]);
+
+  const allData   = sheetRiw.getRange(1, 1, lastRow, lastCol).getValues();
+  const rawHeader = allData[0];
+
+  const PROJ_START_IDX = 7;
+  const PROJ_COUNT     = 60;
+
+  const BULAN_LABEL = [];
+  for (let m = 0; m < PROJ_COUNT; m++) {
+    BULAN_LABEL.push({
+      bulan: (m % 12) + 1,
+      tahun: 2026 + Math.floor(m / 12)
+    });
+  }
+
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg  = headerPeg.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colGolPeg  = headerPeg.findIndex(h => h && h.toUpperCase() === 'GOLONGAN');
+  const colJabPeg  = headerPeg.findIndex(h => h && h.toUpperCase() === 'JABATAN');
+  const colKodePeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'KODESATKER');
+  const colStatusPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'STATUS');
+
+  const { data: dataInput, header: headerInput } = getSheetData(SHEET_NAMES.INPUT_KINERJA);
+  const colNIPInput = headerInput.indexOf('NIP');
+  const mapInputKinerja = {};
+  for (let j = 1; j < dataInput.length; j++) {
+    const nipStr = dataInput[j][colNIPInput] ? dataInput[j][colNIPInput].toString().trim() : '';
+    if (nipStr) {
+      mapInputKinerja[nipStr] = dataInput[j];
+    }
+  }
+
+  const mapPegawai = {};
+  for (let i = 1; i < dataPeg.length; i++) {
+    const nipStr = dataPeg[i][colNIPPeg] ? dataPeg[i][colNIPPeg].toString().trim() : '';
+    if (nipStr) {
+      mapPegawai[nipStr] = {
+        jabatan:    colJabPeg    !== -1 ? dataPeg[i][colJabPeg].toString()    : '',
+        golongan:   colGolPeg    !== -1 ? dataPeg[i][colGolPeg].toString()    : '',
+        KodeSatker: colKodePeg   !== -1 ? dataPeg[i][colKodePeg].toString().trim() : '',
+        status:     colStatusPeg !== -1 ? dataPeg[i][colStatusPeg].toString() : ''
+      };
+    }
+  }
+
+  const baseHeader = rawHeader.slice(0, PROJ_START_IDX).map(h => h ? h.toString().trim() : '');
+
+  const result = [];
+  for (let i = 1; i < allData.length; i++) {
+    const row = allData[i];
+    if (!row[0]) continue;
+
+    const obj = {};
+    baseHeader.forEach((h, idx) => {
+      if (h) obj[h] = row[idx] !== undefined ? row[idx] : '';
+    });
+
+    const nip = (row[0] || '').toString().trim();
+    const pegData = mapPegawai[nip] || {};
+    const jabatan  = pegData.jabatan  || '';
+    const golongan = pegData.golongan || '';
+
+    // Skip PPPK
+    if (String(pegData.status || '').toUpperCase() === 'PPPK') continue;
+
+    obj.KodeSatker = pegData.KodeSatker || '';
+
+    const syarat = getMinSyaratAK(jabatan, golongan);
+    const ak2025 = parseFloat(row[6]) || 0;
+
+    let bulanRekom = null;
+    let tahunRekom = null;
+    let sudahLayak = false;
+
+    if (syarat !== null) {
+      if (ak2025 >= syarat) {
+        sudahLayak = true;
+      } else {
+        for (let m = 0; m < PROJ_COUNT; m++) {
+          const colIdx = PROJ_START_IDX + m;
+          if (colIdx >= row.length) break;
+          const akProj = parseFloat(row[colIdx]) || 0;
+          if (akProj >= syarat) {
+            bulanRekom = BULAN_LABEL[m].bulan;
+            tahunRekom = BULAN_LABEL[m].tahun;
+            break;
+          }
+        }
+      }
+    }
+
+    obj['AK 2025']  = ak2025;
+    obj['AK 2026']  = row.length > 18 ? parseFloat(row[18]) || 0 : 0;
+    obj['AK 2027']  = row.length > 30 ? parseFloat(row[30]) || 0 : 0;
+    obj['AK 2028']  = row.length > 42 ? parseFloat(row[42]) || 0 : 0;
+    obj['AK 2029']  = row.length > 54 ? parseFloat(row[54]) || 0 : 0;
+    obj['AK 2030']  = row.length > 66 ? parseFloat(row[66]) || 0 : 0;
+
+    const rowInput = mapInputKinerja[nip];
+    for (let y = 2026; y <= 2030; y++) {
+      const yData = getYearlyKinerjaData(rowInput, y);
+      obj[y + '_BULAN'] = yData.bulan;
+      obj[y + '_PREDIKAT'] = yData.predikat;
+      obj[y + '_PERSENTASE'] = yData.persentase;
+    }
+    obj.bulanRekom  = bulanRekom;
+    obj.tahunRekom  = tahunRekom;
+    obj.sudahLayak  = sudahLayak;
+    obj.jabatan     = jabatan;
+    obj.golongan    = golongan;
+    obj.status      = (row.length >= 69 && row[68] !== undefined) ? row[68].toString().trim() : '';
+
+    result.push(obj);
+  }
+
+  const filtered = filterPegawaiByRole(result, session);
+  return jsonResponse(filtered);
+}
+
+function handleGetSatker() {
+  const { data, header } = getSheetData(SHEET_NAMES.SATKER);
+  if (!data.length) return jsonResponse([]);
+  const rows = data.slice(1)
+    .filter(row => row[0])
+    .map(row => rowToObject(header, row));
+  return jsonResponse(rows);
+}
+
+function handleGetKategoriKinerja() {
+  const { data, header } = getSheetData(SHEET_NAMES.KINERJA);
+  if (!data.length) return jsonResponse([]);
+  const rows = data.slice(1)
+    .filter(row => row[0])
+    .map(row => rowToObject(header, row));
+  return jsonResponse(rows);
+}
+
+function handleGetAmbangPangkat() {
+  const { data, header } = getSheetData(SHEET_NAMES.KENAIKAN);
+  if (!data.length) return jsonResponse([]);
+  const rows = data.slice(1)
+    .filter(row => row[0])
+    .map(row => rowToObject(header, row));
+  return jsonResponse(rows);
+}
+
+function getYearlyKinerjaData(rowInput, Y) {
+  if (!rowInput || rowInput.length < 62) {
+    return { bulan: 0, predikat: '', persentase: '' };
+  }
+  const startIdx = 2 + (Y - 2026) * 12;
+  let counts = {};
+  let validMonths = 0;
+  for (let m = 0; m < 12; m++) {
+    if (startIdx + m >= rowInput.length) break;
+    const val = rowInput[startIdx + m];
+    const valStr = val !== undefined && val !== null ? val.toString().trim() : '';
+    if (valStr !== '' && valStr !== '0' && valStr !== '-') {
+      validMonths++;
+      counts[valStr] = (counts[valStr] || 0) + 1;
+    }
+  }
+
+  let dominantRating = '';
+  let maxCount = 0;
+  for (const key in counts) {
+    if (counts[key] > maxCount) {
+      maxCount = counts[key];
+      dominantRating = key;
+    }
+  }
+
+  const PREDIKAT_PERCENT_MAP = {
+    'Sangat Baik': '150%',
+    'Baik': '100%',
+    'Cukup': '75%',
+    'Cukup/Butuh Perbaikan': '75%',
+    'Kurang': '50%',
+    'Sangat Kurang': '25%'
+  };
+  const percentage = PREDIKAT_PERCENT_MAP[dominantRating] || '';
+
+  return {
+    bulan: validMonths,
+    predikat: dominantRating,
+    persentase: percentage
+  };
+}
+
+function handleGetRiwayatAK(targetNip, session) {
+  if (!targetNip) return errorResponse('NIP target wajib diisi.');
+  if (session.role === 'Viewer' && session.nip !== targetNip) {
+    return errorResponse('Akses ditolak.', 403);
+  }
+
+  const { data, header } = getSheetData(SHEET_NAMES.RIWAYAT);
+  const colNIP = header.indexOf('NIP');
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][colNIP].toString().trim() === targetNip.toString().trim()) {
+      const row = data[i];
+      const obj = rowToObject(header, row);
+      
+      const { data: dataInput, header: headerInput } = getSheetData(SHEET_NAMES.INPUT_KINERJA);
+      const colNIPInput = headerInput.indexOf('NIP');
+      let rowInput = null;
+      for (let j = 1; j < dataInput.length; j++) {
+        if (dataInput[j][colNIPInput] && dataInput[j][colNIPInput].toString().trim() === targetNip.toString().trim()) {
+          rowInput = dataInput[j];
+          break;
+        }
+      }
+
+      obj['AK 2025'] = row.length > 6 ? parseFloat(row[6]) || 0 : 0;
+      obj['AK 2026'] = row.length > 18 ? parseFloat(row[18]) || 0 : 0;
+      obj['AK 2027'] = row.length > 30 ? parseFloat(row[30]) || 0 : 0;
+      obj['AK 2028'] = row.length > 42 ? parseFloat(row[42]) || 0 : 0;
+      obj['AK 2029'] = row.length > 54 ? parseFloat(row[54]) || 0 : 0;
+      obj['AK 2030'] = row.length > 66 ? parseFloat(row[66]) || 0 : 0;
+
+      for (let y = 2026; y <= 2030; y++) {
+        const yData = getYearlyKinerjaData(rowInput, y);
+        obj[y + '_BULAN'] = yData.bulan;
+        obj[y + '_PREDIKAT'] = yData.predikat;
+        obj[y + '_PERSENTASE'] = yData.persentase;
+      }
+
+      return jsonResponse(obj);
+    }
+  }
+  return errorResponse('Data riwayat AK tidak ditemukan.', 404);
+}
+
+// ======================= PROYEKSI PER PEGAWAI =======================
+function handleGetProyeksiFromSheet(targetNip, session) {
+  if (!targetNip) return errorResponse('NIP target wajib diisi.');
+  if (session.role === 'Viewer' && session.nip !== targetNip) {
+    return errorResponse('Akses ditolak.', 403);
+  }
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetRiw = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+  if (!sheetRiw) return errorResponse('Sheet Riwayat_AK tidak ditemukan.', 404);
+
+  const lastRow = sheetRiw.getLastRow();
+  const lastCol = sheetRiw.getLastColumn();
+  if (lastRow < 2) return errorResponse('Data riwayat kosong.', 404);
+
+  const allData   = sheetRiw.getRange(1, 1, lastRow, lastCol).getValues();
+  const rawHeader = allData[0];
+
+  const PROJ_START_IDX = 7;
+  const PROJ_COUNT     = 60;
+
+  const colNIP = rawHeader.findIndex(h => h && h.toString().trim().toUpperCase() === 'NIP');
+  if (colNIP === -1) return errorResponse('Kolom NIP tidak ditemukan.', 404);
+
+  const targetStr = targetNip.toString().trim();
+  let rowFound = null;
+  for (let i = 1; i < allData.length; i++) {
+    if (allData[i][colNIP] && allData[i][colNIP].toString().trim() === targetStr) {
+      rowFound = allData[i];
+      break;
+    }
+  }
+  if (!rowFound) return errorResponse('Data riwayat untuk NIP tersebut tidak ditemukan.', 404);
+
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colGolPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'GOLONGAN');
+  const colJabPeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'JABATAN');
+  let jabatan = '', golongan = '';
+  for (let i = 1; i < dataPeg.length; i++) {
+    if (dataPeg[i][colNIPPeg] && dataPeg[i][colNIPPeg].toString().trim() === targetStr) {
+      jabatan  = colJabPeg !== -1 ? dataPeg[i][colJabPeg].toString() : '';
+      golongan = colGolPeg !== -1 ? dataPeg[i][colGolPeg].toString() : '';
+      break;
+    }
+  }
+
+  const golMatch = (golongan || '').toString().trim().match(/[IVX]+\/[a-e]/i);
+  const golClean = golMatch ? golMatch[0] : (golongan || '').toString().trim();
+
+  const syarat = getSyaratAKFromReg(jabatan, golClean);
+  const projections = [];
+  for (let m = 0; m < PROJ_COUNT; m++) {
+    const colIdx = PROJ_START_IDX + m;
+    const akKumulatif = parseFloat(rowFound[colIdx]) || 0;
+    const year  = 2026 + Math.floor(m / 12);
+    const month = (m % 12) + 1;
+    const isLayak = syarat !== null && akKumulatif >= syarat;
+    projections.push({ month, year, akKumulatif, status: isLayak ? '\xe2\xad\x90 Layak Naik Pangkat' : 'Normal' });
+  }
+
+  let bulanLayak = '> Des 2030';
+  for (const p of projections) {
+    if (p.status.includes('Layak')) { bulanLayak = `${p.month}/${p.year}`; break; }
+  }
+
+  const keyReg = Object.keys(REGULASI).find(k => {
+    const parts = k.split(' ');
+    const gol = parts[parts.length - 1];
+    const jenj = parts.slice(0, parts.length - 1).join(' ');
+    return jabatan.includes(jenj) && golClean === gol.trim();
+  });
+  const targetJabatan = keyReg ? REGULASI[keyReg].next : '-';
+
+  return jsonResponse({
+    success: true,
+    nip: targetStr,
+    jabatan,
+    golongan,
+    targetAK: syarat || '-',
+    targetJabatan,
+    bulanLayak,
+    totalAKAkhir: projections[59]?.akKumulatif || 0,
+    projections
+  });
+}
+
+function handleGetProyeksi(targetNip, scenario, session) {
+  if (!targetNip) return errorResponse('NIP target wajib diisi.');
+  if (session.role === 'Viewer' && session.nip !== targetNip) {
+    return errorResponse('Akses ditolak.', 403);
+  }
+
+  const scenarioFactor = scenario === 'Optimis' ? 1.5 : scenario === 'Pesimis' ? 0.75 : 1.0;
+
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg = headerPeg.indexOf('NIP');
+  const colGol    = headerPeg.indexOf('Golongan');
+  const colJab    = headerPeg.indexOf('Jabatan');
+
+  const targetNipStr = targetNip.toString().trim();
+  const targetNipClean = targetNipStr.replace(/[^\d]/g, '');
+
+  let golongan = '', jabatan = '';
+  for (let i = 1; i < dataPeg.length; i++) {
+    const rowNIPStr = dataPeg[i][colNIPPeg] ? dataPeg[i][colNIPPeg].toString().trim() : '';
+    const rowNIPClean = rowNIPStr.replace(/[^\d]/g, '');
+    if ((targetNipClean !== '' && rowNIPClean === targetNipClean) || rowNIPStr === targetNipStr) {
+      golongan = dataPeg[i][colGol] ? dataPeg[i][colGol].toString() : '';
+      jabatan  = dataPeg[i][colJab] ? dataPeg[i][colJab].toString() : '';
+      break;
+    }
+  }
+  if (!jabatan) return errorResponse('Data pegawai tidak ditemukan.', 404);
+
+  const { data: dataRiw, header: headerRiw } = getSheetData(SHEET_NAMES.RIWAYAT);
+  const colNIPRiw = headerRiw.indexOf('NIP');
+  const colAK2025 = headerRiw.indexOf('AK 2025');
+
+  let akDasar = 0;
+  for (let i = 1; i < dataRiw.length; i++) {
+    const rowRiwNIPStr = dataRiw[i][colNIPRiw] ? dataRiw[i][colNIPRiw].toString().trim() : '';
+    const rowRiwNIPClean = rowRiwNIPStr.replace(/[^\d]/g, '');
+    if ((targetNipClean !== '' && rowRiwNIPClean === targetNipClean) || rowRiwNIPStr === targetNipStr) {
+      akDasar = parseFloat(dataRiw[i][colAK2025]) || 0;
+      break;
+    }
+  }
+
+  const { data: dataKat, header: headerKat } = getSheetData(SHEET_NAMES.KINERJA);
+  const mapFaktor = {};
+  dataKat.slice(1).forEach(row => {
+    if (row[0]) mapFaktor[row[0].toString().trim()] = parseFloat(row[1]) || 1.0;
+  });
+
+  const { data: dataInput, header: headerInput } = getSheetData(SHEET_NAMES.INPUT_KINERJA);
+  const colNIPInput = headerInput.indexOf('NIP');
+  let predikatList = [];
+  for (let i = 1; i < dataInput.length; i++) {
+    if (dataInput[i][colNIPInput].toString().trim() === targetNip.toString().trim()) {
+      predikatList = dataInput[i].slice(2);
+      break;
+    }
+  }
+
+  let jenjang = '';
+  for (let key in KOEFISIEN) {
+    if (jabatan.includes(key)) { jenjang = key; break; }
+  }
+  const koefDasar = KOEFISIEN[jenjang] || 0;
+
+  const keyReg = `${jenjang} ${golongan}`.trim();
+  const info   = REGULASI[keyReg];
+
+  const syaratJab  = (info && info.akJab !== null && info.akJab !== undefined) ? info.akJab : null;
+  const syaratPang = (info && info.akPang !== null && info.akPang !== undefined) ? info.akPang : null;
+
+  const startYear  = 2026;
+  const projections = [];
+  let totalAK = akDasar;
+  let bulanLulus = null;
+
+  for (let m = 0; m < 60; m++) {
+    const year  = startYear + Math.floor(m / 12);
+    const month = (m % 12) + 1;
+    const predikat  = (predikatList[m] || 'Baik').toString().trim();
+    const faktor    = (mapFaktor[predikat] || 1.0) * scenarioFactor;
+    const akBulanan = (koefDasar * faktor) / 12;
+    totalAK += akBulanan;
+    const akFix = Math.round(totalAK * 1000) / 1000;
+
+    let status = 'Normal';
+    if (bulanLulus) {
+      status = 'Sudah Layak';
+    } else if (syaratJab !== null && akFix >= syaratJab) {
+      status = '⭐ Layak Naik Jabatan';
+      bulanLulus = { year, month, type: 'Jabatan' };
+    } else if (syaratPang !== null && akFix >= syaratPang) {
+      status = '⭐ Layak Naik Pangkat';
+      bulanLulus = { year, month, type: 'Pangkat' };
+    }
+
+    projections.push({
+      month,
+      year,
+      akBulanan: Math.round(akBulanan * 1000) / 1000,
+      akKumulatif: akFix,
+      predikat,
+      status
+    });
+  }
+
+  let matchedTargetAK = syaratJab || '-';
+  let targetLabel = '-';
+  if (bulanLulus) {
+    if (bulanLulus.type === 'Pangkat') {
+      matchedTargetAK = syaratPang;
+      targetLabel = info ? (info.nextPang || info.next || '-') : '-';
+    } else {
+      matchedTargetAK = syaratJab;
+      targetLabel = info ? (info.nextJab || info.next || '-') : '-';
+    }
+  } else {
+    const p = syaratPang !== null ? syaratPang : 9999;
+    const j = syaratJab !== null ? syaratJab : 9999;
+    const min = Math.min(p, j);
+    matchedTargetAK = min === 9999 ? '-' : min;
+    if (info) {
+      targetLabel = min === syaratPang ? (info.nextPang || '-') : (info.nextJab || '-');
+    }
+  }
+
+  return jsonResponse({
+    success:       true,
+    nip:           targetNip,
+    jabatan,
+    golongan,
+    scenario,
+    targetAK:      matchedTargetAK,
+    targetJabatan: targetLabel,
+    bulanLayak:    bulanLulus ? `${bulanLulus.month}/${bulanLulus.year}` : '> 60 bulan',
+    totalAKAkhir:  projections[59]?.akKumulatif || akDasar,
+    projections
+  });
+}
+
+// ======================= REKOMENDASI (batch) =======================
+function handleGetRekomendasi(session) {
+  try { hitungProyeksiAK(); } catch(e) { }
+
+  const { data, header } = getSheetData(SHEET_NAMES.RIWAYAT);
+  if (!data.length) return jsonResponse([]);
+
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg  = headerPeg.indexOf('NIP');
+  const colKodePeg = headerPeg.indexOf('KodeSatker');
+  const mapSatker  = {};
+  dataPeg.slice(1).forEach(row => {
+    if (row[colNIPPeg]) mapSatker[row[colNIPPeg].toString().trim()] = row[colKodePeg].toString().trim();
+  });
+
+  const colNIP   = header.indexOf('NIP');
+  const colNama  = header.indexOf('Nama');
+  const colRekom = header.length - 1;
+
+  const hasil = data.slice(1)
+    .filter(row => row[colNIP])
+    .map(row => ({
+      nip:         row[colNIP].toString().trim(),
+      nama:        row[colNama].toString(),
+      rekomendasi: row[colRekom].toString(),
+      satker:      mapSatker[row[colNIP].toString().trim()] || ''
+    }));
+
+  const filtered = filterPegawaiByRole(
+    hasil.map(h => ({ ...h, KodeSatker: h.satker, NIP: h.nip })),
+    session
+  ).map(h => ({ nip: h.nip, nama: h.nama, rekomendasi: h.rekomendasi }));
+
+  return jsonResponse(filtered);
+}
+
+// ======================= CREATE =======================
+function handleCreatePegawai(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak dapat menambah data.', 403);
+  
+  if (session.role === 'Admin KabKot' && payload.KodeSatker !== session.satker) {
+    return errorResponse('Hanya dapat menambah pegawai di satker sendiri.', 403);
+  }
+
+  if (!payload.KodeSatker) {
+    return errorResponse('Kode Satker wajib diisi.');
+  }
+
+  const satkerSheetInfo = getSheetData(SHEET_NAMES.SATKER || 'Satker');
+  if (!satkerSheetInfo || !satkerSheetInfo.sheet) {
+    return errorResponse('Sheet referensi Satker tidak ditemukan.');
+  }
+
+  const headerSatker = satkerSheetInfo.header;
+  const dataSatker = satkerSheetInfo.data;
+  
+  const colKodeRef = headerSatker.findIndex(h => h.toLowerCase().includes('kode'));
+  const colNamaRef = headerSatker.findIndex(h => h.toLowerCase().includes('satker') && !h.toLowerCase().includes('kode'));
+
+  if (colKodeRef === -1 || colNamaRef === -1) {
+    return errorResponse('Struktur kolom pada Sheet Satker tidak sesuai.');
+  }
+
+  let namaSatkerDitemukan = '';
+  for (let j = 1; j < dataSatker.length; j++) {
+    if (dataSatker[j][colKodeRef] && dataSatker[j][colKodeRef].toString().trim() === payload.KodeSatker.toString().trim()) {
+      namaSatkerDitemukan = dataSatker[j][colNamaRef];
+      break;
+    }
+  }
+
+  if (!namaSatkerDitemukan) {
+    return errorResponse(`Kode Satker [${payload.KodeSatker}] tidak terdaftar di master data Satker.`, 404);
+  }
+
+  payload.Satker = namaSatkerDitemukan;
+
+  const { sheet, data, header } = getSheetData(SHEET_NAMES.PEGAWAI);
+  if (!sheet) return errorResponse('Sheet Pegawai tidak ditemukan.');
+
+  const colNIP = header.indexOf('NIP');
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][colNIP] && data[i][colNIP].toString().trim() === payload.NIP.toString().trim()) {
+      return errorResponse('NIP sudah terdaftar. NIP harus unik.', 409);
+    }
+  }
+
+  // Validasi field wajib (Semua field wajib diisi kecuali: TMT Jabatan, TMT Golongan, Role, Password, Data Riwayat AK Historis)
+  const wajib = ['NIP', 'Nama', 'Pangkat', 'Golongan', 'Jabatan', 'KodeSatker', 'Status', 'JenisKelamin', 'NoSeriKARPEG'];
+  for (const f of wajib) {
+    if (!payload[f] || payload[f].toString().trim() === '') {
+      return errorResponse(`Field ${f} wajib diisi.`);
+    }
+  }
+  const ttlVal = payload.TempatTanggalLahir || (payload.TempatLahir && payload.TanggalLahir ? `${payload.TempatLahir}, ${payload.TanggalLahir}` : '');
+  if (!ttlVal || ttlVal.toString().trim() === '') {
+    return errorResponse('Tempat dan Tanggal Lahir wajib diisi.');
+  }
+  payload.TempatTanggalLahir = ttlVal;
+
+  // Hak Akses: Field Role dan Password hanya dapat dikelola oleh Admin BPS Provinsi
+  const isAdminProv = (session.role === 'Admin BPS Provinsi');
+  if (!isAdminProv) {
+    payload.Role = '';
+    payload.Password = '';
+    payload.PasswordHash = '';
+  }
+
+  // Jika role adalah 'Viewer' atau 'Tanpa Akun', ubah menjadi '' (Tanpa Akun)
+  if (payload.Role === 'Viewer' || payload.Role === 'Tanpa Akun') payload.Role = '';
+
+  let colPassword = header.indexOf('Password');
+  if (colPassword === -1) colPassword = header.indexOf('PASSWORD');
+  if (colPassword === -1) colPassword = header.indexOf('password');
+  
+  const hasRole = isAdminProv && payload.Role && payload.Role.toString().trim() !== '';
+  const plainPw = hasRole ? (payload.Password || payload.NIP.toString()) : '';
+  const hashedPw = plainPw ? sha256Hex(plainPw) : '';
+  
+  if (colPassword !== -1) {
+    payload.Password = hashedPw;
+  } else {
+    payload.PasswordHash = hashedPw;
+  }
+  
+  delete payload.PasswordConfirm;
+
+  const newRow = header.map(h => {
+    if (payload[h] !== undefined) return payload[h];
+    const hClean = h.toString().trim().replace(/[\s_]+/g, '').toUpperCase();
+    if (hClean === 'TMTJABATAN') return payload.TMTJabatan !== undefined ? payload.TMTJabatan : (payload['TMT Jabatan'] !== undefined ? payload['TMT Jabatan'] : (payload.TMT || ''));
+    if (hClean === 'TMTGOLONGAN') return payload.TMTGolongan !== undefined ? payload.TMTGolongan : (payload['TMT Golongan'] !== undefined ? payload['TMT Golongan'] : (payload.TMT || ''));
+    for (const key of Object.keys(payload)) {
+      if (key.replace(/[\s_]+/g, '').toUpperCase() === hClean) return payload[key];
+    }
+    return '';
+  });
+  sheet.appendRow(newRow);
+
+  if (hasRole) {
+    try {
+      syncUserToSheet(payload.NIP, payload.Nama, payload.Role, plainPw, payload.KodeSatker);
+    } catch(e) {
+      console.warn('[syncUserToSheet] Gagal: ' + e.message);
+    }
+  }
+
+  // =====================================================================
+  // AUTO-CREATE ROW DI RIWAYAT_AK & INPUT_KINERJA UNTUK PEGAWAI BARU
+  // =====================================================================
+  try {
+    autoCreateRiwayatAKRow(payload.NIP, payload.Nama, payload);
+  } catch(e) {
+    console.warn('[autoCreateRiwayatAK] Gagal: ' + e.message);
+  }
+
+  try {
+    autoCreateInputKinerjaRow(payload.NIP, payload.Nama);
+  } catch(e) {
+    console.warn('[autoCreateInputKinerja] Gagal: ' + e.message);
+  }
+  // =====================================================================
+
+  return jsonResponse({ success: true, message: 'Pegawai berhasil ditambahkan.', nip: payload.NIP });
+}
+
+// =====================================================================
+// FUNGSI HELPER: AUTO-CREATE ROW DI RIWAYAT_AK
+// Membuat baris baru untuk pegawai baru di sheet Riwayat_AK dengan
+// nilai awal AK (AK 2022-2025 default "-") dan dukungan Input AK Terakhir
+// =====================================================================
+function autoCreateRiwayatAKRow(nip, nama, extraPayload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+  if (!sheet) throw new Error('Sheet Riwayat_AK tidak ditemukan');
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 1) throw new Error('Sheet Riwayat_AK kosong, tidak ada header');
+
+  // Cek apakah NIP sudah ada di sheet
+  if (lastRow >= 2) {
+    const nipCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < nipCol.length; i++) {
+      if (nipCol[i][0] && nipCol[i][0].toString().trim() === nip.toString().trim()) {
+        return;
+      }
+    }
+  }
+
+  const header = sheet.getRange(1, 1, 1, Math.max(lastCol, 67)).getValues()[0];
+  const totalCols = Math.max(lastCol, 67);
+
+  const payload = extraPayload || {};
+  const ak2022Val = (payload.ak2022 !== undefined && payload.ak2022 !== null && payload.ak2022.toString().trim() !== '') ? payload.ak2022.toString().trim() : '-';
+  const pakIntegrasi2022Val = (payload.pakIntegrasi2022 !== undefined && payload.pakIntegrasi2022 !== null && payload.pakIntegrasi2022.toString().trim() !== '') ? payload.pakIntegrasi2022.toString().trim() : '-';
+  const pakKonversi2023Val = (payload.pakKonversi2023 !== undefined && payload.pakKonversi2023 !== null && payload.pakKonversi2023.toString().trim() !== '') ? payload.pakKonversi2023.toString().trim() : '-';
+  const ak2024Val = (payload.ak2024 !== undefined && payload.ak2024 !== null && payload.ak2024.toString().trim() !== '') ? payload.ak2024.toString().trim() : '-';
+  const ak2025Val = (payload.ak2025 !== undefined && payload.ak2025 !== null && payload.ak2025.toString().trim() !== '') ? payload.ak2025.toString().trim() : '-';
+
+  const newRow = [];
+  for (let c = 0; c < totalCols; c++) {
+    const h = header[c] ? header[c].toString().trim() : '';
+    const hUpper = h.toUpperCase();
+
+    if (c === 0 || hUpper === 'NIP') {
+      newRow.push(nip);
+    } else if (c === 1 || hUpper === 'NAMA') {
+      newRow.push(nama);
+    } else if (c === 2 || hUpper === 'AK 2022') {
+      newRow.push(ak2022Val);
+    } else if (c === 3 || hUpper.includes('INTEGRASI')) {
+      newRow.push(pakIntegrasi2022Val);
+    } else if (c === 4 || hUpper.includes('KONVERSI')) {
+      newRow.push(pakKonversi2023Val);
+    } else if (c === 5 || hUpper === 'AK 2024') {
+      newRow.push(ak2024Val);
+    } else if (c === 6 || hUpper === 'AK 2025') {
+      newRow.push(ak2025Val);
+    } else if (c >= 7 && c < 67) {
+      newRow.push(0);
+    } else {
+      newRow.push('');
+    }
+  }
+
+  // Jika "Input AK Terakhir" diaktifkan dan ada pilihan bulan-tahun & nilai AK Terakhir
+  if (payload.enableAKTerakhir && payload.bulanTahunAKTerakhir && payload.nilaiAKTerakhir !== undefined && payload.nilaiAKTerakhir !== '') {
+    const targetBulanTahun = payload.bulanTahunAKTerakhir.toString().trim();
+    const nilaiAK = parseFloat(payload.nilaiAKTerakhir) || 0;
+
+    const tz = ss.getSpreadsheetTimeZone();
+    for (let c = 7; c < totalCols; c++) {
+      const h = header[c];
+      const hStr = h instanceof Date
+        ? Utilities.formatDate(h, tz, 'MMMM yyyy')
+        : (h ? h.toString().trim() : '');
+      if (hStr.toLowerCase() === targetBulanTahun.toLowerCase()) {
+        newRow[c] = nilaiAK;
+        break;
+      }
+    }
+  }
+
+  sheet.appendRow(newRow);
+
+  try { hitungProyeksiAK(); } catch(e) { console.warn('[autoCreateRiwayatAK] hitungProyeksiAK warn: ' + e.message); }
+}
+
+// =====================================================================
+// FUNGSI HELPER: AUTO-CREATE ROW DI INPUT_KINERJA
+// Membuat baris baru untuk pegawai baru di sheet Input_Kinerja dengan
+// nilai awal 'Baik' di semua kolom bulan (Jan 2026\xe2\x80\x93Des 2030)
+// =====================================================================
+function autoCreateInputKinerjaRow(nip, nama) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.INPUT_KINERJA);
+  if (!sheet) throw new Error('Sheet Input_Kinerja tidak ditemukan');
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow < 1) throw new Error('Sheet Input_Kinerja kosong, tidak ada header');
+
+  // Cek apakah NIP sudah ada di sheet
+  if (lastRow >= 2) {
+    const nipCol = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    for (let i = 0; i < nipCol.length; i++) {
+      if (nipCol[i][0] && nipCol[i][0].toString().trim() === nip.toString().trim()) {
+        return; // Sudah ada, skip
+      }
+    }
+  }
+
+  // Baca total kolom dari header
+  const totalCols = Math.max(lastCol, 62); // minimal: NIP, Nama, + 60 bulan
+  const newRow = [];
+  for (let c = 0; c < totalCols; c++) {
+    if (c === 0) {
+      newRow.push(nip);
+    } else if (c === 1) {
+      newRow.push(nama);
+    } else if (c >= 2 && c <= 8) {
+      newRow.push('Baik'); // Jan 2026 – Jul 2026 diisi 'Baik'
+    } else if (c >= 9 && c < 62) {
+      newRow.push('-'); // Agu 2026 – Des 2030 distrip '-' dulu
+    } else {
+      newRow.push('');
+    }
+  }
+
+  sheet.appendRow(newRow);
+}
+
+// ======================= UPDATE =======================
+function handleUpdatePegawai(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak dapat mengubah data.', 403);
+
+  const { sheet, data, header } = getSheetData(SHEET_NAMES.PEGAWAI);
+  if (!sheet) return errorResponse('Sheet Pegawai tidak ditemukan.');
+
+  const colNIP  = header.indexOf('NIP');
+  const colKode = header.indexOf('KodeSatker');
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][colNIP].toString().trim() === payload.NIP.toString().trim()) {
+      if (session.role === 'Admin KabKot' && data[i][colKode].toString().trim() !== session.satker) {
+        return errorResponse('Tidak memiliki akses ke pegawai satker lain.', 403);
+      }
+
+      // Validasi field wajib jika field disertakan dalam payload
+      const wajib = ['Nama', 'Pangkat', 'Golongan', 'Jabatan', 'KodeSatker', 'Status', 'JenisKelamin', 'NoSeriKARPEG'];
+      for (const f of wajib) {
+        if (payload[f] !== undefined && payload[f].toString().trim() === '') {
+          return errorResponse(`Field ${f} wajib diisi.`);
+        }
+      }
+      if (payload.TempatTanggalLahir !== undefined || (payload.TempatLahir !== undefined && payload.TanggalLahir !== undefined)) {
+        const ttlVal = payload.TempatTanggalLahir || (payload.TempatLahir && payload.TanggalLahir ? `${payload.TempatLahir}, ${payload.TanggalLahir}` : '');
+        if (!ttlVal || ttlVal.toString().trim() === '') {
+          return errorResponse('Tempat dan Tanggal Lahir wajib diisi.');
+        }
+        payload.TempatTanggalLahir = ttlVal;
+      }
+
+      const rowNum = i + 1;
+
+      // Hak Akses: Role dan Password hanya dapat dikelola oleh Admin BPS Provinsi
+      const isAdminProv = (session.role === 'Admin BPS Provinsi');
+      if (!isAdminProv) {
+        delete payload.Role;
+        delete payload.Password;
+        delete payload.PasswordHash;
+        delete payload.PASSWORD;
+        delete payload.password;
+      }
+
+      // Jika role adalah 'Viewer' atau 'Tanpa Akun', ubah menjadi '' (Tanpa Akun)
+      if (payload.Role === 'Viewer' || payload.Role === 'Tanpa Akun') payload.Role = '';
+
+      header.forEach((h, colIdx) => {
+        if (h === 'NIP') return;
+        if (h === 'Password' || h === 'PASSWORD' || h === 'password') return;
+        let valToSet = undefined;
+        if (payload[h] !== undefined) {
+          valToSet = payload[h];
+        } else {
+          const hClean = h.toString().trim().replace(/[\s_]+/g, '').toUpperCase();
+          if (hClean === 'TMTJABATAN') valToSet = payload.TMTJabatan !== undefined ? payload.TMTJabatan : (payload['TMT Jabatan'] !== undefined ? payload['TMT Jabatan'] : payload.TMT);
+          else if (hClean === 'TMTGOLONGAN') valToSet = payload.TMTGolongan !== undefined ? payload.TMTGolongan : (payload['TMT Golongan'] !== undefined ? payload['TMT Golongan'] : payload.TMT);
+          else {
+            for (const key of Object.keys(payload)) {
+              if (key.replace(/[\s_]+/g, '').toUpperCase() === hClean) {
+                valToSet = payload[key];
+                break;
+              }
+            }
+          }
+        }
+        if (valToSet !== undefined) {
+          sheet.getRange(rowNum, colIdx + 1).setValue(valToSet);
+        }
+      });
+
+      if (isAdminProv && payload.Password) {
+        const newHash = sha256Hex(payload.Password);
+        let colPassword = header.indexOf('Password');
+        if (colPassword === -1) colPassword = header.indexOf('PASSWORD');
+        if (colPassword === -1) colPassword = header.indexOf('password');
+        if (colPassword !== -1) {
+          sheet.getRange(rowNum, colPassword + 1).setValue(newHash);
+        } else {
+          const colHash = header.indexOf('PasswordHash');
+          if (colHash !== -1) {
+            sheet.getRange(rowNum, colHash + 1).setValue(newHash);
+          }
+        }
+      }
+
+      if (isAdminProv) {
+        try {
+          syncUserToSheet(payload.NIP, payload.Nama, payload.Role, payload.Password, payload.KodeSatker);
+        } catch(e) {
+          console.warn('[syncUserToSheet] Gagal: ' + e.message);
+        }
+      }
+
+      // Update data di sheet Riwayat_AK (AK 2022-2025 dan Input AK Terakhir)
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetRiw = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+      if (sheetRiw) {
+        const lastRowRiw = sheetRiw.getLastRow();
+        const totalColRiw = Math.max(sheetRiw.getLastColumn(), 67);
+        const riwData = sheetRiw.getRange(1, 1, lastRowRiw, totalColRiw).getValues();
+        const riwHeader = riwData[0];
+        const targetNipStr = payload.NIP.toString().trim();
+
+        for (let r = 1; r < riwData.length; r++) {
+          if (riwData[r][0] && riwData[r][0].toString().trim() === targetNipStr) {
+            const rowRiwNum = r + 1;
+
+            const setRiwValByHeader = (searchHeader, val) => {
+              if (val === undefined || val === null) return;
+              const cIdx = riwHeader.findIndex(h => h && h.toString().trim().toUpperCase().includes(searchHeader.toUpperCase()));
+              if (cIdx !== -1) {
+                sheetRiw.getRange(rowRiwNum, cIdx + 1).setValue(val.toString().trim() !== '' ? val : '-');
+              }
+            };
+
+            if (payload.ak2022 !== undefined) setRiwValByHeader('AK 2022', payload.ak2022);
+            if (payload.pakIntegrasi2022 !== undefined) setRiwValByHeader('INTEGRASI', payload.pakIntegrasi2022);
+            if (payload.pakKonversi2023 !== undefined) setRiwValByHeader('KONVERSI', payload.pakKonversi2023);
+            if (payload.ak2024 !== undefined) setRiwValByHeader('AK 2024', payload.ak2024);
+            if (payload.ak2025 !== undefined) setRiwValByHeader('AK 2025', payload.ak2025);
+
+            // Update AK Terakhir jika diaktifkan
+            if (payload.enableAKTerakhir && payload.bulanTahunAKTerakhir && payload.nilaiAKTerakhir !== undefined && payload.nilaiAKTerakhir !== '') {
+              const targetBulanTahun = payload.bulanTahunAKTerakhir.toString().trim();
+              const nilaiAK = parseFloat(payload.nilaiAKTerakhir) || 0;
+              const tz = ss.getSpreadsheetTimeZone();
+
+              for (let c = 7; c < totalColRiw; c++) {
+                const h = riwHeader[c];
+                const hStr = h instanceof Date
+                  ? Utilities.formatDate(h, tz, 'MMMM yyyy')
+                  : (h ? h.toString().trim() : '');
+                if (hStr.toLowerCase() === targetBulanTahun.toLowerCase()) {
+                  sheetRiw.getRange(rowRiwNum, c + 1).setValue(nilaiAK);
+                  break;
+                }
+              }
+            }
+
+            // Update Status Aksi (Kolom 69 / BQ)
+            if (payload.statusAksi !== undefined) {
+              if (sheetRiw.getLastColumn() < 69) {
+                sheetRiw.getRange(1, 69).setValue('Status');
+              } else {
+                const currentHeader69 = sheetRiw.getRange(1, 69).getValue();
+                if (!currentHeader69 || currentHeader69.toString().trim() === '') {
+                  sheetRiw.getRange(1, 69).setValue('Status');
+                }
+              }
+              sheetRiw.getRange(rowRiwNum, 69).setValue(payload.statusAksi);
+            }
+            break;
+          }
+        }
+      }
+
+      try { hitungProyeksiAK(); } catch(e) { }
+
+      let updatedPegawai = null;
+      let updatedRiwayat = null;
+
+      try {
+        const { data: latestPegData, header: latestPegHeader } = getSheetData(SHEET_NAMES.PEGAWAI);
+        const colNipIdx = latestPegHeader.findIndex(h => h && h.toUpperCase() === 'NIP');
+        if (colNipIdx !== -1) {
+          for (let pIdx = 1; pIdx < latestPegData.length; pIdx++) {
+            if (latestPegData[pIdx][colNipIdx] && latestPegData[pIdx][colNipIdx].toString().trim() === payload.NIP.toString().trim()) {
+              const obj = {};
+              latestPegHeader.forEach((h, idx) => {
+                if (h && !['PASSWORD', 'PASSWORDHASH', 'Password', 'password'].includes(h)) {
+                  obj[h] = latestPegData[pIdx][idx] !== undefined ? latestPegData[pIdx][idx] : '';
+                }
+              });
+              updatedPegawai = obj;
+              break;
+            }
+          }
+        }
+      } catch(e) {}
+
+      try {
+        const riwRes = handleGetAllRiwayatAK(session);
+        if (riwRes && riwRes.getContent()) {
+          const allRiw = JSON.parse(riwRes.getContent());
+          if (Array.isArray(allRiw)) {
+            updatedRiwayat = allRiw.find(r => String(r.NIP || r.nip || '').trim() === payload.NIP.toString().trim()) || null;
+          }
+        }
+      } catch(e) {}
+
+      return jsonResponse({
+        success: true,
+        message: 'Data pegawai berhasil diperbarui.',
+        updatedPegawai,
+        updatedRiwayat
+      });
+    }
+  }
+  return errorResponse('Pegawai tidak ditemukan.', 404);
+}
+
+// ======================= UPDATE AK BULANAN =======================
+function handleUpdateAKBulanan(payload, session) {
+  if (session.role === 'Viewer')
+    return errorResponse('Viewer tidak dapat mengubah data.', 403);
+
+  const { nip, year, month, triwulan, kategoriKinerja } = payload;
+  if (!nip || !year || (!month && !triwulan))
+    return errorResponse('Parameter kurang lengkap (nip, year, dan month/triwulan wajib diisi).');
+
+  if (session.role === 'Admin KabKot') {
+    const peg = validateSession(nip);
+    if (peg && peg.satker !== session.satker)
+      return errorResponse('Akses ditolak.', 403);
+  }
+
+  if (kategoriKinerja) {
+    const ss         = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetInput = ss.getSheetByName(SHEET_NAMES.INPUT_KINERJA);
+    const tz         = ss.getSpreadsheetTimeZone();
+
+    if (!sheetInput) return errorResponse('Sheet Input_Kinerja tidak ditemukan.', 404);
+
+    const lastRowInput = sheetInput.getLastRow();
+    if (lastRowInput < 2)
+      return errorResponse('Data Input_Kinerja kosong.', 404);
+
+    const nipsData = sheetInput.getRange(2, 1, lastRowInput - 1, 1).getValues();
+    let barisNip   = -1;
+    const nipStr   = nip.toString().trim();
+    const nipClean = nipStr.replace(/[^\d]/g, '');
+
+    for (let i = 0; i < nipsData.length; i++) {
+      const cellVal = nipsData[i][0] ? nipsData[i][0].toString().trim() : '';
+      const cellClean = cellVal.replace(/[^\d]/g, '');
+      if ((nipClean !== '' && cellClean === nipClean) || cellVal === nipStr) {
+        barisNip = i + 2;
+        break;
+      }
+    }
+
+    if (barisNip === -1)
+      return errorResponse(`NIP ${nip} tidak ditemukan di Input_Kinerja.`, 404);
+
+    // Tentukan daftar bulan yang akan diisi:
+    // TW I   : Januari – Maret (Bulan 1-3)
+    // TW II  : Januari – Juni (Bulan 1-6)
+    // TW III : Januari – September (Bulan 1-9)
+    // TW IV  : Januari – Desember (Bulan 1-12)
+    let monthsToUpdate = [];
+    if (triwulan) {
+      const twInt = parseInt(triwulan, 10);
+      if (twInt === 1) monthsToUpdate = [1, 2, 3];
+      else if (twInt === 2) monthsToUpdate = [1, 2, 3, 4, 5, 6];
+      else if (twInt === 3) monthsToUpdate = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      else if (twInt === 4) monthsToUpdate = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+    if (monthsToUpdate.length === 0 && month) {
+      monthsToUpdate = [parseInt(month, 10)];
+    }
+
+    const headerRaw = sheetInput.getRange(1, 3, 1, 60).getValues()[0];
+
+    monthsToUpdate.forEach(mInt => {
+      const targetTeks = `${getNamaBulan(mInt)} ${year}`;
+      let colBulanOffset = -1;
+      for (let idx = 0; idx < headerRaw.length; idx++) {
+        const h = headerRaw[idx];
+        const teksBulan = h instanceof Date
+          ? Utilities.formatDate(h, tz, 'MMMM yyyy')
+          : h.toString().trim();
+        if (teksBulan === targetTeks) {
+          colBulanOffset = idx;
+          break;
+        }
+      }
+
+      if (colBulanOffset !== -1) {
+        const kolomTarget = 3 + colBulanOffset;
+        sheetInput.getRange(barisNip, kolomTarget).setValue(kategoriKinerja);
+      }
+    });
+  }
+
+  return jsonResponse({
+    success: true,
+    message: 'Kategori kinerja berhasil disimpan.'
+  });
+}
+
+function getNamaBulan(bulanInt) {
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni',
+                 'Juli','Agustus','September','Oktober','November','Desember'];
+  return bulan[bulanInt - 1] || '';
+}
+
+// ======================= DELETE =======================
+function handleDeletePegawai(targetNip, session) {
+  if (!session || session.role !== 'Admin BPS Provinsi') {
+    return errorResponse('Hanya Admin BPS Provinsi yang dapat menghapus data.', 403);
+  }
+  if (!targetNip) return errorResponse('NIP wajib diisi.');
+
+  const targetNipStr = targetNip.toString().trim();
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(15000);
+
+    // 1. Menghapus dari Sheet Pegawai
+    const { sheet: sheetPeg, data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+    if (!sheetPeg || dataPeg.length <= 1) {
+      return errorResponse('Sheet Pegawai kosong atau tidak ditemukan.', 404);
+    }
+
+    const colNIPPeg = headerPeg.findIndex(h => h && h.toString().trim().toUpperCase() === 'NIP');
+    if (colNIPPeg === -1) {
+      return errorResponse('Kolom NIP di sheet Pegawai tidak ditemukan.', 500);
+    }
+
+    let pegawaiFound = false;
+    // Loop dari bawah ke atas (backwards) agar indeks baris tidak terganggu saat deleteRow
+    for (let i = dataPeg.length - 1; i >= 1; i--) {
+      const cellVal = dataPeg[i][colNIPPeg] ? dataPeg[i][colNIPPeg].toString().trim() : '';
+      if (cellVal === targetNipStr) {
+        sheetPeg.deleteRow(i + 1);
+        pegawaiFound = true;
+      }
+    }
+
+    if (!pegawaiFound) {
+      return errorResponse('Pegawai dengan NIP tersebut tidak ditemukan.', 404);
+    }
+
+    // Helper internal untuk menghapus seluruh baris (beserta barisnya) berdasarkan NIP
+    const deleteRowsByNIP = (sheetName) => {
+      const { sheet, data, header } = getSheetData(sheetName);
+      if (!sheet || data.length <= 1) return 0;
+
+      const colNIP = header.findIndex(h => h && h.toString().trim().toUpperCase() === 'NIP');
+      if (colNIP === -1) return 0;
+
+      let deletedCount = 0;
+      // Loop dari bawah ke atas agar baris langsung terhapus tanpa meninggalkan baris kosong
+      for (let i = data.length - 1; i >= 1; i--) {
+        const cellVal = data[i][colNIP] ? data[i][colNIP].toString().trim() : '';
+        if (cellVal === targetNipStr) {
+          sheet.deleteRow(i + 1);
+          deletedCount++;
+        }
+      }
+      return deletedCount;
+    };
+
+    // 2. Menghapus data terkait di sheet Riwayat_AK
+    deleteRowsByNIP(SHEET_NAMES.RIWAYAT);
+
+    // 3. Menghapus data terkait di sheet Input_Kinerja
+    deleteRowsByNIP(SHEET_NAMES.INPUT_KINERJA);
+
+    // 4. Menghapus user terkait di sheet Users (jika ada)
+    deleteRowsByNIP(SHEET_NAMES.USERS || 'Users');
+
+    return jsonResponse({
+      success: true,
+      message: `Pegawai dengan NIP ${targetNipStr} beserta seluruh data terkait di Riwayat_AK dan Input_Kinerja berhasil dihapus.`
+    });
+
+  } catch (e) {
+    return errorResponse('Gagal menghapus data pegawai: ' + e.message, 500);
+  } finally {
+    try { lock.releaseLock(); } catch(err) {}
+  }
+}
+
+// ======================= HITUNG PROYEKSI BATCH =======================
+function handleHitungProyeksi(session) {
+  if (session.role === 'Viewer') 
+    return errorResponse('Viewer tidak dapat menjalankan perhitungan.', 403);
+  try {
+    hitungProyeksiAK();
+    return jsonResponse({ success: true, message: 'Proyeksi berhasil dihitung.' });
+  } catch (e) {
+    return errorResponse('Gagal menghitung proyeksi: ' + e.message, 500);
+  }
+}
+
+function hitungProyeksiAK() {
+  const ss               = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetRiwayat     = ss.getSheetByName(SHEET_NAMES.RIWAYAT);
+  const sheetKinerja     = ss.getSheetByName(SHEET_NAMES.KINERJA);
+  const sheetPegawai     = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+  const sheetInputKinerja= ss.getSheetByName(SHEET_NAMES.INPUT_KINERJA);
+
+  if (!sheetRiwayat || !sheetKinerja || !sheetPegawai || !sheetInputKinerja) {
+    throw new Error('Salah satu sheet tidak ditemukan!');
+  }
+
+  const lastRowRiwayat = sheetRiwayat.getLastRow();
+  if (lastRowRiwayat < 2) return;
+
+  const tz    = ss.getSpreadsheetTimeZone();
+  const hariIni = new Date();
+
+  const NAMA_BULAN_ID = [
+    'Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'
+  ];
+  const BULAN_MAP_ID = {};
+  NAMA_BULAN_ID.forEach((b, i) => { BULAN_MAP_ID[b] = i + 1; });
+
+  const bulanSekarangTeks =
+    `${NAMA_BULAN_ID[hariIni.getMonth()]} ${hariIni.getFullYear()}`;
+
+  const PROJ_COL_START = 8;
+  const PROJ_COUNT     = 60;
+  const REKOM_COL      = 68;
+
+  const totalColBaca = Math.max(sheetRiwayat.getLastColumn(), REKOM_COL);
+  const semuaDataRiwayat = sheetRiwayat
+    .getRange(1, 1, lastRowRiwayat, totalColBaca)
+    .getValues();
+
+  const COL_GOL     = 6;
+  const COL_STATUS  = 7;
+  const COL_JAB     = 8;
+  const COL_TMT_JAB = 11; // Kolom L (index 11)
+  const COL_TMT_GOL = 12; // Kolom M (index 12)
+
+  const headerPeg = sheetPegawai.getRange(1, 1, 1, sheetPegawai.getLastColumn()).getValues()[0].map(h => h ? h.toString().trim() : '');
+  const colLulusUkom = headerPeg.findIndex(h => h.toUpperCase() === 'LULUS_UKOM' || h.toUpperCase() === 'LULUS UKOM');
+  const colLulusAssess = headerPeg.findIndex(h => h.toUpperCase() === 'LULUS_ASSESSMENT' || h.toUpperCase() === 'LULUS ASSESSMENT');
+  let colTmtJab = headerPeg.findIndex(h => h.toUpperCase() === 'TMT JABATAN' || h.toUpperCase() === 'TMT_JABATAN' || h.toUpperCase() === 'TMTJABATAN');
+  if (colTmtJab === -1) colTmtJab = COL_TMT_JAB;
+  let colTmtGol = headerPeg.findIndex(h => h.toUpperCase() === 'TMT GOLONGAN' || h.toUpperCase() === 'TMT_GOLONGAN' || h.toUpperCase() === 'TMTGOLONGAN');
+  if (colTmtGol === -1 && headerPeg.length > 12) colTmtGol = COL_TMT_GOL;
+
+  const dataPegawaiRaw = sheetPegawai
+    .getRange(2, 1, Math.max(sheetPegawai.getLastRow() - 1, 1), Math.max(sheetPegawai.getLastColumn(), 14))
+    .getValues();
+
+  const mapPegawai = {};
+  dataPegawaiRaw.forEach(row => {
+    if (!row[0]) return;
+    const nip      = row[0].toString().trim();
+    const golongan = row[COL_GOL]    ? row[COL_GOL].toString().trim()    : '-';
+    const status   = row[COL_STATUS] ? row[COL_STATUS].toString().trim() : '';
+    const jabatan  = row[COL_JAB]    ? row[COL_JAB].toString().trim()    : '-';
+    const tmtJabRaw = (colTmtJab !== -1 && row[colTmtJab] !== undefined) ? row[colTmtJab] : (row[COL_TMT_JAB] || '');
+    const tmtGolRaw = (colTmtGol !== -1 && row[colTmtGol] !== undefined) ? row[colTmtGol] : (row[COL_TMT_GOL] || '');
+
+    const parseDateParts = (rawVal) => {
+      let y = null, m = null;
+      if (rawVal) {
+        const d = rawVal instanceof Date ? rawVal : new Date(rawVal);
+        if (!isNaN(d.getTime())) {
+          y = d.getFullYear();
+          m = d.getMonth() + 1;
+        }
+      }
+      return { y, m };
+    };
+
+    const tmtJabParts = parseDateParts(tmtJabRaw);
+    const tmtGolParts = parseDateParts(tmtGolRaw);
+    const tmtTahun = tmtJabParts.y || tmtGolParts.y;
+    const tmtBulan = tmtJabParts.m || tmtGolParts.m;
+
+    const isCPNS = status.toUpperCase().includes('CPNS');
+    const lulusUkom = colLulusUkom !== -1 ? row[colLulusUkom] : '';
+    const lulusAssess = colLulusAssess !== -1 ? row[colLulusAssess] : '';
+    mapPegawai[nip] = { golongan, jabatan, isCPNS, tmtTahun, tmtBulan, lulusUkom, lulusAssess };
+  });
+
+  const dataKinerjaFactor = sheetKinerja.getRange('A2:B6').getValues();
+  const mapFaktor = {};
+  dataKinerjaFactor.forEach(row => {
+    if (row[0]) mapFaktor[row[0].toString().trim()] = parseFloat(row[1]);
+  });
+
+  const lastRowInput   = sheetInputKinerja.getLastRow();
+  const headerInputRaw = sheetInputKinerja.getRange(1, 3, 1, 60).getValues()[0];
+
+  let indeksBulanSekarang = -1;
+
+  const headerBulan = headerInputRaw.map((h, idx) => {
+    let teksBulan, tahun, bulan;
+
+    if (h instanceof Date) {
+      tahun     = h.getFullYear();
+      bulan     = h.getMonth() + 1;
+      teksBulan = `${NAMA_BULAN_ID[h.getMonth()]} ${tahun}`;
+    } else {
+      teksBulan = h.toString().trim();
+      const parts = teksBulan.split(' ');
+      bulan  = BULAN_MAP_ID[parts[0]] || 0;
+      tahun  = parts.length > 1 ? parseInt(parts[1]) : 0;
+    }
+
+    if (teksBulan === bulanSekarangTeks) indeksBulanSekarang = idx;
+    return { teks: teksBulan, tahun, bulan };
+  });
+
+  const dataInputFull = lastRowInput >= 2
+    ? sheetInputKinerja.getRange(2, 3, lastRowInput - 1, 60).getValues()
+    : [];
+  const nipsInput = lastRowInput >= 2
+    ? sheetInputKinerja.getRange(2, 1, lastRowInput - 1, 1).getValues()
+    : [];
+
+  const mapInputKinerja = {};
+  nipsInput.forEach((row, idx) => {
+    if (row[0]) mapInputKinerja[row[0].toString().trim()] = dataInputFull[idx] || [];
+  });
+
+  const arrayHasilProyeksi    = [];
+  const arrayHasilRekomendasi = [];
+  const dataRiwayatRows       = semuaDataRiwayat.slice(1);
+
+  for (let i = 0; i < dataRiwayatRows.length; i++) {
+    const row = dataRiwayatRows[i];
+    const nip = row[0] ? row[0].toString().trim() : '';
+
+    const nilaiG  = row[6];
+    const parsedG = parseFloat(nilaiG);
+
+    const dataDiri  = mapPegawai[nip] || { golongan: '-', jabatan: '-', isCPNS: false, tmtTahun: null, tmtBulan: null };
+    const isCPNS    = dataDiri.isCPNS;
+
+    let akDasar;
+    const gValid = !isNaN(parsedG) && nilaiG !== '' && nilaiG !== '-' && nilaiG !== null;
+
+    if (gValid) {
+      akDasar = parsedG;
+    } else if (isCPNS) {
+      akDasar = 0;
+    } else {
+      const proyeksiLama = [];
+      for (let m = 0; m < PROJ_COUNT; m++) {
+        const colIdx = (PROJ_COL_START - 1) + m;
+        const val    = row[colIdx];
+        proyeksiLama.push(
+          (val !== '' && val !== null && val !== undefined) ? val : 0
+        );
+      }
+      arrayHasilProyeksi.push(proyeksiLama);
+      arrayHasilRekomendasi.push([
+        'Data AK 2025 (kolom G) belum diisi. Isi kolom G terlebih dahulu agar proyeksi dihitung.'
+      ]);
+      continue;
+    }
+
+    const jabatanAktif  = dataDiri.jabatan;
+    const golonganAktif = dataDiri.golongan;
+    const tmtTahun      = dataDiri.tmtTahun;
+    const tmtBulan      = dataDiri.tmtBulan;
+    const predikatRaw   = mapInputKinerja[nip] || [];
+
+    const predikatEfektif = [];
+    for (let m = 0; m < 60; m++) {
+      const pVal = predikatRaw[m];
+      const pStr = (pVal !== undefined && pVal !== null) ? pVal.toString().trim() : '';
+      predikatEfektif[m] = (pStr !== '' && pStr !== '-' && pStr !== '—') ? pStr : 'Baik';
+    }
+
+    let jenjang = '';
+    for (const key in KOEFISIEN) {
+      if (jabatanAktif.includes(key)) { jenjang = key; break; }
+    }
+
+    const koefBaru = KOEFISIEN[jenjang] || 0;
+
+    let jenjangLama = '';
+    if (jenjang === 'Ahli Muda') jenjangLama = 'Ahli Pertama';
+    else if (jenjang === 'Ahli Madya') jenjangLama = 'Ahli Muda';
+    else if (jenjang === 'Penyelia') jenjangLama = 'Mahir';
+    else if (jenjang === 'Ahli Utama') jenjangLama = 'Ahli Madya';
+
+    const koefLama = jenjangLama ? (KOEFISIEN[jenjangLama] || 0) : koefBaru;
+    const isPromotedInProjection = jenjangLama && tmtTahun !== null && tmtTahun >= 2026;
+
+    let totalAK_Old = akDasar;
+    let totalAK_New = 0;
+    let totalAK     = akDasar;
+    const proyeksiBaris = [];
+    let akBulanSekarang = 0;
+    let bulanLulus      = '';
+    let sudahLulus      = false;
+
+    const keyRegulasi = `${jenjang} ${golonganAktif}`.trim();
+    const info        = REGULASI[keyRegulasi];
+    const syarat      = (info && info.akJab !== null && info.akJab !== undefined) ? info.akJab : 9999;
+
+    for (let m = 0; m < 60; m++) {
+      const hdr = headerBulan[m];
+      const faktor = mapFaktor[predikatEfektif[m]] !== undefined ? mapFaktor[predikatEfektif[m]] : 1.0;
+      let akFix = 0;
+
+      if (isCPNS && tmtTahun !== null && tmtBulan !== null) {
+        const sudahTMT = hdr.tahun > tmtTahun || (hdr.tahun === tmtTahun && hdr.bulan >= tmtBulan);
+        if (sudahTMT) {
+          totalAK_Old += (koefBaru * faktor) / 12;
+        }
+        akFix = Math.ceil(totalAK_Old * 1000) / 1000;
+        totalAK = akFix;
+      } else if (isPromotedInProjection) {
+        const isBeforeTMT = hdr.tahun < tmtTahun || (hdr.tahun === tmtTahun && hdr.bulan < tmtBulan);
+        const isTMTMonth  = hdr.tahun === tmtTahun && hdr.bulan === tmtBulan;
+
+        if (isBeforeTMT) {
+          totalAK_Old += (koefLama * faktor) / 12;
+          akFix = Math.ceil(totalAK_Old * 1000) / 1000;
+          totalAK = akFix;
+        } else if (isTMTMonth) {
+          totalAK_New = 0;
+          akFix = 0;
+          totalAK = 0;
+        } else {
+          totalAK_New += (koefBaru * faktor) / 12;
+          akFix = Math.ceil(totalAK_New * 1000) / 1000;
+          totalAK = akFix;
+        }
+      } else {
+        totalAK_Old += (koefBaru * faktor) / 12;
+        akFix = Math.ceil(totalAK_Old * 1000) / 1000;
+        totalAK = akFix;
+      }
+
+      proyeksiBaris.push(akFix);
+
+      if (m === indeksBulanSekarang) akBulanSekarang = akFix;
+      if (akFix >= syarat && !sudahLulus) {
+        bulanLulus = hdr.teks;
+        sudahLulus = true;
+      }
+    }
+    arrayHasilProyeksi.push(proyeksiBaris);
+
+    if (info) {
+      const targetInfo = info.next;
+      const statusAksi = (row.length >= 69 && row[68] !== undefined) ? row[68].toString().trim() : '';
+      const isAhliMadya = jabatanAktif.includes('Ahli Madya');
+
+      const lulusUkomVal = dataDiri.lulusUkom || '';
+      const isLulusUkom = lulusUkomVal.toLowerCase() === 'sudah' || lulusUkomVal.toLowerCase() === 'ya' || lulusUkomVal === 'true';
+
+      const lulusAssessVal = dataDiri.lulusAssess || '';
+      const isLulusAssess = lulusAssessVal.toLowerCase() === 'sudah' || lulusAssessVal.toLowerCase() === 'ya' || lulusAssessVal === 'true';
+
+      const isNaikJabatanTarget = info.nextJab && !jabatanAktif.includes(info.nextJab.split(' ')[0]);
+      const targetJenjangTeks = info.nextJab ? info.nextJab.split(' ').slice(0, -1).join(' ') : '';
+      const isEligibleForJab = info.akJab !== null && info.akJab !== undefined && totalAK >= info.akJab;
+
+      if (statusAksi === 'Sudah Naik Jabatan' || statusAksi === 'Completed' || statusAksi === 'Selesai') {
+        arrayHasilRekomendasi.push(['Selesai']);
+        continue;
+      }
+
+      if (isNaikJabatanTarget && (isEligibleForJab || (statusAksi && statusAksi !== 'Sudah Naik Jabatan' && statusAksi !== 'Selesai' && statusAksi !== 'Completed'))) {
+        const isRencanaAksiSelesai = statusAksi === 'Selesai Rencana Aksi' || statusAksi === 'Belum Naik Jabatan';
+        const isLulusUkomDone = isLulusUkom || statusAksi === 'Lulus Ukom' || statusAksi === 'Lulus Uji Kompetensi' || statusAksi === 'Belum Selesai Rencana Aksi' || isRencanaAksiSelesai;
+        const isLulusAssessDone = isLulusAssess || statusAksi === 'Lulus Assessment' || isLulusUkomDone;
+
+        if (targetJenjangTeks === 'Ahli Madya') {
+          // Ahli Muda -> Ahli Madya: Assessment -> UKOM -> Rencana Aksi -> Rekomendasi Kenaikan Jabatan
+          if (!isLulusAssessDone) {
+            arrayHasilRekomendasi.push(['Rekomendasi Assessment']);
+          } else if (!isLulusUkomDone) {
+            arrayHasilRekomendasi.push(['Rekomendasi Uji Kompetensi (Ukom)']);
+          } else if (!isRencanaAksiSelesai) {
+            arrayHasilRekomendasi.push(['Rencana Aksi Kenaikan Jabatan ke Ahli Madya']);
+          } else {
+            arrayHasilRekomendasi.push(['Rekomendasi Kenaikan Jabatan Menjadi Ahli Madya']);
+          }
+        } else {
+          // Ahli Pertama -> Ahli Muda, Mahir -> Penyelia, dsb: UKOM -> Rencana Aksi -> Rekomendasi Kenaikan Jabatan
+          if (!isLulusUkomDone) {
+            arrayHasilRekomendasi.push(['Rekomendasi Uji Kompetensi (Ukom)']);
+          } else if (!isRencanaAksiSelesai) {
+            arrayHasilRekomendasi.push([`Rencana Aksi Kenaikan Jabatan ke ${targetJenjangTeks}`]);
+          } else {
+            arrayHasilRekomendasi.push([`Rekomendasi Kenaikan Jabatan Menjadi ${targetJenjangTeks}`]);
+          }
+        }
+        continue;
+      }
+
+      if (isCPNS) {
+        const tmtTeks = (tmtTahun && tmtBulan)
+          ? `${NAMA_BULAN_ID[tmtBulan - 1]} ${tmtTahun}`
+          : 'belum diketahui';
+        if (!sudahLulus) {
+          const akDipakai = indeksBulanSekarang !== -1 ? akBulanSekarang : totalAK;
+          const selisih   = (syarat - akDipakai).toFixed(3);
+          arrayHasilRekomendasi.push([
+            `[CPNS - TMT: ${tmtTeks}] Tahap 1: Belum Memenuhi Syarat AK. Kurang ${selisih} poin untuk rekomendasi UKOM (${targetInfo}).`
+          ]);
+        } else {
+          arrayHasilRekomendasi.push([
+            `[CPNS - TMT: ${tmtTeks}] Tahap 1: Lulus Syarat AK. Berstatus [Direkomendasikan UKOM] menuju jenjang ${targetInfo}.`
+          ]);
+        }
+      } else {
+        if (!sudahLulus) {
+          const akDipakai = indeksBulanSekarang !== -1 ? akBulanSekarang : totalAK;
+          const selisih   = (syarat - akDipakai).toFixed(3);
+          arrayHasilRekomendasi.push([
+            `Tahap 1: Belum Memenuhi Syarat AK. Kurang ${selisih} poin untuk rekomendasi UKOM (${targetInfo}).`
+          ]);
+        } else if (totalAK >= syarat && totalAK < (syarat + 25)) {
+          arrayHasilRekomendasi.push([
+            `Tahap 1: Lulus Syarat AK. Berstatus [Direkomendasikan UKOM] menuju jenjang ${targetInfo}.`
+          ]);
+        } else if (totalAK >= (syarat + 25) && totalAK < (syarat + 50)) {
+          arrayHasilRekomendasi.push([
+            `Tahap 2 & 3: [Naik Jabatan Disetujui]. Direkomendasikan Naik Pangkat.`
+          ]);
+        } else {
+          arrayHasilRekomendasi.push([
+            `Tahap 4: [Naik Pangkat Disetujui]. Masuk kriteria Direkomendasikan Assessment.`
+          ]);
+        }
+      }
+    } else {
+      arrayHasilRekomendasi.push(['Regulasi jenjang jabatan tidak ditemukan']);
+    }
+  }
+
+  if (arrayHasilProyeksi.length > 0) {
+    sheetRiwayat
+      .getRange(2, PROJ_COL_START, arrayHasilProyeksi.length, PROJ_COUNT)
+      .setValues(arrayHasilProyeksi);
+    sheetRiwayat
+      .getRange(2, REKOM_COL, arrayHasilRekomendasi.length, 1)
+      .setValues(arrayHasilRekomendasi);
+  }
+}
+
+// ======================= DEBUG FUNCTIONS =======================
+function checkSheetStructure() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+  if (!sheet) { console.log('Sheet Pegawai tidak ditemukan!'); return; }
+  const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  console.log('Kolom yang ada di sheet Pegawai:');
+  header.forEach((col, idx) => { console.log(`  Kolom ${idx + 1}: ${col}`); });
+}
+
+function checkUserData(nip) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.USERS) || ss.getSheetByName(SHEET_NAMES.PEGAWAI);
+  if (!sheet) { console.log('Sheet Pegawai tidak ditemukan!'); return; }
+  const data = sheet.getDataRange().getValues();
+  const header = data[0].map(h => h ? h.toString().trim() : '');
+  const colNIP = header.findIndex(h => h && h.toUpperCase() === 'NIP');
+  const colPassword = header.findIndex(h => h && (h.toUpperCase() === 'PASSWORD' || h.toUpperCase() === 'PASSWORDHASH'));
+  if (colNIP === -1) { console.log('Kolom NIP tidak ditemukan!'); return; }
+  const targetNip = nip.toString().trim();
+  for (let i = 1; i < data.length; i++) {
+    const rowNIP = data[i][colNIP] ? data[i][colNIP].toString().trim() : '';
+    if (rowNIP === targetNip) {
+      console.log('User ditemukan!');
+      console.log('  NIP:', rowNIP);
+      if (colPassword !== -1) {
+        const pwd = data[i][colPassword];
+        console.log('  Password:', pwd);
+        console.log('  Password length:', pwd ? pwd.toString().length : 0);
+      }
+      return;
+    }
+  }
+  console.log('User dengan NIP', targetNip, 'tidak ditemukan');
+}
+
+// ============================================================================
+// EXTENSION FITUR: INTEGRASI GOOGLE DRIVE HISTORY & ARSIP PAK
+// ============================================================================
+
+SHEET_NAMES.HISTORY_PAK = 'Dokumen_Terbit';
+
+function handleGetHistoryPAKData(session) {
+  const { data, header } = getSheetData(SHEET_NAMES.HISTORY_PAK);
+  if (!data.length || data.length < 2) return jsonResponse([]);
+
+  const rows = data.slice(1).map(row => rowToObject(header, row));
+  
+  const filteredData = filterPegawaiByRole(
+    rows.map(r => ({ ...r, KodeSatker: r.Kode_Satker || r.KodeSatker, NIP: r.NIP })), 
+    session
+  ).map(r => ({
+    id: r.ID_Dokumen || r.id,
+    nip: r.NIP,
+    namaPegawai: r.Nama_Pegawai || r.NamaPegawai || r.nama,
+    kodeSatker: r.Kode_Satker || r.KodeSatker,
+    tahun: parseInt(r.Tahun || r.tahun),
+    jenis: r.Jenis_Dokumen || r.JenisDokumen || r.jenis,
+    namaFile: r.Nama_File || r.NamaFile,
+    fileId: r.Drive_File_ID || r.fileId,
+    tglDibuat: r.Tanggal_Dibuat || r.tglDibuat,
+    nomorSurat: r.Nomor_Surat || r.NomorSurat || r.nomorSurat || '',
+    bulanAwal: r.Bulan_Awal || r.BulanAwal || r['Bulan Awal Tahun'] || '',
+    bulanAkhir: r.Bulan_Akhir || r.BulanAkhir || r['Bulan Akhir Tahun'] || '',
+    googleDocUrl: r.Google_Doc_URL || r.googleDocUrl || ''
+  }));
+
+  return jsonResponse(filteredData);
+}
+
+function handleSimpanDokumenPAK(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak memiliki hak akses penyimpanan.', 403);
+  
+  const { nip, tahun, jenis, namaFile, base64Content } = payload;
+  if (!nip || !tahun || !jenis || !namaFile || !base64Content) {
+    return errorResponse('Parameter payload dokumen kurang lengkap.');
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetHist = ss.getSheetByName(SHEET_NAMES.HISTORY_PAK) || createHistorySheetStructure(ss);
+    const dbHist = sheetHist.getDataRange().getValues();
+    const headerHist = dbHist[0];
+
+    const colNIP = headerHist.indexOf('NIP');
+    const colTahun = headerHist.indexOf('Tahun');
+    const colJenis = headerHist.indexOf('Jenis_Dokumen');
+    const colFileId = headerHist.indexOf('Drive_File_ID');
+
+    for (let i = 1; i < dbHist.length; i++) {
+      if (dbHist[i][colNIP].toString().trim() === nip.toString().trim() &&
+          dbHist[i][colTahun].toString() === tahun.toString() &&
+          dbHist[i][colJenis].toString().trim() === jenis.toString().trim()) {
+        
+        const oldFileId = dbHist[i][colFileId];
+        if (oldFileId) {
+          try { DriveApp.getFileById(oldFileId).setTrashed(true); } catch(err) { console.warn('File lama tidak ditemukan di Drive.'); }
+        }
+        sheetHist.deleteRow(i + 1);
+        break;
+      }
+    }
+
+    const pegSession = validateSession(nip);
+    if (!pegSession) return errorResponse('Data identitas pegawai tidak terdaftar di sistem.', 404);
+    const namaPegawai = pegSession.nama;
+    const kodeSatker = pegSession.satker;
+
+    const rootFolder = getOrCreateDriveFolder('SIDAK6100 SDM');
+    const historyPAKFolder = getOrCreateDriveSubFolder(rootFolder, 'History PAK');
+    const satkerFolder = getOrCreateDriveSubFolder(historyPAKFolder, `Satker_${kodeSatker}`);
+    const pegawaiFolder = getOrCreateDriveSubFolder(satkerFolder, `${namaPegawai}_${nip}`);
+
+    const blobData = Utilities.newBlob(Utilities.base64Decode(base64Content), 'application/pdf', namaFile);
+    const driveFile = pegawaiFolder.createFile(blobData);
+    const driveFileId = driveFile.getId();
+
+    const uuid = 'DOC-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+    const tglSekarang = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'dd MMMM yyyy HH:mm');
+    
+    const loggedRow = headerHist.map(h => {
+      if (h === 'ID_Dokumen') return uuid;
+      if (h === 'NIP') return nip;
+      if (h === 'Nama_Pegawai') return namaPegawai;
+      if (h === 'Kode_Satker') return kodeSatker;
+      if (h === 'Tahun') return tahun;
+      if (h === 'Jenis_Dokumen') return jenis;
+      if (h === 'Nama_File') return namaFile;
+      if (h === 'Drive_File_ID') return driveFileId;
+      if (h === 'Tanggal_Dibuat') return tglSekarang;
+      if (h === 'Google_Doc_URL') return payload.docUrl || '';
+      return '';
+    });
+    
+    sheetHist.appendRow(loggedRow);
+    lock.releaseLock();
+
+    return jsonResponse({ success: true, message: 'Dokumen PAK berhasil disimpan ke Google Drive.', fileId: driveFileId });
+  } catch(e) {
+    return errorResponse('Gagal melakukan interaksi engine Drive: ' + e.message, 500);
+  }
+}
+
+function getOrCreateDriveFolder(folderName) {
+  const folders = DriveApp.getFoldersByName(folderName);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(folderName);
+}
+
+function getOrCreateDriveSubFolder(parentFolder, subFolderName) {
+  const subFolders = parentFolder.getFoldersByName(subFolderName);
+  if (subFolders.hasNext()) return subFolders.next();
+  return parentFolder.createFolder(subFolderName);
+}
+
+function createHistorySheetStructure(ss) {
+  const sheet = ss.insertSheet(SHEET_NAMES.HISTORY_PAK);
+  const headers = ['ID_Dokumen', 'NIP', 'Nama_Pegawai', 'Kode_Satker', 'Tahun', 'Jenis_Dokumen', 'Nama_File', 'Drive_File_ID', 'Tanggal_Dibuat', 'Google_Doc_URL', 'Nomor_Surat', 'Bulan_Awal', 'Bulan_Akhir'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f1f5f9');
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+// ============================================================================
+// PIPELINE GENERATE DOKUMEN VIA GOOGLE DOCS & PDF CONVERSION
+// ============================================================================
+
+function handleGenerateOfficialDocument(payload, session) {
+  const { nip, jenis, bulanAwal, bulanAkhir, tanggalPenetapan, nomorSurat } = payload;
+  if (!nip || !jenis || !bulanAwal || !bulanAkhir) {
+    return errorResponse('Parameter kurang lengkap (nip, jenis, bulanAwal, bulanAkhir wajib diisi).');
+  }
+
+  if (session.role === 'Viewer' && session.nip !== nip) {
+    return errorResponse('Tidak memiliki akses ke pegawai lain.', 403);
+  }
+
+  try {
+    // 1. Ambil data Pegawai
+    const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+    const colNIP = headerPeg.findIndex(h => h && h.toUpperCase() === 'NIP');
+    const colKode = headerPeg.findIndex(h => h && h.toUpperCase() === 'KODESATKER');
+    const colNama = headerPeg.findIndex(h => h && h.toUpperCase() === 'NAMA');
+    const colPangkat = headerPeg.findIndex(h => h && h.toUpperCase() === 'PANGKAT');
+    const colGol = headerPeg.findIndex(h => h && h.toUpperCase() === 'GOLONGAN');
+    const colJab = headerPeg.findIndex(h => h && h.toUpperCase() === 'JABATAN');
+    let colTMTJab = headerPeg.findIndex(h => h && (h.toUpperCase() === 'TMT JABATAN' || h.toUpperCase() === 'TMT_JABATAN' || h.toUpperCase() === 'TMTJABATAN'));
+    if (colTMTJab === -1 && headerPeg.length > 11) colTMTJab = 11; // Kolom L
+    if (colTMTJab === -1) colTMTJab = headerPeg.findIndex(h => h && h.toUpperCase() === 'TMT');
+
+    let colTMTGol = headerPeg.findIndex(h => h && (h.toUpperCase() === 'TMT GOLONGAN' || h.toUpperCase() === 'TMT_GOLONGAN' || h.toUpperCase() === 'TMTGOLONGAN'));
+    if (colTMTGol === -1 && headerPeg.length > 12) colTMTGol = 12; // Kolom M
+    if (colTMTGol === -1) colTMTGol = colTMTJab;
+
+    const colKarpeg = headerPeg.findIndex(h => h && h.toUpperCase() === 'NOSERIKARPEG');
+    const colTTL = headerPeg.findIndex(h => h && h.toUpperCase() === 'TEMPATTANGGALLAHIR');
+    const colJK = headerPeg.findIndex(h => h && h.toUpperCase() === 'JENISKELAMIN');
+    const colPendidikan = headerPeg.findIndex(h => h && h.toUpperCase() === 'PENDIDIKAN');
+    const colMasaKerjaLama = headerPeg.findIndex(h => h && h.toUpperCase() === 'MASAKERJALAMA');
+    const colMasaKerjaBaru = headerPeg.findIndex(h => h && h.toUpperCase() === 'MASAKERJABARU');
+    const colStatus = headerPeg.findIndex(h => h && h.toUpperCase() === 'STATUS');
+
+    let rowPeg = null;
+    for (let i = 1; i < dataPeg.length; i++) {
+      if (dataPeg[i][colNIP] && dataPeg[i][colNIP].toString().trim() === nip.toString().trim()) {
+        rowPeg = dataPeg[i];
+        break;
+      }
+    }
+    if (!rowPeg) return errorResponse('Pegawai tidak ditemukan.', 404);
+
+    const formatDateHelper = (val) => {
+      if (!val) return '';
+      try {
+        return Utilities.formatDate(new Date(val), SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(), 'dd-MM-yyyy');
+      } catch(e) {
+        return String(val);
+      }
+    };
+
+    const valTmtJab = colTMTJab !== -1 && rowPeg[colTMTJab] ? formatDateHelper(rowPeg[colTMTJab]) : '';
+    const valTmtGol = colTMTGol !== -1 && rowPeg[colTMTGol] ? formatDateHelper(rowPeg[colTMTGol]) : '';
+
+    const pegObj = {
+      nip: rowPeg[colNIP],
+      nama: rowPeg[colNama],
+      kodeSatker: rowPeg[colKode] ? rowPeg[colKode].toString().trim() : '',
+      golongan: colGol !== -1 ? rowPeg[colGol] : '',
+      jabatan: colJab !== -1 ? rowPeg[colJab] : '',
+      pangkat: colPangkat !== -1 ? rowPeg[colPangkat] : '',
+      tmtJabatan: valTmtJab,
+      tmtGolongan: valTmtGol,
+      tmt: valTmtGol || valTmtJab || '',
+      pangkatGolTMT: `${(colPangkat !== -1 ? rowPeg[colPangkat] : '') || '-'} / (${(colGol !== -1 ? rowPeg[colGol] : '') || '-'}) / ${valTmtGol || valTmtJab || '-'}`,
+      jabatanTMT: valTmtJab ? `${(colJab !== -1 ? rowPeg[colJab] : '') || '-'} / ${valTmtJab}` : ((colJab !== -1 ? rowPeg[colJab] : '') || '-'),
+      karpeg: (colKarpeg !== -1 ? rowPeg[colKarpeg] : '') || '-',
+      ttl: (colTTL !== -1 ? rowPeg[colTTL] : '') || '-',
+      jenisKelamin: (colJK !== -1 ? rowPeg[colJK] : '') || '-',
+      pendidikan: (colPendidikan !== -1 ? rowPeg[colPendidikan] : '') || '-',
+      masaKerjaLama: (colMasaKerjaLama !== -1 ? rowPeg[colMasaKerjaLama] : '') || '-',
+      masaKerjaBaru: (colMasaKerjaBaru !== -1 ? rowPeg[colMasaKerjaBaru] : '') || '-',
+      status: (colStatus !== -1 ? rowPeg[colStatus] : '') || ''
+    };
+
+    // 2. Ambil detail Satker
+    const { data: dataSatker, header: headerSatker } = getSheetData(SHEET_NAMES.SATKER);
+    const colKodeSat = headerSatker.findIndex(h => h.toLowerCase().includes('kode'));
+    const colNamaSat = headerSatker.findIndex(h => h.toLowerCase().includes('satker') && !h.toLowerCase().includes('kode'));
+    const colAlamat = headerSatker.findIndex(h => h.toLowerCase().includes('alamat'));
+    const colLaman = headerSatker.findIndex(h => h.toLowerCase().includes('laman'));
+    const colPosEl = headerSatker.findIndex(h => h.toLowerCase().includes('pos-el') || h.toLowerCase().includes('posel') || h.toLowerCase().includes('email'));
+    const colKepala = headerSatker.findIndex(h => h.toLowerCase().includes('kepala') && !h.toLowerCase().includes('nip'));
+    const colNipKepala = headerSatker.findIndex(h => h.toLowerCase().includes('nipkepala') || h.toLowerCase().includes('nip_kepala'));
+    const colKota = headerSatker.findIndex(h => h.toLowerCase().includes('kota'));
+
+    let satkerObj = {
+      namaSatker: 'BPS Provinsi Kalimantan Barat',
+      alamat: 'Jl. Jend. Sutoyo No. 1, Pontianak',
+      laman: 'kalbar.bps.go.id',
+      posEl: 'bps6100@bps.go.id',
+      namaKepala: 'Data belum tersedia',
+      nipKepala: 'Data belum tersedia',
+      kotaPenetapan: 'Pontianak'
+    };
+
+    for (let j = 1; j < dataSatker.length; j++) {
+      if (dataSatker[j][colKodeSat] && dataSatker[j][colKodeSat].toString().trim() === pegObj.kodeSatker) {
+        satkerObj = {
+          namaSatker: dataSatker[j][colNamaSat] || satkerObj.namaSatker,
+          alamat: colAlamat !== -1 ? dataSatker[j][colAlamat] : satkerObj.alamat,
+          laman: colLaman !== -1 ? dataSatker[j][colLaman] : satkerObj.laman,
+          posEl: colPosEl !== -1 ? dataSatker[j][colPosEl] : satkerObj.posEl,
+          namaKepala: colKepala !== -1 ? dataSatker[j][colKepala] : satkerObj.namaKepala,
+          nipKepala: colNipKepala !== -1 ? dataSatker[j][colNipKepala] : satkerObj.nipKepala,
+          kotaPenetapan: colKota !== -1 ? dataSatker[j][colKota] : satkerObj.kotaPenetapan
+        };
+        break;
+      }
+    }
+
+    // 3. Parse periode yang dipilih
+    const [startYear, startMonth] = bulanAwal.split('-').map(Number);
+    const [endYear, endMonth] = bulanAkhir.split('-').map(Number);
+
+    if (startYear > endYear || (startYear === endYear && startMonth > endMonth)) {
+      return errorResponse('Periode Bulan Awal tidak boleh melebihi Periode Bulan Akhir.');
+    }
+
+    // 4. Hitung AK & Kinerja yang difilter
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetInputKinerja = ss.getSheetByName(SHEET_NAMES.INPUT_KINERJA);
+    if (!sheetInputKinerja) return errorResponse('Sheet Input_Kinerja tidak ditemukan.', 404);
+
+    const { data: dataInput, header: headerInput } = getSheetData(SHEET_NAMES.INPUT_KINERJA);
+    const colNIPInput = headerInput.indexOf('NIP');
+    let rowInput = null;
+    for (let i = 1; i < dataInput.length; i++) {
+      if (dataInput[i][colNIPInput] && dataInput[i][colNIPInput].toString().trim() === nip.toString().trim()) {
+        rowInput = dataInput[i];
+        break;
+      }
+    }
+
+    const { data: dataRiw, header: headerRiw } = getSheetData(SHEET_NAMES.RIWAYAT);
+    const colNIPRiw = headerRiw.indexOf('NIP');
+    let rowRiw = null;
+    for (let i = 1; i < dataRiw.length; i++) {
+      if (dataRiw[i][colNIPRiw] && dataRiw[i][colNIPRiw].toString().trim() === nip.toString().trim()) {
+        rowRiw = dataRiw[i];
+        break;
+      }
+    }
+    let ak2025 = rowRiw ? (parseFloat(rowRiw[6]) || 0) : 0;
+
+    const { data: dataKat } = getSheetData(SHEET_NAMES.KINERJA);
+    const mapFaktor = {};
+    dataKat.slice(1).forEach(r => {
+      if (r[0]) mapFaktor[r[0].toString().trim()] = parseFloat(r[1]) || 1.0;
+    });
+
+    let jenjang = '';
+    for (const key in KOEFISIEN) {
+      if (pegObj.jabatan.includes(key)) { jenjang = key; break; }
+    }
+    const koefDasar = KOEFISIEN[jenjang] || 0;
+
+    // Helper parsing nilai angka kredit & penanganan unrecorded gaps (misal data terakhir Des 2022)
+    const parseValBackend = (v) => {
+      if (v === undefined || v === null) return 0;
+      const s = String(v).trim();
+      if (s === '' || s === '-' || s === '(-)' || s === '—' || s === 'null' || s === 'undefined') return 0;
+      const num = parseFloat(s.replace(/\s+/g, '').replace(',', '.'));
+      return isNaN(num) ? 0 : num;
+    };
+    const hasValidValBackend = (v) => {
+      if (v === undefined || v === null) return false;
+      const s = String(v).trim();
+      if (s === '' || s === '-' || s === '(-)' || s === '—' || s === 'null' || s === 'undefined') return false;
+      const num = parseFloat(s.replace(/\s+/g, '').replace(',', '.'));
+      return !isNaN(num) && num > 0;
+    };
+
+    const relevantTMTInfo = getRelevantTMTGS(pegObj);
+    let tmtYear = relevantTMTInfo.year;
+    let tmtMonth = relevantTMTInfo.month;
+
+    const rawPakInt2022Backend = rowRiw ? rowRiw[2] : null;
+    const rawAk2022Backend = rowRiw ? rowRiw[3] : null;
+    let baseline2022 = 0;
+    if (hasValidValBackend(rawPakInt2022Backend)) {
+      baseline2022 = parseValBackend(rawPakInt2022Backend);
+    } else if (hasValidValBackend(rawAk2022Backend)) {
+      baseline2022 = parseValBackend(rawAk2022Backend);
+    }
+
+    if (baseline2022 > 0 && tmtYear > 2022) {
+      tmtYear = 2022;
+      tmtMonth = 1;
+    }
+
+    const calcYearlyAKBackend = (year) => {
+      let ak = koefDasar;
+      if (tmtYear && tmtMonth) {
+        if (tmtYear === year) {
+          ak = (Math.max(0, 12 - tmtMonth + 1) / 12) * koefDasar;
+        } else if (tmtYear > year) {
+          ak = 0;
+        }
+      }
+      return Math.round(ak * 1000) / 1000;
+    };
+
+    const cumMap = { 2022: baseline2022 };
+    let runCum = baseline2022;
+
+    // 2023
+    const rawPakKonv2023Backend = rowRiw ? rowRiw[4] : null;
+    if (hasValidValBackend(rawPakKonv2023Backend)) {
+      runCum = parseValBackend(rawPakKonv2023Backend);
+    } else if (baseline2022 > 0 || tmtYear <= 2023) {
+      runCum = Math.round((runCum + calcYearlyAKBackend(2023)) * 1000) / 1000;
+    } else {
+      runCum = 0;
+    }
+    cumMap[2023] = runCum;
+
+    // 2024
+    const rawAk2024Backend = rowRiw ? rowRiw[5] : null;
+    if (hasValidValBackend(rawAk2024Backend)) {
+      runCum = parseValBackend(rawAk2024Backend);
+    } else if (cumMap[2023] > 0 || tmtYear <= 2024) {
+      runCum = Math.round((runCum + calcYearlyAKBackend(2024)) * 1000) / 1000;
+    } else {
+      runCum = 0;
+    }
+    cumMap[2024] = runCum;
+
+    // 2025
+    const rawAk2025Backend = rowRiw ? rowRiw[6] : null;
+    if (hasValidValBackend(rawAk2025Backend)) {
+      runCum = parseValBackend(rawAk2025Backend);
+    } else if (cumMap[2024] > 0 || tmtYear <= 2025) {
+      runCum = Math.round((runCum + calcYearlyAKBackend(2025)) * 1000) / 1000;
+    } else {
+      runCum = 0;
+    }
+    cumMap[2025] = runCum;
+
+    if (hasValidValBackend(rawAk2025Backend)) {
+      ak2025 = parseValBackend(rawAk2025Backend);
+    } else if (ak2025 <= 0) {
+      ak2025 = cumMap[2025];
+    }
+
+    // Menggunakan getDisplayValues() agar selalu mendapatkan teks seperti "Januari 2026"
+    const headerInputRaw = sheetInputKinerja.getRange(1, 3, 1, 60).getDisplayValues()[0];
+    const NAMA_BULAN_ID = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    
+    // Peta nama bulan yang super robust (Mendukung Indonesia/Inggris, Singkat/Lengkap, Case-insensitive)
+    const BULAN_MAP_ID = {};
+    const indFull = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+    const indShort = ['jan','feb','mar','apr','mei','jun','jul','agu','sep','okt','nov','des'];
+    const engFull = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+    const engShort = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    
+    indFull.forEach((b, i) => { BULAN_MAP_ID[b] = i + 1; });
+    indShort.forEach((b, i) => { BULAN_MAP_ID[b] = i + 1; });
+    engFull.forEach((b, i) => { BULAN_MAP_ID[b] = i + 1; });
+    engShort.forEach((b, i) => { BULAN_MAP_ID[b] = i + 1; });
+
+    const monthCols = headerInputRaw.map((h, idx) => {
+      let yr = 0, mn = 0;
+      if (h) {
+        const text = h.toString().trim().toLowerCase();
+        const parts = text.split(/\s+/);
+        mn = BULAN_MAP_ID[parts[0]] || 0;
+        yr = parts.length > 1 ? parseInt(parts[1]) : 0;
+      }
+      return { year: yr, month: mn, colIndex: idx + 2 };
+    });
+
+    // Hitung periode 1 bulan sebelum startMonth/startYear untuk pencocokan PAK lama
+    let prevMonth = startMonth === 1 ? 12 : startMonth - 1;
+    let prevYear = startMonth === 1 ? startYear - 1 : startYear;
+
+    // 1. Cari data di Riwayat_PAK_Terbit berdasarkan NIP dan Bulan Akhir Tahun sebelumnya
+    let akLama = null;
+    const sheetPAKTerbit = ss.getSheetByName(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+    if (sheetPAKTerbit) {
+      const { data: dataPAKTerbit, header: headerPAKTerbit } = getSheetData(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+      if (dataPAKTerbit && dataPAKTerbit.length > 1) {
+        const colNIPPAK = headerPAKTerbit.indexOf('NIP');
+        const colBulanAkhirPAK = headerPAKTerbit.indexOf('Bulan Akhir Tahun');
+        const colNilaiPAK = headerPAKTerbit.indexOf('Nilai PAK');
+
+        for (let i = 1; i < dataPAKTerbit.length; i++) {
+          const r = dataPAKTerbit[i];
+          if (r[colNIPPAK] && r[colNIPPAK].toString().trim() === nip.toString().trim()) {
+            const rawEnd = r[colBulanAkhirPAK];
+            const parsed = parseMonthYearHelper(rawEnd);
+            if (parsed && parsed.month === prevMonth && parsed.year === prevYear) {
+              akLama = parseFloat(r[colNilaiPAK]) || 0;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Jika tidak ditemukan di Riwayat_PAK_Terbit, fallback ke AK tahun terakhir pada Riwayat AK (atau cumMap)
+    if (akLama === null || isNaN(akLama)) {
+      if (baseline2022 <= 0 && cumMap[2025] <= 0 && (startYear < tmtYear || (startYear === tmtYear && startMonth <= tmtMonth))) {
+        akLama = 0;
+      } else {
+        const targetPrevYear = startYear - 1;
+        if (cumMap[targetPrevYear] !== undefined) {
+          akLama = cumMap[targetPrevYear];
+        } else if (rowRiw) {
+          const targetPrevYearCol = 'AK ' + targetPrevYear;
+          const colIdxPrevYear = headerRiw.indexOf(targetPrevYearCol);
+          if (colIdxPrevYear !== -1 && rowRiw[colIdxPrevYear] !== undefined && rowRiw[colIdxPrevYear] !== '' && !isNaN(parseFloat(rowRiw[colIdxPrevYear]))) {
+            akLama = parseFloat(rowRiw[colIdxPrevYear]);
+          } else {
+            akLama = ak2025;
+          }
+        } else {
+          akLama = ak2025;
+        }
+      }
+    }
+
+    let akSebelum = akLama;
+    let akPeriode = 0;
+    const selectedMonthsData = [];
+
+    const isCPNS = pegObj.status && pegObj.status.toString().toUpperCase().includes('CPNS');
+    monthCols.forEach(m => {
+      const rating = rowInput ? (rowInput[m.colIndex] || 'Baik').toString().trim() : 'Baik';
+      const mult = mapFaktor[rating] !== undefined ? mapFaktor[rating] : 1.0;
+      let monthlyAK = (koefDasar * mult) / 12;
+
+      const isNewAppointmentInYear = baseline2022 <= 0 && cumMap[2025] <= 0 && tmtYear === m.year;
+      if ((isCPNS || isNewAppointmentInYear) && (m.year === tmtYear && m.month < tmtMonth)) {
+        monthlyAK = 0;
+      }
+
+      if ((m.year > startYear || (m.year === startYear && m.month >= startMonth)) &&
+          (m.year < endYear || (m.year === endYear && m.month <= endMonth))) {
+        akPeriode += monthlyAK;
+        selectedMonthsData.push({
+          tahun: m.year,
+          bulan: m.month,
+          namaBulan: NAMA_BULAN_ID[m.month - 1],
+          predikat: rating,
+          persentase: (mult * 100) + '%',
+          ak: monthlyAK
+        });
+      }
+    });
+
+    // Hitung Nilai AK pada bulan akhir periode (akAkhirPeriode)
+    let akAkhirPeriode = ak2025;
+    if (endYear >= 2026) {
+      let sumToMonth = 0;
+      monthCols.forEach(m => {
+        if (m.year < endYear || (m.year === endYear && m.month <= endMonth)) {
+          const rating = rowInput ? (rowInput[m.colIndex] || 'Baik').toString().trim() : 'Baik';
+          const mult = mapFaktor[rating] !== undefined ? mapFaktor[rating] : 1.0;
+          let monthlyAK = (koefDasar * mult) / 12;
+          const isNewAppointmentInYear = baseline2022 <= 0 && cumMap[2025] <= 0 && tmtYear === m.year;
+          if ((isCPNS || isNewAppointmentInYear) && (m.year === tmtYear && m.month < tmtMonth)) {
+            monthlyAK = 0;
+          }
+          sumToMonth += monthlyAK;
+        }
+      });
+      akAkhirPeriode = ak2025 + sumToMonth;
+    } else if (endYear === 2025) {
+      akAkhirPeriode = (tmtYear > 2025) ? 0 : ak2025;
+    } else if (endYear < 2025) {
+      if (tmtYear > endYear) {
+        akAkhirPeriode = 0;
+      } else if (cumMap[endYear] !== undefined) {
+        akAkhirPeriode = cumMap[endYear];
+      } else if (rowRiw) {
+        const colIdxEndYear = headerRiw.indexOf('AK ' + endYear);
+        if (colIdxEndYear !== -1 && rowRiw[colIdxEndYear] !== undefined && !isNaN(parseFloat(rowRiw[colIdxEndYear]))) {
+          akAkhirPeriode = parseFloat(rowRiw[colIdxEndYear]);
+        } else {
+          akAkhirPeriode = ak2025;
+        }
+      } else {
+        akAkhirPeriode = (tmtYear > endYear) ? 0 : ak2025;
+      }
+    }
+
+    // {{AK_BARU}} = Nilai AK pada akhir periode - Nilai PAK (akLama)
+    let akBaru = Math.max(0, akAkhirPeriode - akLama);
+    // {{AK_JUMLAH}} = AK Lama + AK Baru
+    let akJumlah = akLama + akBaru;
+    const akSesudah = akJumlah;
+
+    const groupedKonversi = {};
+    selectedMonthsData.forEach(m => {
+      const key = m.predikat;
+      if (!groupedKonversi[key]) {
+        groupedKonversi[key] = {
+          predikat: m.predikat,
+          persentase: m.persentase,
+          koef: koefDasar,
+          ak: 0,
+          bulanCount: 0
+        };
+      }
+      groupedKonversi[key].ak += m.ak;
+      groupedKonversi[key].bulanCount++;
+    });
+    const listKonversi = Object.values(groupedKonversi);
+    if (listKonversi.length === 0) {
+      const jumlahBulanPeriode = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+      const akKonv = (jumlahBulanPeriode / 12) * koefDasar;
+      listKonversi.push({
+        predikat: 'Baik',
+        persentase: '100%',
+        koef: koefDasar,
+        ak: akBaru > 0 ? akBaru : akKonv,
+        bulanCount: jumlahBulanPeriode
+      });
+    }
+
+    // 5. Get/Create Google Doc Template ID
+    const templateId = getTemplateIdFromSheet(jenis);
+
+    // 6. Make a copy of the template doc
+    const rootFolder = getOrCreateDriveFolder('SIDAK6100 SDM');
+    const draftsFolder = getOrCreateDriveSubFolder(rootFolder, '[3] Drafts');
+    const satkerDraftFolder = getOrCreateDriveSubFolder(draftsFolder, `Satker_${pegObj.kodeSatker}`);
+    const destinationFolder = getOrCreateDriveSubFolder(satkerDraftFolder, `${pegObj.nama}_${nip}`);
+
+    const startPeriodFormatted = `${startYear}${String(startMonth).padStart(2, '0')}`;
+    const endPeriodFormatted = `${endYear}${String(endMonth).padStart(2, '0')}`;
+    const jenisLabelMap = {
+      integrasi: 'AKUMULASI',
+      akumulasi: 'AKUMULASI',
+      pak: 'PAK',
+      konversi: 'KONVERSI'
+    };
+    const jenisLabel = jenisLabelMap[(jenis || '').toLowerCase()] || (jenis || '').toUpperCase();
+    const namaPegawai = pegObj.nama || 'Pegawai';
+
+    const templateFile = DriveApp.getFileById(templateId);
+    const docName = `Draft_${jenisLabel}_${namaPegawai}_${startPeriodFormatted}_s.d_${endPeriodFormatted}`;
+
+    // Hapus file draft lama jika ada dengan nama yang sama untuk menghindari duplikasi
+    const existingDrafts = destinationFolder.getFilesByName(docName);
+    while (existingDrafts.hasNext()) {
+      try {
+        existingDrafts.next().setTrashed(true);
+      } catch (e) {
+        console.warn('Gagal menghapus file draft lama: ' + e.message);
+      }
+    }
+
+    const copyFile = templateFile.makeCopy(docName, destinationFolder);
+    const copyId = copyFile.getId();
+
+    // 7. Open copy and modify placeholders
+    const doc = DocumentApp.openById(copyId);
+    const body = doc.getBody();
+
+    const rangeText = `${NAMA_BULAN_ID[startMonth - 1]} ${startYear} s.d. ${NAMA_BULAN_ID[endMonth - 1]} ${endYear}`;
+    const now = new Date();
+    const tglPenetapanDate = tanggalPenetapan ? new Date(tanggalPenetapan) : now;
+    const tglCetak = formatTanggalID(isNaN(tglPenetapanDate) ? now : tglPenetapanDate);
+
+    const jumlahBulan = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+    const koefLabel = (jumlahBulan === 12) ? "KOEFISIEN PER 1 TAHUN" : `KOEFISIEN PER ${jumlahBulan} BULAN`;
+
+    let totalAK = akSesudah;
+    let integrasiRows = [];
+    if (jenis === 'integrasi') {
+      integrasiRows = buildIntegrasiRows(rowRiw, headerRiw, rowInput, startYear, startMonth, endYear, endMonth, koefDasar, monthCols, mapFaktor, pegObj);
+      totalAK = integrasiRows.reduce((sum, r) => sum + (typeof r.akDapat === 'number' ? r.akDapat : (parseFloat(r.akDapat) || 0)), 0);
+    }
+
+    const replacements = {
+      '{{NAMA}}': pegObj.nama,
+      '{{NIP}}': pegObj.nip,
+      '{{NOMOR_SURAT}}': nomorSurat || '',
+      '{{KARPEG}}': pegObj.karpeg,
+      '{{TTL}}': pegObj.ttl,
+      '{{JENIS_KELAMIN}}': pegObj.jenisKelamin,
+      '{{PANGKAT_GOL_TMT}}': pegObj.pangkatGolTMT,
+      '{{JABATAN}}': pegObj.jabatan,
+      '{{JABATAN_TMT}}': pegObj.jabatanTMT,
+      '{{TMT_JABATAN}}': pegObj.tmtJabatan || '-',
+      '{{TMT_GOLONGAN}}': pegObj.tmtGolongan || '-',
+      '{{TMT}}': pegObj.tmtGolongan || pegObj.tmtJabatan || '-',
+      '{{UNIT_KERJA}}': satkerObj.namaSatker.replace(/^BPS\s+/i, ''),
+      '{{UNIT_KERJA_KOP}}': satkerObj.namaSatker
+      .replace(/^BPS\s+/i, '')
+      .toUpperCase(),
+      '{{MASA_KERJA_LAMA}}': pegObj.masaKerjaLama,
+      '{{MASA_KERJA_BARU}}': pegObj.masaKerjaBaru,
+      '{{PENDIDIKAN}}': pegObj.pendidikan,
+      '{{ALAMAT}}': satkerObj.alamat,
+      '{{LAMAN}}': satkerObj.laman,
+      '{{EMAIL}}': satkerObj.posEl,
+      '{{POSEL}}': satkerObj.posEl,
+      '{{KOTA_PENETAPAN}}': satkerObj.kotaPenetapan,
+      '{{TANGGAL_PENETAPAN}}': tglCetak,
+      '{{NAMA_KEPALA}}': satkerObj.namaKepala,
+      '{{NIP_KEPALA}}': satkerObj.nipKepala,
+      '{{PERIODE}}': rangeText,
+      '{{MASA_PENILAIAN}}': rangeText,
+      '{{JUDUL_KEPALA}}': `Kepala ${satkerObj.namaSatker}`,
+      '{{AK_LAMA}}': formatAngkaID(akLama),
+      '{{AK_BARU}}': formatAngkaID(akBaru),
+      '{{AK_JUMLAH}}': formatAngkaID(akJumlah),
+      '{{AK_SEBELUM}}': formatAngkaID(akLama),
+      '{{AK_PERIODE}}': formatAngkaID(akBaru),
+      '{{AK_SESUDAH}}': formatAngkaID(akJumlah),
+      '{{AK_TOTAL}}': formatAngkaID(totalAK),
+      '{{NILAI_DASAR}}': formatAngkaID(akLama),
+      '{{AK_INTEGRASI}}': formatAngkaID(akBaru)
+    };
+
+    for (const [key, val] of Object.entries(replacements)) {
+      body.replaceText(key, String(val));
+    }
+
+    const docHeaders = doc.getHeader() ? [doc.getHeader()] : [];
+    const docFooters = doc.getFooter() ? [doc.getFooter()] : [];
+
+    [...docHeaders, ...docFooters].forEach(sect => {
+      for (const [key, val] of Object.entries(replacements)) {
+        sect.replaceText(key, String(val));
+      }
+    });
+
+    if (jenis === 'konversi') {
+      body.replaceText("KOEFISIEN TARGET / TAHUN", koefLabel);
+      body.replaceText("KOEFISIEN TARGET/TAHUN", koefLabel);
+      body.replaceText("KOEFISIEN PER TAHUN", koefLabel);
+      body.replaceText("KOEFISIEN AK/TAHUN", koefLabel);
+      body.replaceText("Koefisien Target / Tahun", koefLabel);
+      body.replaceText("Koefisien Target/Tahun", koefLabel);
+      body.replaceText("Koefisien Per Tahun", koefLabel);
+      body.replaceText("Koefisien AK/Tahun", koefLabel);
+      
+      [...docHeaders, ...docFooters].forEach(sect => {
+        sect.replaceText("KOEFISIEN TARGET / TAHUN", koefLabel);
+        sect.replaceText("KOEFISIEN TARGET/TAHUN", koefLabel);
+        sect.replaceText("KOEFISIEN PER TAHUN", koefLabel);
+        sect.replaceText("KOEFISIEN AK/TAHUN", koefLabel);
+        sect.replaceText("Koefisien Target / Tahun", koefLabel);
+        sect.replaceText("Koefisien Target/Tahun", koefLabel);
+        sect.replaceText("Koefisien Per Tahun", koefLabel);
+        sect.replaceText("Koefisien AK/Tahun", koefLabel);
+      });
+    }
+
+    // 8. Populate tables dynamically
+    if (jenis === 'konversi') {
+      populateTableKonversi(body, listKonversi);
+    } 
+    else if (jenis === 'integrasi') {
+      populateTableIntegrasi(body, integrasiRows);
+    } 
+    else if (jenis === 'pak') {
+      populateTablePAK(body, akSebelum, akPeriode, akSesudah, pegObj, jenjang);
+    }
+
+    doc.saveAndClose();
+
+    // 9. Convert Google Doc to PDF
+    const pdfBlob = copyFile.getAs('application/pdf');
+    const pdfName = `SIDAK6100_${jenisLabel}_${namaPegawai}_${startPeriodFormatted}_s.d_${endPeriodFormatted}.pdf`;
+
+    const archivesFolder = getOrCreateDriveSubFolder(rootFolder, '[4] Archives');
+    const satkerArchiveFolder = getOrCreateDriveSubFolder(archivesFolder, `Satker_${pegObj.kodeSatker}`);
+    const pegawaiArchiveFolder = getOrCreateDriveSubFolder(satkerArchiveFolder, `${pegObj.nama}_${nip}`);
+
+    // Hapus file arsip lama jika ada dengan nama yang sama untuk menghindari duplikasi
+    const existingArchives = pegawaiArchiveFolder.getFilesByName(pdfName);
+    while (existingArchives.hasNext()) {
+      try {
+        existingArchives.next().setTrashed(true);
+      } catch (e) {
+        console.warn('Gagal menghapus file arsip lama: ' + e.message);
+      }
+    }
+
+    const pdfFile = pegawaiArchiveFolder.createFile(pdfBlob);
+    pdfFile.setName(pdfName);
+
+    // 10. Save to History_PAK sheet (hanya jika recordToSheet !== false dan previewOnly !== true)
+    if (payload.recordToSheet !== false && payload.previewOnly !== true) {
+      const ssDb = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetHist = ssDb.getSheetByName(SHEET_NAMES.HISTORY_PAK) || createHistorySheetStructure(ssDb);
+      const dbHist = sheetHist.getDataRange().getValues();
+      const headerHist = dbHist[0];
+
+      const uuid = 'DOC-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+      const tglDibuat = Utilities.formatDate(new Date(), ssDb.getSpreadsheetTimeZone(), 'dd MMMM yyyy HH:mm');
+
+      const newHistRow = headerHist.map(h => {
+        if (h === 'ID_Dokumen') return uuid;
+        if (h === 'NIP') return nip;
+        if (h === 'Nama_Pegawai') return pegObj.nama;
+        if (h === 'Kode_Satker') return pegObj.kodeSatker;
+        if (h === 'Tahun') return endYear;
+        if (h === 'Jenis_Dokumen') return jenis.toUpperCase();
+        if (h === 'Nama_File') return pdfName;
+        if (h === 'Drive_File_ID') return pdfFile.getId();
+        if (h === 'Tanggal_Dibuat') return tglDibuat;
+        if (h === 'Google_Doc_URL') return copyFile.getUrl();
+        if (h === 'Nomor_Surat' || h === 'NomorSurat') return nomorSurat || '';
+        if (h === 'Bulan_Awal' || h === 'BulanAwal') return bulanAwal || '';
+        if (h === 'Bulan_Akhir' || h === 'BulanAkhir') return bulanAkhir || '';
+        return '';
+      });
+
+      sheetHist.appendRow(newHistRow);
+    }
+
+    return jsonResponse({
+      success: true,
+      pdfUrl: pdfFile.getUrl(),
+      pdfId: pdfFile.getId(),
+      docUrl: copyFile.getUrl(),
+      docId: copyId,
+      fileName: pdfName
+    });
+
+  } catch (err) {
+    console.error('Error generating document: ' + err.message);
+    return errorResponse('Gagal membuat dokumen: ' + err.message, 500);
+  }
+}
+
+function formatPeriodString(val) {
+  if (val === null || val === undefined) return '';
+  if (val instanceof Date) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+  const str = val.toString().trim();
+  const match = str.match(/(\d{4})[-/](\d{1,2})/);
+  if (match) {
+    return `${match[1]}-${String(match[2]).padStart(2, '0')}`;
+  }
+  return str;
+}
+
+function cleanNIPVal(val) {
+  return val ? val.toString().replace(/[^\d]/g, '').trim() : '';
+}
+
+function cleanJenisVal(val) {
+  if (!val) return '';
+  const str = val.toString().toLowerCase();
+  if (str.includes('konv')) return 'konversi';
+  if (str.includes('integ') || str.includes('akm')) return 'integrasi';
+  if (str.includes('pak')) return 'pak';
+  return str.replace(/[^a-z0-9]/g, '');
+}
+
+function handleRecordDocIssuance(payload, session) {
+  const { nip, jenis, bulanAwal, bulanAkhir, tanggalPenetapan, nomorSurat, pdfUrl, pdfId, docUrl, docId, fileName } = payload;
+  if (!nip || !jenis || !bulanAwal || !bulanAkhir || !nomorSurat) {
+    return errorResponse('Parameter recording dokumen kurang lengkap (nip, jenis, bulanAwal, bulanAkhir, nomorSurat).');
+  }
+
+  if (session.role === 'Viewer' && session.nip !== nip) {
+    return errorResponse('Tidak memiliki akses ke pegawai lain.', 403);
+  }
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetHist = ss.getSheetByName(SHEET_NAMES.HISTORY_PAK) || createHistorySheetStructure(ss);
+    const dbHist = sheetHist.getDataRange().getValues();
+    const headerHist = dbHist[0];
+
+    const findCol = (namePatterns) => {
+      return headerHist.findIndex(h => {
+        if (!h) return false;
+        const cleanH = h.toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+        return namePatterns.some(p => cleanH === p.toLowerCase().replace(/[^a-z0-9]/g, ''));
+      });
+    };
+
+    const colNIP = findCol(['NIP', 'nip']);
+    const colJenis = findCol(['Jenis_Dokumen', 'JenisDokumen', 'Jenis']);
+    const colAwal = findCol(['Bulan_Awal', 'BulanAwal', 'BulanAwalTahun', 'Bulan Awal Tahun']);
+    const colAkhir = findCol(['Bulan_Akhir', 'BulanAkhir', 'BulanAkhirTahun', 'Bulan Akhir Tahun']);
+    const colNomor = findCol(['Nomor_Surat', 'NomorSurat', 'Nomor']);
+
+    // Cari pegawai name & satker
+    const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+    const pegColNIP = headerPeg.findIndex(h => h && h.toUpperCase() === 'NIP');
+    const pegColNama = headerPeg.findIndex(h => h && h.toUpperCase() === 'NAMA');
+    const pegColKode = headerPeg.findIndex(h => h && h.toUpperCase() === 'KODESATKER');
+    
+    let namaPeg = '';
+    let kodeSatker = '';
+    for (let i = 1; i < dataPeg.length; i++) {
+      if (dataPeg[i][pegColNIP] && dataPeg[i][pegColNIP].toString().trim() === nip.toString().trim()) {
+        namaPeg = dataPeg[i][pegColNama] || '';
+        kodeSatker = dataPeg[i][pegColKode] ? dataPeg[i][pegColKode].toString().trim() : '';
+        break;
+      }
+    }
+
+    const tglDibuat = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), 'dd MMMM yyyy HH:mm');
+    const endYear = bulanAkhir ? parseInt(bulanAkhir.split('-')[0], 10) : new Date().getFullYear();
+
+    // Check if row already exists in History_PAK & deduplicate any extra rows
+    let existingRowIdx = -1;
+    const duplicateRows = [];
+
+    if (colNIP !== -1 && colJenis !== -1) {
+      for (let i = 1; i < dbHist.length; i++) {
+        const row = dbHist[i];
+        const rNip = cleanNIPVal(row[colNIP]);
+        const rJenis = cleanJenisVal(row[colJenis]);
+        const rAwal = colAwal !== -1 ? formatPeriodString(row[colAwal]) : '';
+        const rAkhir = colAkhir !== -1 ? formatPeriodString(row[colAkhir]) : '';
+
+        if (rNip === cleanNIPVal(nip) &&
+            rJenis === cleanJenisVal(jenis) &&
+            (colAwal === -1 || !rAwal || rAwal === formatPeriodString(bulanAwal)) &&
+            (colAkhir === -1 || !rAkhir || rAkhir === formatPeriodString(bulanAkhir))) {
+          
+          if (existingRowIdx === -1) {
+            existingRowIdx = i + 1;
+          } else {
+            duplicateRows.push(i + 1);
+          }
+        }
+      }
+    }
+
+    // Hapus baris duplikat (jika sebelumnya ada duplikasi akibat perpindahan device/browser)
+    if (duplicateRows.length > 0) {
+      for (let d = duplicateRows.length - 1; d >= 0; d--) {
+        try { sheetHist.deleteRow(duplicateRows[d]); } catch (e) {}
+      }
+    }
+
+    if (existingRowIdx !== -1) {
+      if (colNomor !== -1) sheetHist.getRange(existingRowIdx, colNomor + 1).setValue(nomorSurat);
+      const colFileID = headerHist.indexOf('Drive_File_ID');
+      if (colFileID !== -1 && pdfId) sheetHist.getRange(existingRowIdx, colFileID + 1).setValue(pdfId);
+      const colDocURL = headerHist.indexOf('Google_Doc_URL');
+      if (colDocURL !== -1 && docUrl) sheetHist.getRange(existingRowIdx, colDocURL + 1).setValue(docUrl);
+      const colTgl = headerHist.indexOf('Tanggal_Dibuat');
+      if (colTgl !== -1) sheetHist.getRange(existingRowIdx, colTgl + 1).setValue(tglDibuat);
+    } else {
+      const uuid = 'DOC-' + Utilities.getUuid().substring(0, 8).toUpperCase();
+      const newHistRow = headerHist.map(h => {
+        if (h === 'ID_Dokumen') return uuid;
+        if (h === 'NIP') return nip;
+        if (h === 'Nama_Pegawai') return namaPeg;
+        if (h === 'Kode_Satker') return kodeSatker;
+        if (h === 'Tahun') return endYear;
+        if (h === 'Jenis_Dokumen') return jenis.toUpperCase();
+        if (h === 'Nama_File') return fileName || '';
+        if (h === 'Drive_File_ID') return pdfId || '';
+        if (h === 'Tanggal_Dibuat') return tglDibuat;
+        if (h === 'Google_Doc_URL') return docUrl || '';
+        if (h === 'Nomor_Surat' || h === 'NomorSurat') return nomorSurat || '';
+        if (h === 'Bulan_Awal' || h === 'BulanAwal') return bulanAwal || '';
+        if (h === 'Bulan_Akhir' || h === 'BulanAkhir') return bulanAkhir || '';
+        return '';
+      });
+      sheetHist.appendRow(newHistRow);
+    }
+
+    return jsonResponse({
+      success: true,
+      message: 'Nomor surat dan dokumen berhasil dicatat.'
+    });
+
+  } catch (e) {
+    console.error('Error handleRecordDocIssuance: ' + e.message);
+    return errorResponse('Gagal mencatat dokumen: ' + e.message, 500);
+  }
+}
+
+function getTemplateIdFromSheet(jenis) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Templates');
+  if (!sheet) {
+    sheet = ss.insertSheet('Templates');
+    sheet.getRange(1, 1, 1, 3).setValues([['Nama_Template', 'Google_Doc_ID', 'Deskripsi']]).setFontWeight('bold').setBackground('#e2e8f0');
+    sheet.setFrozenRows(1);
+    
+    const rows = [
+      ['konversi', '', 'Template Konversi Predikat Kinerja ke Angka Kredit'],
+      ['integrasi', '', 'Template Akumulasi Angka Kredit Integrasi'],
+      ['pak', '', 'Template Penetapan Angka Kredit (PAK)']
+    ];
+    sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+    SpreadsheetApp.flush();
+  }
+
+  const data = sheet.getDataRange().getValues();
+  let templateId = '';
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().toLowerCase().trim() === jenis.toLowerCase().trim()) {
+      templateId = data[i][1];
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (templateId) {
+    try {
+      DriveApp.getFileById(templateId);
+      return templateId;
+    } catch (e) {
+      console.warn(`Template ID "${templateId}" untuk "${jenis}" tidak valid. Membuat template baru...`);
+    }
+  }
+
+  const newTemplateId = createDefaultTemplateDoc(jenis);
+  if (rowIndex !== -1) {
+    sheet.getRange(rowIndex, 2).setValue(newTemplateId);
+  } else {
+    sheet.appendRow([jenis, newTemplateId, `Template ${jenis.toUpperCase()} otomatis`]);
+  }
+  SpreadsheetApp.flush();
+  return newTemplateId;
+}
+
+function createDefaultTemplateDoc(jenis) {
+  const docName = `Template_${jenis.toUpperCase()}_Official`;
+  const rootFolder = getOrCreateDriveFolder('SIDAK6100 SDM');
+  const templateFolder = getOrCreateDriveSubFolder(rootFolder, 'Templates');
+  
+  const doc = DocumentApp.create(docName);
+  const file = DriveApp.getFileById(doc.getId());
+  
+  templateFolder.addFile(file);
+  DriveApp.getRootFolder().removeFile(file);
+  
+  const body = doc.getBody();
+  body.setMarginTop(36);
+  body.setMarginBottom(36);
+  body.setMarginLeft(48);
+  body.setMarginRight(48);
+  
+  const style = {};
+  style[DocumentApp.Attribute.FONT_FAMILY] = 'Arial';
+  style[DocumentApp.Attribute.FONT_SIZE] = 10;
+  body.setAttributes(style);
+
+  const header = doc.addHeader() || doc.getHeader();
+  const headerPara = header.appendParagraph("BADAN PUSAT STATISTIK\n{{UNIT_KERJA_KOP}}\n{{ALAMAT}}\nLaman: {{LAMAN}} Pos-el: {{EMAIL}}");
+  headerPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  headerPara.setFontFamily('Arial');
+  headerPara.setFontSize(8.5);
+  headerPara.setItalic(true);
+  
+  if (jenis === 'konversi') {
+    buildDefaultKonversiStructure(body);
+  } else if (jenis === 'integrasi') {
+    buildDefaultIntegrasiStructure(body);
+  } else if (jenis === 'pak') {
+    buildDefaultPAKStructure(body);
+  }
+  
+  doc.saveAndClose();
+  return doc.getId();
+}
+
+function buildDefaultKonversiStructure(body) {
+  const title = body.appendParagraph("KONVERSI PREDIKAT KINERJA KE ANGKA KREDIT");
+  title.setFontSize(12).setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  const subtitle = body.appendParagraph("NOMOR : B-102/6172/KP.600/2026");
+  subtitle.setFontSize(10).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  body.appendParagraph("\nInstansi : Badan Pusat Statistik\nMasa Penilaian : {{MASA_PENILAIAN}}\n");
+  
+  body.appendParagraph("PEJABAT FUNGSIONAL YANG DINILAI").setBold(true);
+  const table1 = body.appendTable([
+    ["1", "Nama", ": {{NAMA}}"],
+    ["2", "NIP", ": {{NIP}}"],
+    ["3", "Nomor Seri KARPEG", ": {{KARPEG}}"],
+    ["4", "Tempat dan Tanggal Lahir", ": {{TTL}}"],
+    ["5", "Jenis Kelamin", ": {{JENIS_KELAMIN}}"],
+    ["6", "Pangkat/Golongan Ruang/TMT", ": {{PANGKAT_GOL_TMT}}"],
+    ["7", "Jabatan / TMT", ": {{JABATAN_TMT}}"],
+    ["8", "Unit Kerja", ": {{UNIT_KERJA}}, {{UNIT_KERJA_KOP}}"]
+  ]);
+  styleTable(table1);
+
+  body.appendParagraph("\nKONVERSI PREDIKAT KINERJA KE ANGKA KREDIT").setBold(true);
+  const table2 = body.appendTable([
+    ["PREDIKAT KINERJA", "PERSENTASE", "KOEFISIEN TARGET / TAHUN", "ANGKA KREDIT PEROLEHAN"],
+    ["{{PREDIKAT}}", "{{PERSENTASE}}", "{{KOEF_TARGET}}", "{{AK_DAPAT}}"]
+  ]);
+  styleTable(table2);
+  
+  appendSignatureBlock(body);
+}
+
+function buildDefaultIntegrasiStructure(body) {
+  const title = body.appendParagraph("AKUMULASI PENILAIAN ANGKA KREDIT INTEGRASI");
+  title.setFontSize(12).setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  body.appendParagraph("\nPEJABAT FUNGSIONAL YANG DINILAI").setBold(true);
+  const table1 = body.appendTable([
+    ["Nama Pegawai", "{{NAMA}}"],
+    ["NIP", "{{NIP}}"],
+    ["Pangkat / Golongan ruang / TMT", "{{PANGKAT_GOL_TMT}}"],
+    ["Jabatan / TMT", "{{JABATAN_TMT}}"],
+    ["Unit Kerja", "{{UNIT_KERJA}}, {{UNIT_KERJA_KOP}}"]
+  ]);
+  styleTable(table1);
+  
+  body.appendParagraph("\nHASIL PENILAIAN ANGKA KREDIT").setBold(true);
+  const table2 = body.appendTable([
+    ["TAHUN / PERIODE", "BULAN", "PREDIKAT", "PERSENTASE", "KOEFISIEN", "ANGKA KREDIT YANG DIDAPAT"],
+    ["{{TAHUN}}", "{{BULAN}}", "{{PREDIKAT}}", "{{PERSENTASE}}", "{{KOEF}}", "{{AK_DAPAT}}"]
+  ]);
+  styleTable(table2);
+  
+  const totalPara = body.appendParagraph("\nTOTAL AKUMULASI INTEGRASI: {{AK_TOTAL}}");
+  totalPara.setBold(true).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+  
+  appendSignatureBlock(body);
+}
+
+function buildDefaultPAKStructure(body) {
+  const title = body.appendParagraph("PENETAPAN ANGKA KREDIT (PAK)");
+  title.setFontSize(12).setBold(true).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  const subtitle = body.appendParagraph("Nomor: 00.1709/PAK/ST/2026");
+  subtitle.setFontSize(10).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  
+  body.appendParagraph("\nKETERANGAN PERORANGAN").setBold(true);
+  const table1 = body.appendTable([
+    ["1", "Nama Lengkap", "{{NAMA}}"],
+    ["2", "NIP", "{{NIP}}"],
+    ["3", "Nomor Seri KARPEG", "{{KARPEG}}"],
+    ["4", "Tempat dan Tanggal Lahir", "{{TTL}}"],
+    ["5", "Jenis Kelamin", "{{JENIS_KELAMIN}}"],
+    ["6", "Pangkat / Golongan / TMT", "{{PANGKAT_GOL_TMT}}"],
+    ["7", "Jabatan Fungsional / TMT", "{{JABATAN_TMT}}"],
+    ["8", "Unit Kerja", "{{UNIT_KERJA}}, {{UNIT_KERJA_KOP}}"]
+  ]);
+  styleTable(table1);
+  
+  body.appendParagraph("\nPENETAPAN ANGKA KREDIT").setBold(true);
+  const table2 = body.appendTable([
+    ["NO", "KOMPONEN PENETAPAN ANGKA KREDIT", "LAMA", "BARU", "JUMLAH"],
+    ["1", "Angka Kredit Dasar Konversi", "-", "-", "-"],
+    ["2", "Angka Kredit JF Lama", "{{AK_LAMA}}", "-", "{{AK_LAMA}}"],
+    ["3", "Angka Kredit Penyesuaian", "-", "-", "-"],
+    ["4", "Angka Kredit Konversi Periode Berjalan", "-", "{{AK_BARU}}", "{{AK_BARU}}"],
+    ["JUMLAH", "TOTAL ANGKA KREDIT KUMULATIF", "{{AK_LAMA}}", "{{AK_BARU}}", "{{AK_JUMLAH}}"]
+  ]);
+  styleTable(table2);
+  
+  body.appendParagraph("\nKeterangan Kenaikan Pangkat/Jabatan:").setBold(true);
+  const table3 = body.appendTable([
+    ["Syarat AK minimal Kenaikan Pangkat", "{{AK_SYARAT_PANGKAT}}"],
+    ["Syarat AK minimal Kenaikan Jabatan", "{{AK_SYARAT_JABATAN}}"],
+    ["Kekurangan AK untuk Kenaikan Pangkat", "{{AK_KURANG_PANGKAT}}"],
+    ["Kekurangan AK untuk Kenaikan Jabatan", "{{AK_KURANG_JABATAN}}"]
+  ]);
+  styleTable(table3);
+  
+  body.appendParagraph("\nStatus Kenaikan Pangkat: {{STATUS_KETERANGAN}}").setItalic(true);
+  
+  appendSignatureBlock(body);
+}
+
+function styleTable(table) {
+  table.setBorderColor('#000000');
+  table.setBorderWidth(1);
+}
+
+function appendSignatureBlock(body) {
+  const sig = body.appendParagraph("\nDitetapkan di : {{KOTA_PENETAPAN}}\nPada tanggal : {{TANGGAL_PENETAPAN}}\n\n{{JUDUL_KEPALA}},\n\n\n{{NAMA_KEPALA}}\nNIP. {{NIP_KEPALA}}");
+  sig.setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+}
+
+function populateTableKonversi(body, listKonversi) {
+  const placeholder = '{{PREDIKAT}}';
+  const element = body.findText(placeholder);
+  if (!element) return;
+  
+  // Mencari TableRow secara dinamis dengan mendaki hirarki dokumen
+  let rowParent = element.getElement().getParent();
+  while (rowParent && rowParent.getType() !== DocumentApp.ElementType.TABLE_ROW) {
+    rowParent = rowParent.getParent();
+  }
+  const row = rowParent;
+  if (!row) return;
+  
+  // Mencari Table secara dinamis dengan mendaki hirarki dokumen
+  let tableParent = row.getParent();
+  while (tableParent && tableParent.getType() !== DocumentApp.ElementType.TABLE) {
+    tableParent = tableParent.getParent();
+  }
+  const table = tableParent;
+  if (!table) return;
+  const rowIndex = table.getChildIndex(row);
+  listKonversi.forEach((item, index) => {
+    const newRow = row.copy();
+    newRow.replaceText('{{PREDIKAT}}', item.predikat.toUpperCase());
+    newRow.replaceText('{{PERSENTASE}}', item.persentase);
+    const koefPeriode = (item.koef * item.bulanCount) / 12;
+    newRow.replaceText('{{KOEF_TARGET}}', formatAngkaID(koefPeriode));
+    let akDapatVal = item.ak;
+    const pctNum = parseFloat(String(item.persentase).replace('%', '')) || 0;
+    if (akDapatVal <= 0 && pctNum > 0 && item.bulanCount > 0) {
+      akDapatVal = Math.round(((koefPeriode * pctNum) / 100) * 1000) / 1000;
+    }
+    newRow.replaceText('{{AK_DAPAT}}', formatAngkaID(akDapatVal));
+    table.insertTableRow(rowIndex + 1 + index, newRow);
+  });
+  table.removeChild(row);
+}
+
+function parseDateToPartsGS(val) {
+  if (!val) return null;
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return { year: val.getFullYear(), month: val.getMonth() + 1, day: val.getDate(), time: val.getTime() };
+  }
+  const str = String(val).trim();
+  if (!str || str === '-' || str === '—' || str.toLowerCase() === 'null') return null;
+  const mISO = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (mISO) {
+    const y = parseInt(mISO[1], 10), m = parseInt(mISO[2], 10), d = parseInt(mISO[3], 10);
+    return { year: y, month: m, day: d, time: new Date(y, m - 1, d).getTime() };
+  }
+  const mDMY = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (mDMY) {
+    const d = parseInt(mDMY[1], 10), m = parseInt(mDMY[2], 10), y = parseInt(mDMY[3], 10);
+    return { year: y, month: m, day: d, time: new Date(y, m - 1, d).getTime() };
+  }
+  const dt = new Date(str);
+  if (!isNaN(dt.getTime())) {
+    return { year: dt.getFullYear(), month: dt.getMonth() + 1, day: dt.getDate(), time: dt.getTime() };
+  }
+  return null;
+}
+
+function getRelevantTMTGS(pegObj) {
+  if (!pegObj) return { year: 2022, month: 1, type: 'TMT' };
+  const rawJab = pegObj.tmtJabatan || pegObj['TMT Jabatan'] || '';
+  const rawGol = pegObj.tmtGolongan || pegObj['TMT Golongan'] || pegObj.tmt || '';
+  const pJab = parseDateToPartsGS(rawJab);
+  const pGol = parseDateToPartsGS(rawGol);
+  let relevant = null;
+  let type = 'TMT';
+  if (pJab) {
+    relevant = pJab;
+    type = 'TMT Jabatan';
+  } else if (pGol) {
+    relevant = pGol;
+    type = 'TMT Golongan';
+  }
+  return {
+    year: relevant ? relevant.year : 2022,
+    month: relevant ? relevant.month : 1,
+    type: type,
+    parts: relevant
+  };
+}
+
+function buildIntegrasiRows(rowRiw, headerRiw, rowInput, startYear, startMonth, endYear, endMonth, koefDasar, monthCols, mapFaktor, pegObj) {
+  const parseVal = (val) => {
+    if (val === undefined || val === null) return 0;
+    const s = String(val).trim();
+    if (s === '' || s === '-' || s === '(-)' || s === '—' || s === 'null' || s === 'undefined') return 0;
+    const num = parseFloat(s.replace(/\s+/g, '').replace(',', '.'));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const hasValidValue = (val) => {
+    if (val === undefined || val === null) return false;
+    const s = String(val).trim();
+    if (s === '' || s === '-' || s === '(-)' || s === '—' || s === 'null' || s === 'undefined') return false;
+    const num = parseFloat(s.replace(/\s+/g, '').replace(',', '.'));
+    return !isNaN(num) && num > 0;
+  };
+
+  const rows = [];
+
+  // Helper mencari nilai di rowRiw berdasarkan regex header
+  const getRiwValByHeader = (pattern, defaultIdx) => {
+    if (!rowRiw) return null;
+    if (headerRiw && headerRiw.length > 0) {
+      for (let i = 0; i < headerRiw.length; i++) {
+        const h = String(headerRiw[i] || '').trim();
+        if (pattern.test(h)) {
+          return rowRiw[i];
+        }
+      }
+    }
+    if (defaultIdx !== undefined && defaultIdx < rowRiw.length) {
+      return rowRiw[defaultIdx];
+    }
+    return null;
+  };
+
+  const getPredikatDanPersentase = (akDapat, koef, bulanCount) => {
+    if (akDapat === undefined || akDapat === null || isNaN(akDapat) || akDapat <= 0 || !koef || koef <= 0) {
+      if (akDapat === 0) {
+        return { predikat: '-', persentase: '-' };
+      }
+      return { predikat: 'Baik', persentase: '100%' };
+    }
+
+    const mCount = (typeof bulanCount === 'number' && bulanCount > 0) ? bulanCount : (parseInt(bulanCount) || 12);
+    const effectiveKoef = (koef * mCount) / 12;
+    const ratio = akDapat / effectiveKoef;
+    const r = Math.round(ratio * 1000) / 1000;
+
+    if (Math.abs(r - 1.5) < 0.05 || r >= 1.35) {
+      return { predikat: 'Sangat Baik', persentase: '150%' };
+    } else if (Math.abs(r - 1.0) < 0.05 || (r >= 0.88 && r < 1.35)) {
+      return { predikat: 'Baik', persentase: '100%' };
+    } else if (Math.abs(r - 0.75) < 0.05 || (r >= 0.63 && r < 0.88)) {
+      return { predikat: 'Cukup', persentase: '75%' };
+    } else if (Math.abs(r - 0.5) < 0.05 || (r >= 0.38 && r < 0.63)) {
+      return { predikat: 'Kurang', persentase: '50%' };
+    } else if (Math.abs(r - 0.25) < 0.05 || (r > 0.05 && r < 0.38)) {
+      return { predikat: 'Sangat Kurang', persentase: '25%' };
+    } else if (r <= 0.05) {
+      return { predikat: '-', persentase: '-' };
+    }
+
+    const pct = Math.round(r * 100);
+    let pred = 'Baik';
+    if (pct >= 135) pred = 'Sangat Baik';
+    else if (pct >= 88) pred = 'Baik';
+    else if (pct >= 63) pred = 'Cukup';
+    else if (pct >= 38) pred = 'Kurang';
+    else if (pct > 0) pred = 'Sangat Kurang';
+    else pred = '-';
+
+    return { predikat: pred, persentase: pct + '%' };
+  };
+
+  const relevantTMTInfo = getRelevantTMTGS(pegObj);
+  let tmtYear = relevantTMTInfo.year;
+  let tmtMonth = relevantTMTInfo.month;
+
+  const rawPakInt2022 = getRiwValByHeader(/pak.*integrasi.*2022/i, 2);
+  const rawAk2022 = getRiwValByHeader(/ak.*2022/i, 3);
+  let ak2022 = 0;
+  if (hasValidValue(rawPakInt2022)) {
+    ak2022 = parseVal(rawPakInt2022);
+  } else if (hasValidValue(rawAk2022)) {
+    ak2022 = parseVal(rawAk2022);
+  }
+
+  if (ak2022 > 0 && tmtYear > 2022) {
+    tmtYear = 2022;
+    tmtMonth = 1;
+  }
+
+  // Helper estimasi perolehan AK tahunan sesuai TMT
+  const calcYearlyAKRow = (year) => {
+    let ak = koefDasar;
+    if (tmtYear && tmtMonth) {
+      if (tmtYear === year) {
+        ak = (Math.max(0, 12 - tmtMonth + 1) / 12) * koefDasar;
+      } else if (tmtYear > year) {
+        ak = 0;
+      }
+    }
+    return Math.round(ak * 1000) / 1000;
+  };
+
+  // 1. Tahun 2022 (Cut-off Integrasi) - jika endYear >= 2022 dan (ak2022 > 0 || tmtYear <= 2022)
+  if (endYear >= 2022 && (ak2022 > 0 || tmtYear <= 2022)) {
+    if (ak2022 > 0) {
+      rows.push({
+        tahun: '2022',
+        bulan: '-',
+        predikat: '-',
+        persentase: '-',
+        koef: '-',
+        akDapat: ak2022
+      });
+    }
+  }
+
+  // 2. Tahun 2023 - jika endYear >= 2023 dan (ak2022 > 0 || tmtYear <= 2023 || hasValidValue(rawPakKonv2023))
+  let cum2023 = ak2022;
+  const rawPakKonv2023 = getRiwValByHeader(/pak.*konversi.*2023/i, 4);
+  const pakKonv2023 = parseVal(rawPakKonv2023);
+  const ak2023 = pakKonv2023 - ak2022;
+  if (endYear >= 2023 && (ak2022 > 0 || tmtYear <= 2023 || hasValidValue(rawPakKonv2023))) {
+    if (hasValidValue(rawPakKonv2023) && ak2023 > 0) {
+      cum2023 = pakKonv2023;
+      const info2023 = getPredikatDanPersentase(ak2023, koefDasar, 12);
+      rows.push({
+        tahun: '2023',
+        bulan: '12',
+        predikat: info2023.predikat,
+        persentase: info2023.persentase,
+        koef: koefDasar,
+        akDapat: ak2023
+      });
+    } else {
+      const ak2023Est = calcYearlyAKRow(2023);
+      cum2023 = Math.round((ak2022 + ak2023Est) * 1000) / 1000;
+      if (ak2023Est > 0) {
+        rows.push({
+          tahun: '2023',
+          bulan: String(tmtYear === 2023 ? (12 - tmtMonth + 1) : 12),
+          predikat: 'Baik',
+          persentase: '100%',
+          koef: koefDasar,
+          akDapat: ak2023Est
+        });
+      }
+    }
+  }
+
+  // 3. Tahun 2024 - jika endYear >= 2024 dan (cum2023 > 0 || tmtYear <= 2024 || hasValidValue(rawAk2024))
+  let cum2024 = cum2023;
+  const rawAk2024 = getRiwValByHeader(/ak.*2024/i, 5);
+  const akKumulatif2024 = parseVal(rawAk2024);
+  const prevCum2024 = cum2023;
+  const ak2024 = akKumulatif2024 - prevCum2024;
+  if (endYear >= 2024 && (cum2023 > 0 || tmtYear <= 2024 || hasValidValue(rawAk2024))) {
+    if (hasValidValue(rawAk2024) && ak2024 > 0) {
+      cum2024 = akKumulatif2024;
+      const info2024 = getPredikatDanPersentase(ak2024, koefDasar, 12);
+      rows.push({
+        tahun: '2024',
+        bulan: '12',
+        predikat: info2024.predikat,
+        persentase: info2024.persentase,
+        koef: koefDasar,
+        akDapat: ak2024
+      });
+    } else {
+      const ak2024Est = calcYearlyAKRow(2024);
+      cum2024 = Math.round((cum2023 + ak2024Est) * 1000) / 1000;
+      if (ak2024Est > 0) {
+        rows.push({
+          tahun: '2024',
+          bulan: String(tmtYear === 2024 ? (12 - tmtMonth + 1) : 12),
+          predikat: 'Baik',
+          persentase: '100%',
+          koef: koefDasar,
+          akDapat: ak2024Est
+        });
+      }
+    }
+  }
+
+  // 4. Tahun 2025 - jika endYear >= 2025 dan (cum2024 > 0 || tmtYear <= 2025 || hasValidValue(rawAk2025))
+  let cum2025 = cum2024;
+  const rawAk2025 = getRiwValByHeader(/ak.*2025/i, 6);
+  const akKumulatif2025 = parseVal(rawAk2025);
+  const prevCum2025 = cum2024;
+  const ak2025 = akKumulatif2025 - prevCum2025;
+  if (endYear >= 2025 && (cum2024 > 0 || tmtYear <= 2025 || hasValidValue(rawAk2025))) {
+    if (hasValidValue(rawAk2025) && ak2025 > 0) {
+      cum2025 = akKumulatif2025;
+      const info2025 = getPredikatDanPersentase(ak2025, koefDasar, 12);
+      rows.push({
+        tahun: '2025',
+        bulan: '12',
+        predikat: info2025.predikat,
+        persentase: info2025.persentase,
+        koef: koefDasar,
+        akDapat: ak2025
+      });
+    } else {
+      const ak2025Est = calcYearlyAKRow(2025);
+      cum2025 = Math.round((cum2024 + ak2025Est) * 1000) / 1000;
+      if (ak2025Est > 0) {
+        rows.push({
+          tahun: '2025',
+          bulan: String(tmtYear === 2025 ? (12 - tmtMonth + 1) : 12),
+          predikat: 'Baik',
+          persentase: '100%',
+          koef: koefDasar,
+          akDapat: ak2025Est
+        });
+      }
+    }
+  }
+
+  // 5. Tahun 2026 dan seterusnya (sebelum startYear)
+  if (startYear > 2026) {
+    const effStart = Math.max(2026, tmtYear);
+    const indexMap = { 2026: 18, 2027: 30, 2028: 42, 2029: 54, 2030: 66 };
+    for (let y = effStart; y < startYear; y++) {
+      const prevIdx = (y - 1 === 2025) ? 6 : indexMap[y - 1];
+      const currIdx = indexMap[y];
+      let prevCum = 0;
+      let currCum = 0;
+      if (rowRiw && prevIdx !== undefined && currIdx !== undefined) {
+        prevCum = parseVal(rowRiw[prevIdx]);
+        currCum = parseVal(rowRiw[currIdx]);
+      }
+      const diff = Math.max(0, currCum - prevCum);
+      if (diff > 0) {
+        const yData = getYearlyKinerjaData(rowInput, y);
+        const mCountY = yData.bulan || 12;
+        const infoY = getPredikatDanPersentase(diff, koefDasar, mCountY);
+        rows.push({
+          tahun: String(y),
+          bulan: String(mCountY),
+          predikat: infoY.predikat,
+          persentase: infoY.persentase,
+          koef: koefDasar,
+          akDapat: Math.round(diff * 1000000) / 1000000
+        });
+      }
+    }
+  }
+
+  // 6. Periode Berjalan (dari startYear s/d endYear, jika endYear >= 2026)
+  if (endYear >= 2026) {
+    const effectiveStartYear = Math.max(2026, startYear);
+    for (let y = effectiveStartYear; y <= endYear; y++) {
+      const mStart = (y === startYear) ? startMonth : 1;
+      const mEnd = (y === endYear) ? endMonth : 12;
+      const mCount = Math.max(1, mEnd - mStart + 1);
+
+      // Hitung AK untuk tahun y pada periode ini
+      let akPeriodeY = 0;
+      let lastMult = 1.0;
+      if (monthCols && monthCols.length > 0) {
+        monthCols.forEach(m => {
+          if (m.year === y && m.month >= mStart && m.month <= mEnd) {
+            const rating = rowInput ? (rowInput[m.colIndex] || 'Baik').toString().trim() : 'Baik';
+            const mult = (mapFaktor && mapFaktor[rating] !== undefined) ? mapFaktor[rating] : 1.0;
+            lastMult = mult;
+            let monthlyAK = (koefDasar * mult) / 12;
+
+            const isCPNS = pegObj && pegObj.status && pegObj.status.toString().toUpperCase().includes('CPNS');
+            const isNewAppointmentInYear = ak2022 <= 0 && cum2025 <= 0 && tmtYear === y;
+            if ((isCPNS || isNewAppointmentInYear) && (y === tmtYear && m.month < tmtMonth)) {
+              monthlyAK = 0;
+            }
+
+            akPeriodeY += monthlyAK;
+          }
+        });
+      }
+
+      if (akPeriodeY <= 0 && mCount > 0) {
+        akPeriodeY = Math.round((((mCount / 12) * koefDasar) * lastMult) * 1000) / 1000;
+      }
+
+      const infoPeriodY = getPredikatDanPersentase(akPeriodeY, koefDasar, mCount);
+
+      rows.push({
+        tahun: String(y),
+        bulan: String(mCount),
+        predikat: infoPeriodY.predikat,
+        persentase: infoPeriodY.persentase,
+        koef: koefDasar,
+        akDapat: Math.round(akPeriodeY * 1000000) / 1000000
+      });
+    }
+  }
+
+  return rows;
+}
+
+function populateTableIntegrasi(body, integrasiRows) {
+  const placeholder = '{{TAHUN}}';
+  const element = body.findText(placeholder);
+  if (!element) return;
+  
+  // Mencari TableRow secara dinamis dengan mendaki hirarki dokumen
+  let rowParent = element.getElement().getParent();
+  while (rowParent && rowParent.getType() !== DocumentApp.ElementType.TABLE_ROW) {
+    rowParent = rowParent.getParent();
+  }
+  const row = rowParent;
+  if (!row) return;
+  
+  // Mencari Table secara dinamis dengan mendaki hirarki dokumen
+  let tableParent = row.getParent();
+  while (tableParent && tableParent.getType() !== DocumentApp.ElementType.TABLE) {
+    tableParent = tableParent.getParent();
+  }
+  const table = tableParent;
+  if (!table) return;
+  const rowIndex = table.getChildIndex(row);
+
+  if (Array.isArray(integrasiRows) && integrasiRows.length > 0) {
+    integrasiRows.forEach((item, index) => {
+      const newRow = row.copy();
+      newRow.replaceText('{{TAHUN}}', String(item.tahun || ''));
+      newRow.replaceText('{{BULAN}}', String(item.bulan || ''));
+      newRow.replaceText('{{PREDIKAT}}', String(item.predikat || ''));
+      newRow.replaceText('{{PERSENTASE}}', String(item.persentase || ''));
+      newRow.replaceText('{{KOEF}}', typeof item.koef === 'number' ? formatAngkaID(item.koef) : String(item.koef || '-'));
+      newRow.replaceText('{{AK_DAPAT}}', typeof item.akDapat === 'number' ? formatAngkaID(item.akDapat) : String(item.akDapat || '0'));
+      table.insertTableRow(rowIndex + 1 + index, newRow);
+    });
+  }
+
+  // Hapus baris template
+  table.removeChild(row);
+}
+
+function populateTablePAK(body, akSebelum, akPeriode, akSesudah, pegObj, jenjang) {
+  const cleanGolMatch = (pegObj.golongan || '').toString().trim().match(/[IVX]+\/[a-e]/i);
+  const golClean = cleanGolMatch ? cleanGolMatch[0] : (pegObj.golongan || '').toString().trim();
+  const keyReg = `${jenjang} ${golClean}`.trim();
+  const info = REGULASI[keyReg];
+  const syaratPang = (info && info.akPang !== null && info.akPang !== undefined) ? info.akPang : null;
+  const syaratJab = (info && info.akJab !== null && info.akJab !== undefined) ? info.akJab : null;
+  
+  // Perhitungan Kekurangan/Kelebihan AK secara absolut (Math.abs):
+  const kurangPang = (syaratPang !== null && syaratPang > 0) ? Math.abs(akSesudah - syaratPang) : null;
+  const kurangJab = (syaratJab !== null && syaratJab > 0) ? Math.abs(akSesudah - syaratJab) : null;
+  
+  const isJenjang = syaratPang === null || syaratPang === 0;
+  
+  let nextJabatan = '-';
+  if (info) {
+    if (isJenjang) {
+      const rawTarget = info.nextJab || info.next || '-';
+      const cleanTarget = rawTarget.replace(/\s+[IVX]+\/[a-e]/i, '').trim();
+      if (pegObj.jabatan && jenjang && pegObj.jabatan.includes(jenjang)) {
+        nextJabatan = pegObj.jabatan.replace(jenjang, cleanTarget);
+      } else {
+        nextJabatan = cleanTarget;
+      }
+    } else {
+      nextJabatan = info.next || info.nextPang || info.nextJab || '-';
+    }
+  }
+  
+  body.replaceText('{{AK_LAMA}}', formatAngkaID(akSebelum));
+  body.replaceText('{{AK_BARU}}', formatAngkaID(akPeriode));
+  body.replaceText('{{AK_JUMLAH}}', formatAngkaID(akSesudah));
+  body.replaceText('{{AK_SYARAT_PANGKAT}}', (syaratPang !== null && syaratPang > 0) ? formatAngkaID(syaratPang) : '-');
+  body.replaceText('{{AK_SYARAT_JABATAN}}', (syaratJab !== null && syaratJab > 0) ? formatAngkaID(syaratJab) : '-');
+  body.replaceText('{{AK_KURANG_PANGKAT}}', kurangPang !== null ? formatAngkaID(kurangPang) : '-');
+  body.replaceText('{{AK_KURANG_JABATAN}}', kurangJab !== null ? formatAngkaID(kurangJab) : '-');
+  body.replaceText('{{NEXT_JABATAN}}', nextJabatan);
+  
+  const targetSyarat = isJenjang ? (syaratJab || 0) : (syaratPang || 0);
+  const isEligible = targetSyarat > 0 && akSesudah >= targetSyarat;
+  const statusKeterangan = isEligible 
+    ? (isJenjang 
+        ? `Dapat dipertimbangkan untuk Kenaikan Jenjang Jabatan Setingkat Lebih Tinggi menjadi ${nextJabatan}.`
+        : `Dapat dipertimbangkan untuk Kenaikan Pangkat Setingkat Lebih Tinggi menjadi Pangkat/Golongan Ruang ${nextJabatan}.`)
+    : (isJenjang
+        ? `Belum dapat dipertimbangkan untuk Kenaikan Jenjang Jabatan Setingkat Lebih Tinggi menjadi ${nextJabatan}.`
+        : `Belum dapat dipertimbangkan untuk Kenaikan Pangkat Setingkat Lebih Tinggi menjadi Pangkat/Golongan Ruang ${nextJabatan}.`);
+  body.replaceText('{{STATUS_KETERANGAN}}', statusKeterangan);
+}
+
+function parseMonthYearHelper(str) {
+  if (!str) return null;
+  if (typeof str === 'object' && str instanceof Date) {
+    if (isNaN(str.getTime())) return null;
+    return { month: str.getMonth() + 1, year: str.getFullYear() };
+  }
+  const s = String(str).trim().toLowerCase();
+  if (!s) return null;
+
+  if (/^\d{4}-\d{1,2}$/.test(s)) {
+    const [y, m] = s.split('-');
+    return { month: parseInt(m, 10), year: parseInt(y, 10) };
+  }
+  if (/^\d{1,2}[-\/]\d{4}$/.test(s)) {
+    const [m, y] = s.split(/[-\/]/);
+    return { month: parseInt(m, 10), year: parseInt(y, 10) };
+  }
+
+  const indFull = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+  const indShort = ['jan','feb','mar','apr','mei','jun','jul','agu','sep','okt','nov','des'];
+  const engFull = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const engShort = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+  const parts = s.split(/[\s,_\-]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    let m = 0;
+    let y = 0;
+
+    const yearIdx = parts.findIndex(p => /^\d{4}$/.test(p));
+    if (yearIdx !== -1) {
+      y = parseInt(parts[yearIdx], 10);
+      const monthPart = parts.find((p, idx) => idx !== yearIdx && isNaN(Number(p))) || parts.find((p, idx) => idx !== yearIdx);
+      if (monthPart) {
+        if (!isNaN(Number(monthPart))) {
+          m = parseInt(monthPart, 10);
+        } else {
+          const mStr = monthPart.toLowerCase();
+          m = indFull.indexOf(mStr) + 1 || indShort.indexOf(mStr) + 1 || engFull.indexOf(mStr) + 1 || engShort.indexOf(mStr) + 1;
+        }
+      }
+    } else if (/^\d{1,2}$/.test(parts[0]) && /^\d{4}$/.test(parts[1])) {
+      m = parseInt(parts[0], 10);
+      y = parseInt(parts[1], 10);
+    }
+
+    if (m >= 1 && m <= 12 && y > 1900 && y < 2100) {
+      return { month: m, year: y };
+    }
+  }
+  return null;
+}
+
+function formatAngkaID(value) {
+  if (value === undefined || value === null || value === '' || isNaN(value)) return '0,000';
+  return Number(value).toFixed(3).replace('.', ',');
+}
+
+function formatTanggalID(date) {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+
+// =====================================================================
+// FITUR HISTORY DOKUMEN & ARSIP PAK PEGAWAI (MODUL BARU)
+// =====================================================================
+
+function checkAndInitSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // check Users sheet
+  let sheetUsers = ss.getSheetByName(SHEET_NAMES.USERS || 'Users');
+  if (!sheetUsers) {
+    sheetUsers = ss.insertSheet(SHEET_NAMES.USERS || 'Users');
+    const headers = ['NIP', 'Nama', 'Kode_Satker', 'Role', 'Password'];
+    sheetUsers.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f1f5f9');
+    sheetUsers.setFrozenRows(1);
+
+    // Migrasi otomatis data akun awal dari sheet Pegawai jika ada
+    try {
+      const pegSheet = ss.getSheetByName(SHEET_NAMES.PEGAWAI || 'Pegawai');
+      if (pegSheet) {
+        const pegData = pegSheet.getDataRange().getValues();
+        if (pegData.length >= 2) {
+          const pHeader = pegData[0].map(h => h ? h.toString().trim().toUpperCase() : '');
+          const pNip = pHeader.indexOf('NIP');
+          const pNama = pHeader.indexOf('NAMA');
+          const pKode = pHeader.findIndex(h => h === 'KODE_SATKER' || h === 'KODESATKER' || h === 'SATKER' || h === 'UNITKERJA');
+          const pRole = pHeader.indexOf('ROLE');
+          let pPw = pHeader.indexOf('PASSWORD');
+          if (pPw === -1) pPw = pHeader.indexOf('PASSWORDHASH');
+          
+          if (pNip !== -1) {
+            const rowsToInsert = [];
+            for (let i = 1; i < pegData.length; i++) {
+              const r = pegData[i];
+              const nipVal = r[pNip] ? r[pNip].toString().trim() : '';
+              if (!nipVal) continue;
+              const namaVal = (pNama !== -1 && r[pNama]) ? r[pNama].toString() : '';
+              const kodeVal = (pKode !== -1 && r[pKode]) ? r[pKode].toString().trim() : '';
+              const roleVal = (pRole !== -1 && r[pRole]) ? r[pRole].toString().trim() : 'Viewer';
+              const pwVal = (pPw !== -1 && r[pPw]) ? r[pPw].toString().trim() : '';
+              rowsToInsert.push([nipVal, namaVal, kodeVal, roleVal, pwVal]);
+            }
+            if (rowsToInsert.length > 0) {
+              sheetUsers.getRange(2, 1, rowsToInsert.length, 5).setValues(rowsToInsert);
+            }
+          }
+        }
+      }
+    } catch(err) {
+      console.log('Error auto-migrating users: ' + err.message);
+    }
+  }
+  
+  // check Riwayat_PAK_Terbit
+  let sheetRiwayatTerbit = ss.getSheetByName(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+  if (!sheetRiwayatTerbit) {
+    sheetRiwayatTerbit = ss.insertSheet(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+    const headers = ['NIP', 'Nama Pegawai', 'Bulan Awal Tahun', 'Bulan Akhir Tahun', 'Nilai PAK'];
+    sheetRiwayatTerbit.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f1f5f9');
+    sheetRiwayatTerbit.setFrozenRows(1);
+  }
+
+  // check Arsip_Dokumen
+  let sheetArsip = ss.getSheetByName(SHEET_NAMES.ARSIP_DOKUMEN);
+  if (!sheetArsip) {
+    sheetArsip = ss.insertSheet(SHEET_NAMES.ARSIP_DOKUMEN);
+    const headers = ['NIP', 'Nama Pegawai', 'Bulan Awal Tahun', 'Bulan Akhir Tahun', 'Satuan Kerja', 'Link Google Drive'];
+    sheetArsip.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f1f5f9');
+    sheetArsip.setFrozenRows(1);
+  }
+
+  // check Jadwal
+  let sheetJadwal = ss.getSheetByName(SHEET_NAMES.JADWAL);
+  if (!sheetJadwal) {
+    sheetJadwal = ss.insertSheet(SHEET_NAMES.JADWAL);
+    const headers = ['ID', 'Jenis', 'Tanggal', 'Waktu', 'Lokasi', 'Keterangan', 'Status', 'NIP_Pegawai'];
+    sheetJadwal.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#f1f5f9');
+    sheetJadwal.setFrozenRows(1);
+  }
+
+  // check & align headers Sheet Pegawai: Kolom L (TMT Jabatan) dan Kolom M (TMT Golongan)
+  try {
+    const sheetPeg = ss.getSheetByName(SHEET_NAMES.PEGAWAI || 'Pegawai');
+    if (sheetPeg && sheetPeg.getLastColumn() >= 12) {
+      const pHeaders = sheetPeg.getRange(1, 1, 1, Math.max(sheetPeg.getLastColumn(), 13)).getValues()[0];
+      const hL = pHeaders[11] ? pHeaders[11].toString().trim() : '';
+      const hM = pHeaders[12] ? pHeaders[12].toString().trim() : '';
+      if (hL.toUpperCase() === 'TMT' || hL === '') {
+        sheetPeg.getRange(1, 12).setValue('TMT Jabatan');
+      }
+      if (hM === '' || hM.toUpperCase() === 'TMT') {
+        sheetPeg.getRange(1, 13).setValue('TMT Golongan');
+      }
+    }
+  } catch (err) {
+    console.log('Error verifying Pegawai TMT headers: ' + err.message);
+  }
+}
+
+// Riwayat PAK CRUD
+function handleGetRiwayatPAKTerbit(session) {
+  const { data, header } = getSheetData(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+  if (!data.length || data.length < 2) return jsonResponse([]);
+
+  const rows = data.slice(1).map(row => rowToObject(header, row));
+  
+  // Look up KodeSatker for each NIP from Pegawai sheet for filtering
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg  = headerPeg.indexOf('NIP');
+  const colKodePeg = headerPeg.indexOf('KodeSatker');
+  const mapSatker  = {};
+  dataPeg.slice(1).forEach(row => {
+    if (row[colNIPPeg]) mapSatker[row[colNIPPeg].toString().trim()] = row[colKodePeg] ? row[colKodePeg].toString().trim() : '';
+  });
+
+  const filteredData = filterPegawaiByRole(
+    rows.map(r => ({ ...r, KodeSatker: mapSatker[r.NIP.toString().trim()] || '', NIP: r.NIP })), 
+    session
+  ).map(r => ({
+    nip: r.NIP,
+    namaPegawai: r['Nama Pegawai'] || r.NamaPegawai || '',
+    bulanAwalTahun: r['Bulan Awal Tahun'] || r.BulanAwalTahun || '',
+    bulanAkhirTahun: r['Bulan Akhir Tahun'] || r.BulanAkhirTahun || '',
+    nilaiPAK: parseFloat(r['Nilai PAK'] || r.NilaiPAK || 0)
+  }));
+
+  return jsonResponse(filteredData);
+}
+
+function handleSimpanRiwayatPAKTerbit(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak memiliki hak akses menyimpan riwayat.', 403);
+
+  const { nip, namaPegawai, bulanAwalTahun, bulanAkhirTahun, nilaiPAK } = payload;
+  if (!nip || !namaPegawai || !bulanAwalTahun || !bulanAkhirTahun || nilaiPAK === undefined) {
+    return errorResponse('Parameter riwayat PAK kurang lengkap.');
+  }
+
+  if (session.role === 'Admin KabKot') {
+    const peg = validateSession(nip);
+    if (peg && peg.satker !== session.satker) {
+      return errorResponse('Tidak memiliki akses untuk pegawai satker lain.', 403);
+    }
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+
+    const colNIP = header.indexOf('NIP');
+    const colBulanAwal = header.indexOf('Bulan Awal Tahun');
+    const colBulanAkhir = header.indexOf('Bulan Akhir Tahun');
+    const colNilai = header.indexOf('Nilai PAK');
+
+    let rowIndex = -1;
+    const nipStr = nip.toString().trim();
+    const bAwalStr = bulanAwalTahun.toString().trim();
+    const bAkhirStr = bulanAkhirTahun.toString().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][colNIP].toString().trim() === nipStr &&
+          data[i][colBulanAwal].toString().trim() === bAwalStr &&
+          data[i][colBulanAkhir].toString().trim() === bAkhirStr) {
+        rowIndex = i + 1; // 1-based index
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      // Update existing record
+      sheet.getRange(rowIndex, colNilai + 1).setValue(parseFloat(nilaiPAK));
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Riwayat PAK berhasil diperbarui.' });
+    } else {
+      // Add new record
+      const newRow = header.map(h => {
+        if (h === 'NIP') return nip;
+        if (h === 'Nama Pegawai') return namaPegawai;
+        if (h === 'Bulan Awal Tahun') return bulanAwalTahun;
+        if (h === 'Bulan Akhir Tahun') return bulanAkhirTahun;
+        if (h === 'Nilai PAK') return parseFloat(nilaiPAK);
+        return '';
+      });
+      sheet.appendRow(newRow);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Riwayat PAK baru berhasil disimpan.' });
+    }
+  } catch(e) {
+    return errorResponse('Gagal menyimpan riwayat PAK: ' + e.message, 500);
+  }
+}
+
+function handleHapusRiwayatPAKTerbit(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak memiliki hak akses menghapus riwayat.', 403);
+
+  const { nip, bulanAwalTahun, bulanAkhirTahun } = payload;
+  if (!nip || !bulanAwalTahun || !bulanAkhirTahun) {
+    return errorResponse('Parameter penghapusan kurang lengkap.');
+  }
+
+  if (session.role === 'Admin KabKot') {
+    const peg = validateSession(nip);
+    if (peg && peg.satker !== session.satker) {
+      return errorResponse('Tidak memiliki akses untuk pegawai satker lain.', 403);
+    }
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.RIWAYAT_PAK_TERBIT);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+
+    const colNIP = header.indexOf('NIP');
+    const colBulanAwal = header.indexOf('Bulan Awal Tahun');
+    const colBulanAkhir = header.indexOf('Bulan Akhir Tahun');
+
+    let rowIndex = -1;
+    const nipStr = nip.toString().trim();
+    const bAwalStr = bulanAwalTahun.toString().trim();
+    const bAkhirStr = bulanAkhirTahun.toString().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][colNIP].toString().trim() === nipStr &&
+          data[i][colBulanAwal].toString().trim() === bAwalStr &&
+          data[i][colBulanAkhir].toString().trim() === bAkhirStr) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      sheet.deleteRow(rowIndex);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Riwayat PAK berhasil dihapus.' });
+    }
+
+    lock.releaseLock();
+    return errorResponse('Data tidak ditemukan.', 404);
+  } catch(e) {
+    return errorResponse('Gagal menghapus riwayat PAK: ' + e.message, 500);
+  }
+}
+
+// Arsip PAK CRUD
+function handleGetArsipDokumen(session) {
+  const { data, header } = getSheetData(SHEET_NAMES.ARSIP_DOKUMEN);
+  if (!data.length || data.length < 2) return jsonResponse([]);
+
+  const rows = data.slice(1).map(row => rowToObject(header, row));
+
+  // Look up KodeSatker for each NIP from Pegawai sheet for filtering
+  const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+  const colNIPPeg  = headerPeg.indexOf('NIP');
+  const colKodePeg = headerPeg.indexOf('KodeSatker');
+  const mapSatker  = {};
+  dataPeg.slice(1).forEach(row => {
+    if (row[colNIPPeg]) mapSatker[row[colNIPPeg].toString().trim()] = row[colKodePeg] ? row[colKodePeg].toString().trim() : '';
+  });
+
+  const filteredData = filterPegawaiByRole(
+    rows.map(r => ({ ...r, KodeSatker: mapSatker[r.NIP ? r.NIP.toString().trim() : ''] || '', NIP: r.NIP })), 
+    session
+  ).map(r => {
+    const rawLink = r['Link Google Drive'] || r.LinkGoogleDrive || r['Link Drive'] || r.LinkDrive || '';
+    let cleanLink = rawLink ? rawLink.toString().trim() : '';
+    
+    if (cleanLink) {
+      try {
+        const fId = getFileIdFromUrl(cleanLink);
+        if (fId) {
+          // Buka akses public link view di Google Drive secara otomatis
+          const file = DriveApp.getFileById(fId);
+          if (file) {
+            try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(err) { }
+            cleanLink = `https://drive.google.com/file/d/${fId}/view?usp=sharing`;
+          }
+        }
+      } catch(e) {
+        console.warn('[handleGetArsipDokumen] Gagal set sharing permission: ' + e.message);
+      }
+    }
+
+    return {
+      nip: r.NIP,
+      namaPegawai: r['Nama Pegawai'] || r.NamaPegawai || '',
+      bulanAwalTahun: r['Bulan Awal Tahun'] || r.BulanAwalTahun || '',
+      bulanAkhirTahun: r['Bulan Akhir Tahun'] || r.BulanAkhirTahun || '',
+      satuanKerja: r['Satuan Kerja'] || r.SatuanKerja || '',
+      linkDrive: cleanLink
+    };
+  });
+
+  return jsonResponse(filteredData);
+}
+
+function handleUploadArsipDokumen(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak memiliki hak akses unggah.', 403);
+  
+  const { nip, bulanAwalTahun, bulanAkhirTahun, base64Content } = payload;
+  if (!nip || !bulanAwalTahun || !bulanAkhirTahun || !base64Content) {
+    return errorResponse('Parameter payload unggah arsip kurang lengkap.');
+  }
+
+  if (session.role === 'Admin KabKot') {
+    const pegSession = validateSession(nip);
+    if (pegSession && pegSession.satker !== session.satker) {
+      return errorResponse('Tidak memiliki akses untuk pegawai satker lain.', 403);
+    }
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Look up employee details in Pegawai sheet to get Name and Satker
+    const { data: dataPeg, header: headerPeg } = getSheetData(SHEET_NAMES.PEGAWAI);
+    const colNIPPeg = headerPeg.indexOf('NIP');
+    const colNamaPeg = headerPeg.indexOf('Nama');
+    const colKodeSatker = headerPeg.indexOf('KodeSatker');
+    
+    const nipStr = nip.toString().trim();
+    let namaPegawai = '';
+    let kodeSatker = '';
+    
+    for (let i = 1; i < dataPeg.length; i++) {
+      if (dataPeg[i][colNIPPeg] && dataPeg[i][colNIPPeg].toString().trim() === nipStr) {
+        namaPegawai = dataPeg[i][colNamaPeg].toString();
+        kodeSatker = dataPeg[i][colKodeSatker] ? dataPeg[i][colKodeSatker].toString().trim() : '';
+        break;
+      }
+    }
+
+    if (!namaPegawai) {
+      lock.releaseLock();
+      return errorResponse('Data pegawai tidak ditemukan.');
+    }
+
+    // Look up Satker Name from Satker sheet
+    const satkerSheetInfo = getSheetData(SHEET_NAMES.SATKER);
+    const headerSatker = satkerSheetInfo.header;
+    const dataSatker = satkerSheetInfo.data;
+    
+    const colKodeRef = headerSatker.findIndex(h => h.toLowerCase().includes('kode'));
+    const colNamaRef = headerSatker.findIndex(h => h.toLowerCase().includes('satker') && !h.toLowerCase().includes('kode'));
+
+    let namaSatker = 'Lainnya';
+    if (colKodeRef !== -1 && colNamaRef !== -1) {
+      for (let j = 1; j < dataSatker.length; j++) {
+        if (dataSatker[j][colKodeRef] && dataSatker[j][colKodeRef].toString().trim() === kodeSatker) {
+          namaSatker = dataSatker[j][colNamaRef].toString().trim();
+          break;
+        }
+      }
+    }
+
+    // Google Drive Folder Hierarchy check and creation
+    // SIDAK6100 SDM -> ARSIP DOKUMEN PAK -> [Satuan Kerja] -> [Nama Pegawai]
+    const rootFolder = getOrCreateDriveFolder('SIDAK6100 SDM');
+    const l2Folder = getOrCreateDriveSubFolder(rootFolder, 'ARSIP DOKUMEN PAK');
+    const l3Folder = getOrCreateDriveSubFolder(l2Folder, namaSatker);
+    const targetFolder = getOrCreateDriveSubFolder(l3Folder, namaPegawai);
+
+    // Document Name Format: NIP_NamaPegawai_PeriodeAwalBulanTahun-PeriodeAkhirBulanTahun.pdf
+    const cleanPeriodAwal = bulanAwalTahun.replace(/\s+/g, '');
+    const cleanPeriodAkhir = bulanAkhirTahun.replace(/\s+/g, '');
+    const fileName = `${nipStr}_${namaPegawai}_${cleanPeriodAwal}-${cleanPeriodAkhir}.pdf`;
+
+    // Check sheet for existing records with matching NIP & Period
+    const sheet = ss.getSheetByName(SHEET_NAMES.ARSIP_DOKUMEN);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+
+    const colNIP = header.indexOf('NIP');
+    const colBulanAwal = header.indexOf('Bulan Awal Tahun');
+    const colBulanAkhir = header.indexOf('Bulan Akhir Tahun');
+    const colLink = header.indexOf('Link Google Drive');
+
+    let rowIndex = -1;
+    let oldFileUrl = '';
+    const bAwalStr = bulanAwalTahun.toString().trim();
+    const bAkhirStr = bulanAkhirTahun.toString().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][colNIP].toString().trim() === nipStr &&
+          data[i][colBulanAwal].toString().trim() === bAwalStr &&
+          data[i][colBulanAkhir].toString().trim() === bAkhirStr) {
+        rowIndex = i + 1;
+        oldFileUrl = data[i][colLink];
+        break;
+      }
+    }
+
+    // Trash old file in Drive if exists
+    if (oldFileUrl) {
+      const oldFileId = getFileIdFromUrl(oldFileUrl);
+      if (oldFileId) {
+        try { DriveApp.getFileById(oldFileId).setTrashed(true); } catch(e) { console.warn('Old file not found in drive: ' + oldFileId); }
+      }
+    }
+
+    // Save PDF file to Google Drive and set sharing to public view with link
+    const decodedBlob = Utilities.newBlob(Utilities.base64Decode(base64Content), 'application/pdf', fileName);
+    const newFile = targetFolder.createFile(decodedBlob);
+    try {
+      newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(err) {
+      console.warn('[handleUploadArsipDokumen] Gagal set sharing permission: ' + err.message);
+    }
+    const newFileId = newFile.getId();
+    const newFileUrl = `https://drive.google.com/file/d/${newFileId}/view?usp=sharing`;
+
+    if (rowIndex !== -1) {
+      // Update link in existing record
+      sheet.getRange(rowIndex, colLink + 1).setValue(newFileUrl);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Arsip dokumen PAK berhasil diperbarui.', fileUrl: newFileUrl });
+    } else {
+      // Add new record to sheet
+      const newRow = header.map(h => {
+        if (h === 'NIP') return nipStr;
+        if (h === 'Nama Pegawai') return namaPegawai;
+        if (h === 'Bulan Awal Tahun') return bulanAwalTahun;
+        if (h === 'Bulan Akhir Tahun') return bulanAkhirTahun;
+        if (h === 'Satuan Kerja') return namaSatker;
+        if (h === 'Link Google Drive') return newFileUrl;
+        return '';
+      });
+      sheet.appendRow(newRow);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Arsip dokumen PAK baru berhasil disimpan.', fileUrl: newFileUrl });
+    }
+  } catch(e) {
+    return errorResponse('Gagal mengunggah arsip dokumen: ' + e.message, 500);
+  }
+}
+
+function handleHapusArsipDokumen(payload, session) {
+  if (session.role === 'Viewer') return errorResponse('Viewer tidak memiliki hak akses menghapus arsip.', 403);
+
+  const { nip, bulanAwalTahun, bulanAkhirTahun } = payload;
+  if (!nip || !bulanAwalTahun || !bulanAkhirTahun) {
+    return errorResponse('Parameter penghapusan kurang lengkap.');
+  }
+
+  if (session.role === 'Admin KabKot') {
+    const peg = validateSession(nip);
+    if (peg && peg.satker !== session.satker) {
+      return errorResponse('Tidak memiliki akses untuk pegawai satker lain.', 403);
+    }
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.ARSIP_DOKUMEN);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+
+    const colNIP = header.indexOf('NIP');
+    const colBulanAwal = header.indexOf('Bulan Awal Tahun');
+    const colBulanAkhir = header.indexOf('Bulan Akhir Tahun');
+    const colLink = header.indexOf('Link Google Drive');
+
+    let rowIndex = -1;
+    let fileUrl = '';
+    const nipStr = nip.toString().trim();
+    const bAwalStr = bulanAwalTahun.toString().trim();
+    const bAkhirStr = bulanAkhirTahun.toString().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][colNIP].toString().trim() === nipStr &&
+          data[i][colBulanAwal].toString().trim() === bAwalStr &&
+          data[i][colBulanAkhir].toString().trim() === bAkhirStr) {
+        rowIndex = i + 1;
+        fileUrl = data[i][colLink];
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      // Trash file
+      if (fileUrl) {
+        const fileId = getFileIdFromUrl(fileUrl);
+        if (fileId) {
+          try { DriveApp.getFileById(fileId).setTrashed(true); } catch(err) { console.warn('Drive file not found: ' + fileId); }
+        }
+      }
+
+      sheet.deleteRow(rowIndex);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Arsip dokumen berhasil dihapus.' });
+    }
+
+    lock.releaseLock();
+    return errorResponse('Data tidak ditemukan.', 404);
+  } catch(e) {
+    return errorResponse('Gagal menghapus arsip: ' + e.message, 500);
+  }
+}
+
+function getFileIdFromUrl(url) {
+  if (!url) return '';
+  const match = url.match(/[-\w]{25,}(?!.*[-\w]{25,})/);
+  return match ? match[0] : '';
+}
+
+// =====================================================================
+// FITUR JADWAL (ASSESSMENT & UKOM) - CRUD HANDLERS
+// =====================================================================
+
+function handleGetJadwal(session) {
+  const { data, header } = getSheetData(SHEET_NAMES.JADWAL);
+  if (!data.length || data.length < 2) return jsonResponse([]);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const tz = ss.getSpreadsheetTimeZone();
+
+  const rows = data.slice(1).map(row => rowToObject(header, row));
+  const formatted = rows.map(r => {
+    let tgl = '';
+    if (r.Tanggal) {
+      if (r.Tanggal instanceof Date) {
+        tgl = Utilities.formatDate(r.Tanggal, tz, 'yyyy-MM-dd');
+      } else {
+        tgl = r.Tanggal.toString().trim();
+      }
+    }
+    return {
+      id: r.ID ? r.ID.toString().trim() : '',
+      jenis: r.Jenis ? r.Jenis.toString().trim() : '',
+      tanggal: tgl,
+      waktu: r.Waktu ? r.Waktu.toString().trim() : '',
+      lokasi: r.Lokasi ? r.Lokasi.toString().trim() : '',
+      keterangan: r.Keterangan ? r.Keterangan.toString().trim() : '',
+      status: r.Status ? r.Status.toString().trim() : 'Belum Dilaksanakan',
+      nipPegawai: r.NIP_Pegawai ? r.NIP_Pegawai.toString().replace(/'/g, '').trim() : ''
+    };
+  });
+
+  return jsonResponse(formatted);
+}
+
+function handleSimpanJadwal(payload, session) {
+  if (session.role !== 'Admin BPS Provinsi') {
+    return errorResponse('Hanya Admin Provinsi yang memiliki hak akses mengelola jadwal.', 403);
+  }
+
+  const { id, jenis, tanggal, waktu, lokasi, keterangan, status, nipPegawai } = payload;
+  if (!jenis || !tanggal || !status) {
+    return errorResponse('Parameter jadwal tidak lengkap.');
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.JADWAL);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+
+    const colID = header.indexOf('ID');
+    const colJenis = header.indexOf('Jenis');
+    const colTanggal = header.indexOf('Tanggal');
+    const colWaktu = header.indexOf('Waktu');
+    const colLokasi = header.indexOf('Lokasi');
+    const colKeterangan = header.indexOf('Keterangan');
+    const colStatus = header.indexOf('Status');
+    const colNIP = header.indexOf('NIP_Pegawai');
+
+    let rowIndex = -1;
+    const searchId = id ? id.toString().trim() : '';
+
+    if (searchId) {
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][colID].toString().trim() === searchId) {
+          rowIndex = i + 1;
+          break;
+        }
+      }
+    }
+
+    const nipString = Array.isArray(nipPegawai) ? nipPegawai.join(',') : (nipPegawai || '').toString().trim();
+
+    if (rowIndex !== -1) {
+      // Update existing record
+      sheet.getRange(rowIndex, colJenis + 1).setValue(jenis);
+      sheet.getRange(rowIndex, colTanggal + 1).setValue(tanggal);
+      sheet.getRange(rowIndex, colWaktu + 1).setValue(waktu || '');
+      sheet.getRange(rowIndex, colLokasi + 1).setValue(lokasi || '');
+      sheet.getRange(rowIndex, colKeterangan + 1).setValue(keterangan || '');
+      sheet.getRange(rowIndex, colStatus + 1).setValue(status);
+      sheet.getRange(rowIndex, colNIP + 1).setValue("'" + nipString);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Jadwal berhasil diperbarui.' });
+    } else {
+      // Create new record
+      const newId = 'JDW_' + new Date().getTime();
+      const newRow = header.map(h => {
+        if (h === 'ID') return newId;
+        if (h === 'Jenis') return jenis;
+        if (h === 'Tanggal') return tanggal;
+        if (h === 'Waktu') return waktu || '';
+        if (h === 'Lokasi') return lokasi || '';
+        if (h === 'Keterangan') return keterangan || '';
+        if (h === 'Status') return status;
+        if (h === 'NIP_Pegawai') return "'" + nipString;
+        return '';
+      });
+      sheet.appendRow(newRow);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Jadwal baru berhasil disimpan.', id: newId });
+    }
+  } catch (e) {
+    return errorResponse('Gagal menyimpan jadwal: ' + e.message, 500);
+  }
+}
+
+function handleHapusJadwal(payload, session) {
+  if (session.role !== 'Admin BPS Provinsi') {
+    return errorResponse('Hanya Admin Provinsi yang memiliki hak akses menghapus jadwal.', 403);
+  }
+
+  const { id } = payload;
+  if (!id) {
+    return errorResponse('ID jadwal wajib dikirim.');
+  }
+
+  try {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAMES.JADWAL);
+    const data = sheet.getDataRange().getValues();
+    const colID = data[0].indexOf('ID');
+
+    let rowIndex = -1;
+    const searchId = id.toString().trim();
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][colID].toString().trim() === searchId) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex !== -1) {
+      sheet.deleteRow(rowIndex);
+      lock.releaseLock();
+      return jsonResponse({ success: true, message: 'Jadwal berhasil dihapus.' });
+    } else {
+      lock.releaseLock();
+      return errorResponse('Jadwal tidak ditemukan.', 404);
+    }
+  } catch (e) {
+    return errorResponse('Gagal menghapus jadwal: ' + e.message, 500);
+  }
+}

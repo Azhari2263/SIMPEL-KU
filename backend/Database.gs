@@ -60,98 +60,31 @@ function getCachedSheets(ss) {
   return { list: _cachedSheetsList, map: _cachedSheetsMap };
 }
 
-/**
- * Mengambil data dari CacheService (Mendukung data besar >95KB dengan auto-reassembly chunk)
- */
 function getScriptCacheData(key) {
-  if (!key) return null;
   try {
     var c = CacheService.getScriptCache();
-    // 1. Periksa apakah data disimpan dalam format berpartisi (chunking)
-    var metaVal = c.get(key + '_meta');
-    if (metaVal) {
-      var meta = JSON.parse(metaVal);
-      if (meta && meta.chunks && meta.chunks > 0) {
-        var chunkKeys = [];
-        for (var i = 0; i < meta.chunks; i++) {
-          chunkKeys.push(key + '_chunk_' + i);
-        }
-        var chunksMap = c.getAll(chunkKeys);
-        var fullStr = '';
-        var allPresent = true;
-        for (var j = 0; j < meta.chunks; j++) {
-          var part = chunksMap[key + '_chunk_' + j];
-          if (typeof part !== 'string') {
-            allPresent = false;
-            break;
-          }
-          fullStr += part;
-        }
-        if (allPresent && fullStr) {
-          return JSON.parse(fullStr);
-        }
-      }
-    }
-
-    // 2. Fallback pembacaan langsung
     var val = c.get(key);
     if (val) return JSON.parse(val);
   } catch (e) { /* ignore */ }
   return null;
 }
 
-/**
- * Menyimpan data ke CacheService (Mendukung data besar >95KB dengan auto-chunking tanpa silent failure)
- */
 function putScriptCacheData(key, data, ttlSeconds) {
-  if (!key || data === undefined || data === null) return;
   try {
     var c = CacheService.getScriptCache();
     var str = JSON.stringify(data);
-    var ttl = ttlSeconds || 120;
-    var CHUNK_SIZE = 85000; // Batas aman di bawah limit 100KB per nilai cache Google
-
-    if (str.length < CHUNK_SIZE) {
-      c.put(key, str, ttl);
-      // Bersihkan meta chunk terdahulu jika sebelumnya pernah berpartisi
-      try { c.remove(key + '_meta'); } catch (eRem) { /* ignore */ }
-      return;
+    if (str.length < 95000) {
+      c.put(key, str, ttlSeconds || 120);
     }
-
-    // Jika ukuran data melampaui limit Google Apps Script, partisi menjadi beberapa chunk
-    var totalChunks = Math.ceil(str.length / CHUNK_SIZE);
-    if (totalChunks > 10) return; // Batasi maksimal ~850KB untuk mencegah ekses memori cache
-
-    var chunkObj = {};
-    for (var i = 0; i < totalChunks; i++) {
-      var chunkStr = str.substring(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-      chunkObj[key + '_chunk_' + i] = chunkStr;
-    }
-    chunkObj[key + '_meta'] = JSON.stringify({ chunks: totalChunks, len: str.length });
-
-    // Tulis seluruh chunk sekaligus secara atomik menggunakan putAll
-    c.putAll(chunkObj, ttl);
   } catch (e) { /* ignore */ }
 }
 
-/**
- * Menghapus cache spesifik beserta seluruh partisi chunk-nya
- */
 function clearScriptCacheKeys(keys) {
-  if (!keys || !keys.length) return;
   try {
     var c = CacheService.getScriptCache();
-    var allKeysToRemove = [];
-    for (var k = 0; k < keys.length; k++) {
-      var key = keys[k];
-      if (!key) continue;
-      allKeysToRemove.push(key);
-      allKeysToRemove.push(key + '_meta');
-      for (var i = 0; i < 10; i++) {
-        allKeysToRemove.push(key + '_chunk_' + i);
-      }
+    if (keys && keys.length) {
+      c.removeAll(keys);
     }
-    c.removeAll(allKeysToRemove);
   } catch (e) { /* ignore */ }
 }
 
