@@ -1,7 +1,7 @@
 /**
  * ========================================================================
  * SIMPEL-KU - API ROUTER & DISPATCHER MODULE
-*/
+ */
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action) {
@@ -116,6 +116,10 @@ function handleApiRequest(params) {
       );
     } else if (action === 'getExportLaporanData') {
       result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+    } else if (action === 'generateDokumenPerKegiatan') {
+      result = generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+    } else if (action === 'generateKipappDanPdf') {
+      result = generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
     } else if (action === 'uploadBuktiDukung') {
       result = uploadBuktiDukungFoto(params.token, params);
     } else if (action === 'updateSupervisorChecklist') {

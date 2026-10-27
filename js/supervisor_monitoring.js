@@ -600,6 +600,10 @@ function renderIntegratedMonitoringUI() {
         }
       }
 
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+      if (resArea) resArea.classList.add('hidden');
+      const btnKipapp = document.getElementById('btnBuatKipapp');
+      if (btnKipapp) btnKipapp.classList.add('hidden');
       openModal('modalExportLaporan');
       // Trigger live preview begitu modal terbuka
       setTimeout(() => {
@@ -2031,5 +2035,405 @@ function renderIntegratedMonitoringUI() {
           }
         } catch (e) {}
       }, 500);
+    }
+
+
+
+    /**
+     * ========================================================================
+     * FITUR: GENERATE REKAPITULASI DOKUMEN PER KEGIATAN & BUAT KIPAPP
+     * ========================================================================
+     */
+    let _lastGeneratedDokumenData = null;
+
+    async function executeGenerateDokumenPerKegiatan() {
+      const role = (currentUser?.role || '').toLowerCase();
+      const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
+
+      let scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'individu';
+      if (!isManager) scope = 'individu';
+
+      let targetUser = '';
+      if (scope === 'individu') {
+        if (isManager) {
+          targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+        } else {
+          targetUser = currentUser?.username;
+        }
+      } else {
+        const radioIndividu = document.getElementById('radioScopeIndividu');
+        if (radioIndividu) {
+          radioIndividu.checked = true;
+          onExportScopeChange();
+          targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+        }
+      }
+
+      const bulan = document.getElementById('exportMonthSelect')?.value || (new Date().getMonth() + 1);
+      const tahun = document.getElementById('exportYearSelect')?.value || new Date().getFullYear();
+
+      if (!targetUser) {
+        showToast('Silakan pilih pegawai terlebih dahulu.', 'warning');
+        return;
+      }
+
+      const btnGen = document.getElementById('btnGenerateDokumenKegiatan');
+      const btnKipapp = document.getElementById('btnBuatKipapp');
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+
+      if (btnGen) {
+        btnGen.disabled = true;
+        btnGen.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Memproses Dokumen...</span>';
+      }
+
+      if (resArea) {
+        resArea.classList.remove('hidden');
+        resArea.innerHTML = `
+          <div class="flex items-center gap-3 py-2 text-slate-600">
+            <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+            <div>
+              <span class="font-bold text-slate-800">Sedang membuat/memperbarui Google Docs rekapitulasi per kegiatan...</span>
+              <p class="text-[10px] text-slate-500 mt-0.5">Menyiapkan dokumen penugasan, menyisipkan foto bukti dukung, dan menata folder di Google Drive.</p>
+            </div>
+          </div>
+        `;
+      }
+
+      showLoader(true, 'Menghasilkan dokumen Google Docs per kegiatan...');
+
+      try {
+        const res = await callBackend('generateDokumenPerKegiatan', {
+          token: sessionToken,
+          targetUsername: targetUser,
+          bulan: bulan,
+          tahun: tahun
+        });
+
+        showLoader(false);
+        if (btnGen) {
+          btnGen.disabled = false;
+          btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Generate Dokumen Kegiatan</span>';
+        }
+
+        if (res && res.success && res.data) {
+          _lastGeneratedDokumenData = res.data;
+          showToast(res.message || 'Dokumen rekapitulasi per kegiatan berhasil dibuat!', 'success');
+
+          if (btnKipapp) {
+            btnKipapp.classList.remove('hidden');
+            btnKipapp.classList.add('inline-flex');
+          }
+
+          renderHasilGenerateDokumenUI(res.data);
+        } else {
+          if (resArea) {
+            resArea.innerHTML = `
+              <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start gap-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5 text-sm flex-shrink-0"></i>
+                <div>
+                  <strong class="font-bold block">Gagal Membuat Dokumen</strong>
+                  <span class="text-[11px]">${escapeHtml(res?.message || 'Terjadi kesalahan saat membuat dokumen.')}</span>
+                </div>
+              </div>
+            `;
+          }
+          showToast(res?.message || 'Gagal membuat dokumen kegiatan.', 'error');
+        }
+      } catch (err) {
+        showLoader(false);
+        if (btnGen) {
+          btnGen.disabled = false;
+          btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Generate Dokumen Kegiatan</span>';
+        }
+        if (resArea) {
+          resArea.innerHTML = `
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
+              <strong class="font-bold block">Kesalahan Koneksi / Server</strong>
+              <span class="text-[11px]">${escapeHtml(err.message)}</span>
+            </div>
+          `;
+        }
+        showToast('Kesalahan: ' + err.message, 'error');
+      }
+    }
+
+    function renderHasilGenerateDokumenUI(d) {
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+      if (!resArea) return;
+
+      const items = d.items || [];
+      const itemsHtml = items.map(it => `
+        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px]">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">${it.no}</span>
+            <div class="truncate">
+              <span class="font-bold text-slate-800 block truncate">${escapeHtml(it.kegiatan)}</span>
+              <span class="text-[10px] text-slate-500">${it.kuantitas} checklist terlaksana &bull; ${it.totalFoto} foto terlampir &bull; Status: <strong class="${it.action === 'updated' ? 'text-amber-600' : 'text-emerald-600'}">${it.action === 'updated' ? 'Diperbarui' : 'Dibuat Baru'}</strong></span>
+            </div>
+          </div>
+          <a href="${it.docUrl}" target="_blank" class="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 transition flex items-center gap-1 text-[10px] flex-shrink-0 ml-2 shadow-2xs">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Buka Docs</span>
+          </a>
+        </div>
+      `).join('');
+
+      resArea.innerHTML = `
+        <div class="space-y-2.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+            <div>
+              <span class="font-extrabold text-emerald-700 flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                <span>${items.length} Dokumen Google Docs Siap (${escapeHtml(d.namaPegawai)} - ${escapeHtml(d.periodeStr)})</span>
+              </span>
+              <p class="text-[10px] text-slate-500 mt-0.5">Setiap kegiatan tersimpan tersendiri dalam folder Bukti Dukung tanpa duplikasi.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              ${d.folderBuktiDukungUrl ? `
+                <a href="${d.folderBuktiDukungUrl}" target="_blank" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border border-slate-300 transition flex items-center gap-1 text-[10px] shadow-2xs">
+                  <i class="fa-solid fa-folder-open text-amber-600"></i>
+                  <span>Folder Bukti Dukung</span>
+                </a>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="max-h-44 overflow-y-auto space-y-1.5 pr-1">
+            ${itemsHtml}
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between gap-2">
+            <div class="text-[11px] text-emerald-800">
+              <strong>Langkah Berikutnya:</strong> Klik tombol <strong>Buat Kipapp</strong> untuk membuat Google Sheets & ekspor PDF otomatis.
+            </div>
+            <button type="button" onclick="executeGenerateKipappDanPdf()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs flex-shrink-0 cursor-pointer active:scale-95">
+              <i class="fa-solid fa-table-list"></i>
+              <span>Buat Kipapp Sekarang</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function executeGenerateKipappDanPdf() {
+      const role = (currentUser?.role || '').toLowerCase();
+      const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
+
+      let scope = document.querySelector('input[name="exportScope"]:checked')?.value || 'individu';
+      if (!isManager) scope = 'individu';
+
+      let targetUser = '';
+      if (scope === 'individu') {
+        if (isManager) {
+          targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+        } else {
+          targetUser = currentUser?.username;
+        }
+      } else {
+        targetUser = document.getElementById('exportEmployeeSelect')?.value || currentUser?.username;
+      }
+
+      const bulan = document.getElementById('exportMonthSelect')?.value || (new Date().getMonth() + 1);
+      const tahun = document.getElementById('exportYearSelect')?.value || new Date().getFullYear();
+
+      if (!targetUser) {
+        showToast('Silakan pilih pegawai terlebih dahulu.', 'warning');
+        return;
+      }
+
+      const btnKipapp = document.getElementById('btnBuatKipapp');
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+
+      if (btnKipapp) {
+        btnKipapp.disabled = true;
+        btnKipapp.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Menyusun Kipapp & PDF...</span>';
+      }
+
+      if (resArea) {
+        resArea.classList.remove('hidden');
+        resArea.innerHTML = `
+          <div class="flex items-center gap-3 py-3 text-slate-600">
+            <div class="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+            <div>
+              <span class="font-bold text-slate-800">Sedang mengekspor berkas PDF dan menyusun Google Sheets Kipapp...</span>
+              <p class="text-[10px] text-slate-500 mt-0.5">Membuat folder 'Bukti Dukung PDF', mengekspor seluruh Google Docs, dan memperbarui spreadsheet Kipapp.</p>
+            </div>
+          </div>
+        `;
+      }
+
+      showLoader(true, 'Menyusun berkas Kipapp & PDF di Google Drive...');
+
+      try {
+        const res = await callBackend('generateKipappDanPdf', {
+          token: sessionToken,
+          targetUsername: targetUser,
+          bulan: bulan,
+          tahun: tahun
+        });
+
+        showLoader(false);
+        if (btnKipapp) {
+          btnKipapp.disabled = false;
+          btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
+        }
+
+        if (res && res.success && res.data) {
+          showToast(res.message || 'Google Sheets Kipapp dan berkas PDF berhasil dibuat!', 'success');
+          renderHasilKipappDanPdfUI(res.data);
+        } else {
+          if (resArea) {
+            resArea.innerHTML = `
+              <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start gap-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5 text-sm flex-shrink-0"></i>
+                <div>
+                  <strong class="font-bold block">Gagal Membuat Kipapp & PDF</strong>
+                  <span class="text-[11px]">${escapeHtml(res?.message || 'Terjadi kendala saat menyusun berkas.')}</span>
+                </div>
+              </div>
+            `;
+          }
+          showToast(res?.message || 'Gagal membuat Kipapp & PDF.', 'error');
+        }
+      } catch (err) {
+        showLoader(false);
+        if (btnKipapp) {
+          btnKipapp.disabled = false;
+          btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
+        }
+        if (resArea) {
+          resArea.innerHTML = `
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
+              <strong class="font-bold block">Kesalahan Koneksi / Server</strong>
+              <span class="text-[11px]">${escapeHtml(err.message)}</span>
+            </div>
+          `;
+        }
+        showToast('Kesalahan: ' + err.message, 'error');
+      }
+    }
+
+    function renderHasilKipappDanPdfUI(d) {
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+      if (!resArea) return;
+
+      const items = d.items || [];
+      const rowsHtml = items.map(it => `
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+          <td class="p-2 text-center font-bold text-slate-500">${it.no}</td>
+          <td class="p-2 font-medium text-slate-800">${escapeHtml(it.uraianKegiatan)}</td>
+          <td class="p-2 text-center font-bold text-emerald-600">${it.kuantitas}</td>
+          <td class="p-2 text-center">
+            <a href="${it.linkBuktiDukung}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold underline text-[10px]">
+              Docs
+            </a>
+          </td>
+          <td class="p-2 text-center">
+            ${it.linkPdf && it.linkPdf !== '-' ? `
+              <a href="${it.linkPdf}" target="_blank" class="text-rose-600 hover:text-rose-800 font-bold underline text-[10px]">
+                PDF
+              </a>
+            ` : '-'}
+          </td>
+        </tr>
+      `).join('');
+
+      resArea.innerHTML = `
+        <div class="space-y-3">
+          <!-- Banner Keberhasilan -->
+          <div class="p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <span class="font-black text-sm flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>Kipapp & PDF Berhasil Dibuat / Diperbarui!</span>
+              </span>
+              <p class="text-[10px] text-emerald-100 mt-0.5">
+                Pegawai: <strong>${escapeHtml(d.namaPegawai)}</strong> &bull; Periode: <strong>${escapeHtml(d.periodeStr)}</strong>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              ${d.kipappUrl ? `
+                <a href="${d.kipappUrl}" target="_blank" class="px-3 py-1.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs">
+                  <i class="fa-solid fa-file-excel text-emerald-600"></i>
+                  <span>Buka Google Sheets Kipapp</span>
+                </a>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Tombol Pintasan Folder Drive -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            ${d.kipappUrl ? `
+              <a href="${d.kipappUrl}" target="_blank" class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex items-center gap-2">
+                <i class="fa-solid fa-table text-emerald-600 text-base"></i>
+                <div class="truncate">
+                  <strong class="font-bold text-slate-800 block text-[11px] truncate">File Kipapp (Sheets)</strong>
+                  <span class="text-[9px] text-slate-500">Tabel Rekapitulasi Resmi</span>
+                </div>
+              </a>
+            ` : ''}
+            ${d.folderPdfUrl ? `
+              <a href="${d.folderPdfUrl}" target="_blank" class="p-2.5 rounded-xl border border-rose-200 bg-rose-50/70 hover:bg-rose-100/70 transition flex items-center gap-2">
+                <i class="fa-solid fa-file-pdf text-rose-600 text-base"></i>
+                <div class="truncate">
+                  <strong class="font-bold text-slate-800 block text-[11px] truncate">Folder Bukti Dukung PDF</strong>
+                  <span class="text-[9px] text-slate-500">PDF per kegiatan</span>
+                </div>
+              </a>
+            ` : ''}
+            ${d.folderBuktiDukungUrl ? `
+              <a href="${d.folderBuktiDukungUrl}" target="_blank" class="p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 transition flex items-center gap-2">
+                <i class="fa-solid fa-folder-open text-blue-600 text-base"></i>
+                <div class="truncate">
+                  <strong class="font-bold text-slate-800 block text-[11px] truncate">Folder Bukti Dukung Docs</strong>
+                  <span class="text-[9px] text-slate-500">Google Docs per kegiatan</span>
+                </div>
+              </a>
+            ` : ''}
+          </div>
+
+          <!-- Ringkasan Tabel Kipapp -->
+          <div class="rounded-xl border border-slate-200 overflow-hidden bg-white">
+            <div class="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-700">
+              <span>Daftar Kegiatan Terhubung (${items.length} Baris)</span>
+              <span class="text-[10px] text-slate-400">Tersinkronisasi ke Sheets & Drive</span>
+            </div>
+            <div class="max-h-40 overflow-y-auto">
+              <table class="w-full text-left text-[11px] border-collapse">
+                <thead class="bg-slate-100/80 text-slate-600 font-bold uppercase text-[9px] border-b border-slate-200">
+                  <tr>
+                    <th class="p-2 text-center w-8">No</th>
+                    <th class="p-2">Uraian Kegiatan</th>
+                    <th class="p-2 text-center w-16">Kuantitas</th>
+                    <th class="p-2 text-center w-16">Docs</th>
+                    <th class="p-2 text-center w-16">PDF</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openGenerateKipappModalFromPreview() {
+      const scopeSel = document.getElementById('previewScopeSelect');
+      const empSel = document.getElementById('previewEmployeeSelect');
+      const scope = scopeSel ? scopeSel.value : 'individu';
+      const targetUser = (scope === 'individu' && empSel) ? empSel.value : currentUser?.username;
+
+      openExportModal(targetUser);
+
+      setTimeout(() => {
+        const card = document.getElementById('exportPerKegiatanCard');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.classList.add('ring-2', 'ring-blue-500');
+          setTimeout(() => card.classList.remove('ring-2', 'ring-blue-500'), 1500);
+        }
+      }, 200);
     }
 

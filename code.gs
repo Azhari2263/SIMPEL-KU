@@ -1858,6 +1858,777 @@ function testGoogleDriveAccess() {
   return report;
 }
 
+/**
+ * ========================================================================
+ * FITUR GENERATE REKAPITULASI LAPORAN PER KEGIATAN, GOOGLE DOCS & KIPAPP
+ * ========================================================================
+ */
+
+/**
+ * Mengubah kata kerja awalan menjadi kata benda untuk narasi Rincian Kegiatan
+ */
+function convertVerbsToNouns(text) {
+  if (!text) return '';
+  var s = String(text).trim();
+
+  var replacements = [
+    { from: /^mengatur dan mengarahkan/i, to: 'pengaturan dan pengarahan' },
+    { from: /^menyapu dan mengepel/i, to: 'penyapuan dan pengepelan' },
+    { from: /^mengecek dan memastikan/i, to: 'pengecekan dan pemastian' },
+    { from: /^membuka dan menutup/i, to: 'pembukaan dan penutupan' },
+    { from: /^membersihkan/i, to: 'pembersihan' },
+    { from: /^mengatur/i, to: 'pengaturan' },
+    { from: /^mengarahkan/i, to: 'pengarahan' },
+    { from: /^menyapu/i, to: 'penyapuan' },
+    { from: /^mengepel/i, to: 'pengepelan' },
+    { from: /^melayani/i, to: 'pelayanan' },
+    { from: /^mengecek/i, to: 'pengecekan' },
+    { from: /^memeriksa/i, to: 'pemeriksaan' },
+    { from: /^menjaga/i, to: 'penjagaan' },
+    { from: /^mencatat/i, to: 'pencatatan' },
+    { from: /^menyiram/i, to: 'penyiraman' },
+    { from: /^merapikan/i, to: 'perapian' },
+    { from: /^membuka/i, to: 'pembukaan' },
+    { from: /^menutup/i, to: 'penutupan' },
+    { from: /^mengawasi/i, to: 'pengawasan' },
+    { from: /^memantau/i, to: 'pemantauan' },
+    { from: /^mengontrol/i, to: 'pengontrolan' },
+    { from: /^memastikan/i, to: 'pemastian' },
+    { from: /^membuang/i, to: 'pembuangan' },
+    { from: /^menguras/i, to: 'pengurasan' },
+    { from: /^mengisi/i, to: 'pengisian' },
+    { from: /^mengganti/i, to: 'penggantian' },
+    { from: /^memperbaiki/i, to: 'perbaikan' },
+    { from: /^menyiapkan/i, to: 'penyiapan' },
+    { from: /^mengoperasikan/i, to: 'pengoperasian' },
+    { from: /^mengunci/i, to: 'penguncian' },
+    { from: /^mengamankan/i, to: 'pengamanan' },
+    { from: /^menerima/i, to: 'penerimaan' },
+    { from: /^mengantar/i, to: 'pengantaran' },
+    { from: /^membantu/i, to: 'bantuan' },
+    { from: /^mengikuti/i, to: 'keikutsertaan' }
+  ];
+
+  for (var i = 0; i < replacements.length; i++) {
+    if (replacements[i].from.test(s)) {
+      return s.replace(replacements[i].from, replacements[i].to);
+    }
+  }
+
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+/**
+ * Format narasi rincian kegiatan sesuai spesifikasi:
+ * Contoh: "Terlaksananya pengaturan dan pengarahan parkiran kendaraan roda-2 dan roda-4 sebanyak 25 kali selama periode 1–31 Oktober 2026."
+ */
+function formatRincianKegiatanNarrative(namaTugas, jumlah, periodeStr) {
+  var cleanTugas = String(namaTugas || '').trim();
+  var converted = convertVerbsToNouns(cleanTugas);
+  var countStr = String(jumlah !== undefined && jumlah !== null ? jumlah : 0);
+  return "Terlaksananya " + converted + " sebanyak " + countStr + " kali selama periode " + periodeStr + ".";
+}
+
+/**
+ * Sanitasi nama berkas agar aman dari karakter terlarang Google Drive / OS
+ */
+function sanitizeFileName(str) {
+  if (!str) return 'Dokumen';
+  return String(str)
+    .replace(/[\\\/\:\*\?\"\<\>\|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Mencocokkan foto bukti dukung dengan suatu kegiatan / tugas
+ */
+function findPhotosForTask(allPhotos, taskKegiatan) {
+  if (!allPhotos || !Array.isArray(allPhotos) || allPhotos.length === 0) return [];
+  var taskAlpha = getAlphaOnly(taskKegiatan || '');
+  if (!taskAlpha) return [];
+
+  return allPhotos.filter(function(p) {
+    if (!p || !p.fileId) return false;
+    var pAlpha = getAlphaOnly(p.namaTugas || '');
+    if (!pAlpha) return false;
+
+    // 1. Cocok persis alpha
+    if (pAlpha === taskAlpha) return true;
+
+    // 2. Substring jika panjang karakter min 6 char
+    if (taskAlpha.length >= 6 && pAlpha.length >= 6) {
+      if (taskAlpha.indexOf(pAlpha) !== -1 || pAlpha.indexOf(taskAlpha) !== -1) return true;
+    }
+
+    // 3. Kata kunci signifikan (> 4 char) cocok min 2 kata
+    var taskWords = (taskKegiatan || '').toLowerCase().split(/[\s\-_,\.\/]+/).filter(function(w) { return w.length > 4; });
+    var pWords = (p.namaTugas || '').toLowerCase().split(/[\s\-_,\.\/]+/).filter(function(w) { return w.length > 4; });
+    var matches = 0;
+    for (var i = 0; i < taskWords.length; i++) {
+      var tw = taskWords[i];
+      for (var j = 0; j < pWords.length; j++) {
+        var pw = pWords[j];
+        if (tw === pw || tw.indexOf(pw) !== -1 || pw.indexOf(tw) !== -1) {
+          matches++;
+          break;
+        }
+      }
+    }
+    return (matches >= 2);
+  });
+}
+
+/**
+ * Mencari Google Docs yang sudah ada di folder Bukti Dukung (mencegah duplikasi file)
+ */
+function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun) {
+  try {
+    var files = folder.getFiles();
+    var taskAlpha = getAlphaOnly(taskKegiatan || '');
+    var empAlpha = getAlphaOnly(empName || '');
+    var subAlpha = taskAlpha.substring(0, Math.min(20, taskAlpha.length));
+
+    while (files.hasNext()) {
+      var f = files.next();
+      var mime = f.getMimeType();
+      if (mime !== MimeType.GOOGLE_DOCS && mime !== 'application/vnd.google-apps.document') continue;
+
+      var fName = f.getName();
+      var fAlpha = getAlphaOnly(fName);
+
+      if (subAlpha && fAlpha.indexOf(subAlpha) !== -1) {
+        if (!empAlpha || fAlpha.indexOf(empAlpha.substring(0, Math.min(8, empAlpha.length))) !== -1 || fName.toLowerCase().indexOf(bulanNama.toLowerCase()) !== -1) {
+          return f;
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("Pencarian file doc gagal: " + err.message);
+  }
+  return null;
+}
+
+/**
+ * Menyusun tata letak & isi Google Docs sesuai referensi gambar BUKTI DUKUNG DOKUMENTASI
+ */
+function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
+  var body = doc.getBody();
+  body.clear();
+
+  // Konfigurasi Margin Halaman A4
+  body.setMarginTop(54);
+  body.setMarginBottom(54);
+  body.setMarginLeft(72);
+  body.setMarginRight(72);
+
+  // 1. JUDUL HALAMAN UTAMA: BUKTI DUKUNG DOKUMENTASI
+  var titlePara = body.appendParagraph("BUKTI DUKUNG DOKUMENTASI");
+  titlePara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  titlePara.setFontFamily("Arial");
+  titlePara.setFontSize(13);
+  titlePara.setBold(true);
+  titlePara.setSpacingBefore(10);
+  titlePara.setSpacingAfter(26);
+
+  // 2. IDENTITAS PEGAWAI (Tanpa NIP, Jabatan Staf Bagian Umum, Titik Dua Rapi)
+  var idTable = body.appendTable([
+    ["NAMA PEGAWAI", ": " + empName],
+    ["JABATAN", ": Staf Bagian Umum"],
+    ["TANGGAL PELAKSANAAN", ": " + periodeStr]
+  ]);
+  idTable.setBorderWidth(0);
+  idTable.setColumnWidth(0, 160);
+  idTable.setColumnWidth(1, 310);
+
+  for (var r = 0; r < 3; r++) {
+    var idRow = idTable.getRow(r);
+    for (var c = 0; c < 2; c++) {
+      var cell = idRow.getCell(c);
+      cell.setFontFamily("Arial");
+      cell.setFontSize(10.5);
+      cell.setPaddingTop(3);
+      cell.setPaddingBottom(3);
+      cell.setPaddingLeft(0);
+      cell.setPaddingRight(0);
+      var pChild = cell.getChild(0);
+      if (pChild && pChild.asParagraph) {
+        pChild.asParagraph().setSpacingAfter(0);
+        if (c === 0) pChild.asParagraph().setBold(true);
+      }
+    }
+  }
+
+  // Jeda ruang sebelum tabel penugasan
+  var spacer1 = body.appendParagraph("");
+  spacer1.setSpacingBefore(12);
+  spacer1.setSpacingAfter(12);
+
+  // 3. TABEL PENUGASAN (URAIAN KEGIATAN & RINCIAN KEGIATAN)
+  var narrativeText = formatRincianKegiatanNarrative(task.kegiatan, task.selesai || 0, periodeStr);
+
+  var taskTable = body.appendTable([
+    ["URAIAN KEGIATAN", "RINCIAN KEGIATAN"],
+    [task.kegiatan || '-', narrativeText]
+  ]);
+  taskTable.setBorderWidth(1);
+  taskTable.setBorderColor("#000000");
+  taskTable.setColumnWidth(0, 205);
+  taskTable.setColumnWidth(1, 265);
+
+  // Baris Header Tabel
+  var thRow = taskTable.getRow(0);
+  for (var thC = 0; thC < 2; thC++) {
+    var thCell = thRow.getCell(thC);
+    thCell.setFontFamily("Arial");
+    thCell.setFontSize(10.5);
+    thCell.setPaddingTop(8);
+    thCell.setPaddingBottom(8);
+    thCell.setPaddingLeft(10);
+    thCell.setPaddingRight(10);
+    var thP = thCell.getChild(0);
+    if (thP && thP.asParagraph) {
+      thP.asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      thP.asParagraph().setBold(true);
+      thP.asParagraph().setSpacingAfter(0);
+    }
+  }
+
+  // Baris Isi Data Tabel
+  var tbRow = taskTable.getRow(1);
+  for (var tbC = 0; tbC < 2; tbC++) {
+    var tbCell = tbRow.getCell(tbC);
+    tbCell.setFontFamily("Arial");
+    tbCell.setFontSize(10);
+    tbCell.setPaddingTop(8);
+    tbCell.setPaddingBottom(8);
+    tbCell.setPaddingLeft(10);
+    tbCell.setPaddingRight(10);
+    var tbP = tbCell.getChild(0);
+    if (tbP && tbP.asParagraph) {
+      tbP.asParagraph().setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+      tbP.asParagraph().setLineSpacing(1.15);
+      tbP.asParagraph().setSpacingAfter(0);
+    }
+  }
+
+  // 4. PEMISAH HALAMAN (Page Break) MENUJU LAMPIRAN DOKUMENTASI
+  body.appendPageBreak();
+
+  // 5. JUDUL LAMPIRAN DOKUMENTASI
+  var lampiranTitle = body.appendParagraph("LAMPIRAN DOKUMENTASI");
+  lampiranTitle.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+  lampiranTitle.setFontFamily("Arial");
+  lampiranTitle.setFontSize(13);
+  lampiranTitle.setBold(true);
+  lampiranTitle.setSpacingBefore(10);
+  lampiranTitle.setSpacingAfter(24);
+
+  // 6. PENYISIPAN FOTO BUKTI DUKUNG DENGAN CAPTION RAPI
+  if (photos && photos.length > 0) {
+    for (var i = 0; i < photos.length; i++) {
+      var p = photos[i];
+      try {
+        var imgFile = DriveApp.getFileById(p.fileId);
+        var imgBlob = imgFile.getBlob();
+
+        var imgPara = body.appendParagraph("");
+        imgPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+        imgPara.setSpacingBefore(6);
+        imgPara.setSpacingAfter(6);
+
+        var docImg = imgPara.appendInlineImage(imgBlob);
+
+        var origW = docImg.getWidth();
+        var origH = docImg.getHeight();
+        var maxW = 460;
+        var maxH = 340;
+        var finalW = origW;
+        var finalH = origH;
+
+        if (finalW > maxW) {
+          var ratio = maxW / finalW;
+          finalW = maxW;
+          finalH = Math.round(finalH * ratio);
+        }
+        if (finalH > maxH) {
+          var ratioH = maxH / finalH;
+          finalH = maxH;
+          finalW = Math.round(finalW * ratioH);
+        }
+        docImg.setWidth(finalW);
+        docImg.setHeight(finalH);
+
+        var capPara = body.appendParagraph("Bukti Dokumentasi #" + (i + 1));
+        capPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+        capPara.setFontFamily("Arial");
+        capPara.setFontSize(10);
+        capPara.setBold(true);
+        capPara.setItalic(true);
+        capPara.setSpacingBefore(4);
+        capPara.setSpacingAfter(18);
+
+        if (i < photos.length - 1) {
+          var betweenSpacer = body.appendParagraph("");
+          betweenSpacer.setSpacingBefore(0);
+          betweenSpacer.setSpacingAfter(12);
+        }
+      } catch (eImg) {
+        var errPara = body.appendParagraph("[Foto Bukti Dokumentasi #" + (i + 1) + " tidak dapat dimuat: " + eImg.message + "]");
+        errPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+        errPara.setFontSize(9);
+        errPara.setItalic(true);
+        errPara.setFontColor("#dc2626");
+        errPara.setSpacingAfter(12);
+      }
+    }
+  } else {
+    var noPhotoPara = body.appendParagraph("(Dokumentasi foto belum diunggah untuk kegiatan ini)");
+    noPhotoPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    noPhotoPara.setFontFamily("Arial");
+    noPhotoPara.setFontSize(10);
+    noPhotoPara.setItalic(true);
+    noPhotoPara.setFontColor("#64748b");
+    noPhotoPara.setSpacingBefore(30);
+  }
+}
+
+/**
+ * ========================================================================
+ * BACKEND ACTION: GENERATE REKAPITULASI DOKUMEN PER KEGIATAN (GOOGLE DOCS)
+ * ========================================================================
+ */
+function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
+  try {
+    var session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
+    }
+
+    var ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    var now = new Date();
+    var selMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
+    var selYear = tahun ? Number(tahun) : now.getFullYear();
+
+    var repData = getExportLaporanData(token, 'individu', selMonth, selYear, targetUsername);
+    if (!repData || !repData.success || !repData.data) {
+      return {
+        success: false,
+        message: (repData && repData.message) ? repData.message : "Gagal mengambil data checklist pegawai untuk periode yang dipilih."
+      };
+    }
+
+    var report = repData.data;
+    var empName = (report.pegawai && report.pegawai.namaPegawai) || session.namaPegawai || session.username;
+    var unitKerja = (report.pegawai && report.pegawai.unit) || resolveUnitKerja(null, empName, targetUsername, session);
+    var namaBulanStr = (report.periode && report.periode.namaBulan) || ('Bulan_' + selMonth);
+    var daysInMonth = (report.periode && report.periode.daysInMonth) || new Date(selYear, selMonth, 0).getDate();
+    var periodeStr = "1–" + daysInMonth + " " + namaBulanStr + " " + selYear;
+
+    var items = report.items || [];
+    if (items.length === 0) {
+      return {
+        success: false,
+        message: "Tidak ditemukan daftar kegiatan/tugas checklist untuk pegawai " + empName + " pada periode " + periodeStr + "."
+      };
+    }
+
+    var allPhotos = report.buktiDukung || [];
+
+    // 1. Dapatkan Folder Induk Google Drive
+    var rootInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
+    var rootFolder = rootInfo.folder;
+
+    // 2. Bangun Hierarki Folder: Induk -> [Tahun] -> [Unit] -> [Bulan] -> [Nama Pegawai]
+    var yearFolder = getOrCreateChildFolder(rootFolder, String(selYear));
+    var unitFolder = getOrCreateChildFolder(yearFolder, unitKerja);
+    var monthFolder = getOrCreateChildFolder(unitFolder, namaBulanStr);
+    var employeeFolder = getOrCreateChildFolder(monthFolder, empName);
+
+    // 3. Buat / Dapatkan Folder 'Bukti Dukung' di Dalam Folder Pegawai
+    var buktiDukungFolder = getOrCreateChildFolder(employeeFolder, "Bukti Dukung");
+    try {
+      buktiDukungFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (eShare) {}
+
+    // 4. Proses Setiap Kegiatan Menjadi Dokumen Google Docs Tersendiri
+    var processedItems = [];
+    var errors = [];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
+      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
+
+      try {
+        var existingDocFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear);
+        var docObj = null;
+        var docFile = null;
+        var actionStatus = 'updated';
+
+        if (existingDocFile) {
+          docObj = DocumentApp.openById(existingDocFile.getId());
+          buildGoogleDocContent(docObj, item, empName, periodeStr, matchingPhotos);
+          docObj.saveAndClose();
+          docFile = existingDocFile;
+          actionStatus = 'updated';
+        } else {
+          var docName = "Bukti Dukung - " + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
+          docObj = DocumentApp.create(docName);
+          buildGoogleDocContent(docObj, item, empName, periodeStr, matchingPhotos);
+          docObj.saveAndClose();
+
+          docFile = DriveApp.getFileById(docObj.getId());
+          try {
+            docFile.moveTo(buktiDukungFolder);
+          } catch (eMove) {
+            buktiDukungFolder.addFile(docFile);
+            try { DriveApp.getRootFolder().removeFile(docFile); } catch (eRem) {}
+          }
+          try {
+            docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (eS) {}
+          actionStatus = 'created';
+        }
+
+        var cleanDocUrl = String(docFile.getUrl() || '').replace(/\\/g, '').trim();
+        processedItems.push({
+          no: i + 1,
+          kegiatan: namaTugas,
+          kuantitas: item.selesai !== undefined ? item.selesai : (item.target || 0),
+          target: item.target || 0,
+          selesai: item.selesai || 0,
+          docId: docFile.getId(),
+          docUrl: cleanDocUrl,
+          docName: docFile.getName(),
+          action: actionStatus,
+          totalFoto: matchingPhotos.length
+        });
+
+      } catch (eDoc) {
+        errors.push("Gagal memproses kegiatan '" + namaTugas + "': " + eDoc.message);
+      }
+    }
+
+    if (processedItems.length === 0) {
+      return {
+        success: false,
+        message: "Gagal membuat dokumen kegiatan: " + (errors.join(' | ') || "Terjadi kesalahan internal.")
+      };
+    }
+
+    return {
+      success: true,
+      message: "Berhasil menghasilkan " + processedItems.length + " dokumen rekapitulasi Google Docs di folder Bukti Dukung!",
+      data: {
+        namaPegawai: empName,
+        username: (report.pegawai && report.pegawai.username) || targetUsername,
+        unitKerja: unitKerja,
+        periodeStr: periodeStr,
+        bulan: selMonth,
+        tahun: selYear,
+        folderBuktiDukungId: buktiDukungFolder.getId(),
+        folderBuktiDukungUrl: buktiDukungFolder.getUrl(),
+        folderPegawaiUrl: employeeFolder.getUrl(),
+        items: processedItems,
+        errors: errors
+      }
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: "Terjadi kesalahan pada proses generate dokumen: " + err.message
+    };
+  }
+}
+
+/**
+ * ========================================================================
+ * BACKEND ACTION: BUAT KIPAPP (GOOGLE SHEETS) & EKSPOR PDF OTOMATIS
+ * ========================================================================
+ */
+function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
+  try {
+    var session = getSessionUser(token);
+    if (!session) {
+      return { success: false, message: "Sesi telah berakhir atau tidak valid. Silakan login kembali." };
+    }
+
+    var ss = getDb();
+    if (!ss) return { success: false, message: "Koneksi spreadsheet gagal." };
+
+    var now = new Date();
+    var selMonth = bulan ? Number(bulan) : (now.getMonth() + 1);
+    var selYear = tahun ? Number(tahun) : now.getFullYear();
+
+    var repData = getExportLaporanData(token, 'individu', selMonth, selYear, targetUsername);
+    if (!repData || !repData.success || !repData.data) {
+      return {
+        success: false,
+        message: (repData && repData.message) ? repData.message : "Gagal mengambil data checklist pegawai untuk Kipapp."
+      };
+    }
+
+    var report = repData.data;
+    var empName = (report.pegawai && report.pegawai.namaPegawai) || session.namaPegawai || session.username;
+    var unitKerja = (report.pegawai && report.pegawai.unit) || resolveUnitKerja(null, empName, targetUsername, session);
+    var namaBulanStr = (report.periode && report.periode.namaBulan) || ('Bulan_' + selMonth);
+    var daysInMonth = (report.periode && report.periode.daysInMonth) || new Date(selYear, selMonth, 0).getDate();
+    var periodeStr = "1–" + daysInMonth + " " + namaBulanStr + " " + selYear;
+
+    var items = report.items || [];
+    if (items.length === 0) {
+      return {
+        success: false,
+        message: "Tidak ada daftar kegiatan checklist untuk pegawai " + empName + " pada periode " + periodeStr + "."
+      };
+    }
+
+    var allPhotos = report.buktiDukung || [];
+
+    // 1. Dapatkan Folder Induk Google Drive
+    var rootInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
+    var rootFolder = rootInfo.folder;
+
+    // 2. Hierarki Folder Pegawai
+    var yearFolder = getOrCreateChildFolder(rootFolder, String(selYear));
+    var unitFolder = getOrCreateChildFolder(yearFolder, unitKerja);
+    var monthFolder = getOrCreateChildFolder(unitFolder, namaBulanStr);
+    var employeeFolder = getOrCreateChildFolder(monthFolder, empName);
+
+    // 3. Folder 'Bukti Dukung' & 'Bukti Dukung PDF'
+    var buktiDukungFolder = getOrCreateChildFolder(employeeFolder, "Bukti Dukung");
+    var pdfFolder = getOrCreateChildFolder(buktiDukungFolder, "Bukti Dukung PDF");
+
+    try {
+      buktiDukungFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      pdfFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch (eShare) {}
+
+    // 4. Pastikan Setiap Kegiatan Memiliki Google Docs dan Ekspor ke PDF
+    var tableRows = [];
+    var processedResults = [];
+    var pdfErrors = [];
+
+    for (var i = 0; i < items.length; i++) {
+      var item = items[i];
+      var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
+      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
+      var kuantitas = item.selesai !== undefined ? item.selesai : (item.target || 0);
+      var rincianNarasi = formatRincianKegiatanNarrative(namaTugas, kuantitas, periodeStr);
+
+      var docFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear);
+
+      // Jika file Doc belum ada, buat langsung
+      if (!docFile) {
+        try {
+          var docName = "Bukti Dukung - " + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
+          var docObj = DocumentApp.create(docName);
+          buildGoogleDocContent(docObj, item, empName, periodeStr, matchingPhotos);
+          docObj.saveAndClose();
+
+          docFile = DriveApp.getFileById(docObj.getId());
+          try {
+            docFile.moveTo(buktiDukungFolder);
+          } catch (eMove) {
+            buktiDukungFolder.addFile(docFile);
+            try { DriveApp.getRootFolder().removeFile(docFile); } catch (eRem) {}
+          }
+          try {
+            docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (eS) {}
+        } catch (eCreateDoc) {
+          pdfErrors.push("Gagal membuat Google Doc untuk " + namaTugas + ": " + eCreateDoc.message);
+          continue;
+        }
+      }
+
+      var docUrl = docFile.getUrl();
+      var docId = docFile.getId();
+      var pdfUrl = '';
+
+      // Ekspor Google Docs ke PDF
+      try {
+        var pdfBlob = docFile.getAs('application/pdf');
+        var pdfName = sanitizeFileName(docFile.getName()) + ".pdf";
+        pdfBlob.setName(pdfName);
+
+        // Hapus PDF lama jika sudah ada agar tidak terjadi duplikasi file
+        var existingPdfs = pdfFolder.getFilesByName(pdfName);
+        while (existingPdfs.hasNext()) {
+          var oldPdf = existingPdfs.next();
+          try { oldPdf.setTrashed(true); } catch (eTrash) {}
+        }
+
+        var pdfFile = pdfFolder.createFile(pdfBlob);
+        try {
+          pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (eS2) {}
+
+        pdfUrl = pdfFile.getUrl();
+
+      } catch (ePdf) {
+        pdfErrors.push("Ekspor PDF untuk '" + namaTugas + "' gagal: " + ePdf.message);
+        pdfUrl = docUrl; // Fallback ke Doc URL jika PDF gagal
+      }
+
+      // Bersihkan URL dari karakter escape backslash (\)
+      var cleanDocUrl = String(docUrl || '').replace(/\\/g, '').trim();
+      var cleanPdfUrl = String(pdfUrl || '').replace(/\\/g, '').trim();
+
+      // Gunakan titik koma (;) sebagai pemisah argumen fungsi HYPERLINK untuk regional Indonesia (id_ID)
+      var formulaDoc = cleanDocUrl ? ('=HYPERLINK("' + cleanDocUrl + '"; "Buka Dokumen")') : '-';
+      var formulaPdf = (cleanPdfUrl && cleanPdfUrl !== '-') ? ('=HYPERLINK("' + cleanPdfUrl + '"; "Buka PDF")') : '-';
+
+      processedResults.push({
+        no: i + 1,
+        rincianKegiatan: rincianNarasi,
+        uraianKegiatan: namaTugas,
+        satuan: "Kegiatan",
+        kuantitas: kuantitas,
+        linkBuktiDukung: cleanDocUrl,
+        linkPdf: cleanPdfUrl,
+        tanggalPelaksanaan: periodeStr
+      });
+
+      tableRows.push([
+        i + 1,
+        rincianNarasi,
+        namaTugas,
+        "Kegiatan",
+        kuantitas,
+        formulaDoc,
+        formulaPdf,
+        periodeStr
+      ]);
+    }
+
+    if (processedResults.length === 0) {
+      return {
+        success: false,
+        message: "Gagal membuat Kipapp & PDF: " + (pdfErrors.join(' | ') || "Tidak ada kegiatan yang berhasil diekspor.")
+      };
+    }
+
+    // 5. Buat / Perbarui Spreadsheet Kipapp di Dalam Folder Pegawai
+    var kipappFileName = "Kipapp - " + sanitizeFileName(empName) + " - " + namaBulanStr + " " + selYear;
+    var existingSheets = employeeFolder.getFilesByName(kipappFileName);
+    var kipappSs = null;
+
+    if (existingSheets.hasNext()) {
+      var ssFile = existingSheets.next();
+      kipappSs = SpreadsheetApp.openById(ssFile.getId());
+    } else {
+      kipappSs = SpreadsheetApp.create(kipappFileName);
+      var newSsFile = DriveApp.getFileById(kipappSs.getId());
+      try {
+        newSsFile.moveTo(employeeFolder);
+      } catch (eMoveSs) {
+        employeeFolder.addFile(newSsFile);
+        try { DriveApp.getRootFolder().removeFile(newSsFile); } catch (eRemSs) {}
+      }
+      try {
+        newSsFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (eSsShare) {}
+    }
+
+    // Format Lembar Kipapp (Pastikan regional Indonesia id_ID untuk pemisah rumus titik koma)
+    try {
+      kipappSs.setSpreadsheetLocale('id_ID');
+    } catch (eLoc) {}
+
+    var kipappSheet = kipappSs.getSheets()[0];
+    kipappSheet.setName("Kipapp " + namaBulanStr + " " + selYear);
+    kipappSheet.clear();
+
+    // Judul & Metadata
+    kipappSheet.getRange(1, 1).setValue("REKAPITULASI BUKTI DUKUNG DAN KIPAPP PEGAWAI").setFontSize(13).setFontWeight("bold");
+    kipappSheet.getRange(2, 1).setValue("BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT").setFontSize(11).setFontWeight("bold").setFontColor("#1e40af");
+    kipappSheet.getRange(3, 1).setValue("Nama Pegawai: " + empName + " | Unit Kerja: " + unitKerja + " | Periode: " + periodeStr).setFontSize(10).setFontStyle("italic").setFontColor("#475569");
+
+    // Header Kolom (Baris 5)
+    var headers = [
+      "No",
+      "Rincian Kegiatan",
+      "Uraian Kegiatan",
+      "Satuan",
+      "Kuantitas",
+      "Link Bukti Dukung (Google Docs)",
+      "Link PDF",
+      "Tanggal Pelaksanaan"
+    ];
+
+    kipappSheet.getRange(5, 1, 1, headers.length)
+      .setValues([headers])
+      .setBackground("#1e40af")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold")
+      .setHorizontalAlignment("center")
+      .setVerticalAlignment("middle");
+
+    kipappSheet.setRowHeight(5, 30);
+    kipappSheet.setFrozenRows(5);
+
+    // Isi Baris Data
+    var dataRange = kipappSheet.getRange(6, 1, tableRows.length, headers.length);
+    dataRange.setValues(tableRows);
+    dataRange.setVerticalAlignment("middle");
+    dataRange.setFontSize(10);
+
+    // Format Lebar Kolom
+    kipappSheet.setColumnWidth(1, 45);   // No
+    kipappSheet.setColumnWidth(2, 360);  // Rincian Kegiatan
+    kipappSheet.setColumnWidth(3, 280);  // Uraian Kegiatan
+    kipappSheet.setColumnWidth(4, 85);   // Satuan
+    kipappSheet.setColumnWidth(5, 85);   // Kuantitas
+    kipappSheet.setColumnWidth(6, 210);  // Link Bukti Dukung
+    kipappSheet.setColumnWidth(7, 130);  // Link PDF
+    kipappSheet.setColumnWidth(8, 160);  // Tanggal Pelaksanaan
+
+    // Perataan Kolom
+    kipappSheet.getRange(6, 1, tableRows.length, 1).setHorizontalAlignment("center");
+    kipappSheet.getRange(6, 2, tableRows.length, 2).setWrap(true).setHorizontalAlignment("left");
+    kipappSheet.getRange(6, 4, tableRows.length, 5).setHorizontalAlignment("center");
+
+    // Border dan Baris Selang-Seling
+    for (var r = 0; r < tableRows.length; r++) {
+      kipappSheet.setRowHeight(6 + r, 26);
+      if (r % 2 === 1) {
+        kipappSheet.getRange(6 + r, 1, 1, headers.length).setBackground("#f8fafc");
+      }
+    }
+    dataRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
+
+    SpreadsheetApp.flush();
+
+    return {
+      success: true,
+      message: "Berkas Google Sheets Kipapp dan seluruh file PDF berhasil dibuat/diperbarui di Google Drive!",
+      data: {
+        namaPegawai: empName,
+        periodeStr: periodeStr,
+        kipappName: kipappFileName,
+        kipappUrl: kipappSs.getUrl(),
+        folderPdfUrl: pdfFolder.getUrl(),
+        folderBuktiDukungUrl: buktiDukungFolder.getUrl(),
+        folderPegawaiUrl: employeeFolder.getUrl(),
+        totalKegiatan: processedResults.length,
+        items: processedResults,
+        errors: pdfErrors
+      }
+    };
+
+  } catch (err) {
+    return {
+      success: false,
+      message: "Gagal membuat Kipapp & PDF: " + err.message
+    };
+  }
+}
+
 // <<<<<<<<<< END MODUL: backend/BuktiDukung.gs <<<<<<<<<<
 
 
@@ -4703,7 +5474,7 @@ function supervisorToggleStaffTaskCheck(token, payload) {
 /**
  * ========================================================================
  * SIMPEL-KU - API ROUTER & DISPATCHER MODULE
-*/
+ */
 
 function doGet(e) {
   if (e && e.parameter && e.parameter.action) {
@@ -4818,6 +5589,10 @@ function handleApiRequest(params) {
       );
     } else if (action === 'getExportLaporanData') {
       result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+    } else if (action === 'generateDokumenPerKegiatan') {
+      result = generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+    } else if (action === 'generateKipappDanPdf') {
+      result = generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
     } else if (action === 'uploadBuktiDukung') {
       result = uploadBuktiDukungFoto(params.token, params);
     } else if (action === 'updateSupervisorChecklist') {

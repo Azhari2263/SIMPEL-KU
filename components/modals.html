@@ -207,6 +207,45 @@
           </div>
         </div>
 
+        
+        <!-- PANEL FITUR GENERATE REKAPITULASI LAPORAN PER KEGIATAN & KIPAPP -->
+        <div id="exportPerKegiatanCard" class="p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/70 to-slate-50 border border-blue-200/80 shadow-xs space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center text-sm shadow-xs flex-shrink-0 mt-0.5">
+                <i class="fa-solid fa-file-signature"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900 text-xs flex items-center gap-2">
+                  <span>Generate Rekapitulasi Dokumen Per Kegiatan & Kipapp</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">Google Docs & Sheets</span>
+                </h4>
+                <p class="text-[11px] text-slate-500 mt-0.5">
+                  Buat dokumen Google Docs per jenis kegiatan lengkap dengan foto bukti dukung, lalu buat tabel Kipapp (Google Sheets) dan ekspor PDF otomatis.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+              <!-- Tombol 1: Generate Dokumen Per Kegiatan -->
+              <button type="button" id="btnGenerateDokumenKegiatan" onclick="executeGenerateDokumenPerKegiatan()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
+                <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                <span>Generate Dokumen Kegiatan</span>
+              </button>
+
+              <!-- Tombol 2: Buat Kipapp (Tampil setelah dokumen dibuat) -->
+              <button type="button" id="btnBuatKipapp" onclick="executeGenerateKipappDanPdf()" class="hidden px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95">
+                <i class="fa-solid fa-table-list text-xs"></i>
+                <span>Buat Kipapp</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Area Hasil / Status Pemrosesan Dokumen & Kipapp -->
+          <div id="rekapKegiatanResultArea" class="hidden rounded-xl border border-blue-200/90 bg-white p-3.5 text-xs shadow-2xs space-y-2.5">
+            <!-- Diisi secara dinamis oleh JavaScript -->
+          </div>
+        </div>
+
         <!-- Tombol Aksi Pratinjau Cepat -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">

@@ -83,6 +83,10 @@
             runner.swapSecurityShift(params.token, p1, p2, t1, t2, params.bulan, params.tahun);
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
+          } else if (action === 'generateDokumenPerKegiatan') {
+            runner.generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+          } else if (action === 'generateKipappDanPdf') {
+            runner.generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
           } else if (action === 'uploadBuktiDukung') {
             runner.uploadBuktiDukungFoto(params.token, params);
           } else if (action === 'updateSupervisorChecklist') {
