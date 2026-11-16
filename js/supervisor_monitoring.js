@@ -731,16 +731,118 @@ function renderIntegratedMonitoringUI() {
 
     /**
      * Mengelompokkan daftar bukti dukung berdasarkan nama tugas
+     * Memastikan setiap tanggal pelaksanaan hanya memiliki satu foto dokumentasi utama (anti-duplikasi per tanggal).
      */
     function groupBuktiDukungByTask(buktiList) {
       if (!buktiList || !Array.isArray(buktiList) || buktiList.length === 0) return {};
-      const groups = {};
+      const rawGroups = {};
       buktiList.forEach(it => {
         const taskName = (it.namaTugas || 'Tugas Operasional').trim();
-        if (!groups[taskName]) groups[taskName] = [];
-        groups[taskName].push(it);
+        if (!rawGroups[taskName]) rawGroups[taskName] = [];
+        rawGroups[taskName].push(it);
       });
-      return groups;
+
+      const finalGroups = {};
+      Object.keys(rawGroups).forEach(taskName => {
+        const items = rawGroups[taskName];
+        const byDate = {};
+        const seenFiles = {};
+
+        items.forEach(p => {
+          const fileId = p.fileId || p.fileUrl || '';
+          if (fileId && seenFiles[fileId]) return;
+          if (fileId) seenFiles[fileId] = true;
+
+          const tglKey = Number(p.tanggal) || 0;
+          const groupKey = (tglKey > 0) ? String(tglKey) : (fileId ? ('file_' + fileId) : ('idx_' + Math.random()));
+
+          if (!byDate[groupKey]) {
+            byDate[groupKey] = p;
+          } else {
+            // Prioritas 1: Foto yang telah divalidasi pengawas (statusPengawas === true)
+            // Prioritas 2: Foto unggahan terbaru (berdasarkan timestamp / waktu)
+            const currentBest = byDate[groupKey];
+            const isCurVal = !!currentBest.statusPengawas;
+            const isNewVal = !!p.statusPengawas;
+
+            if (!isCurVal && isNewVal) {
+              byDate[groupKey] = p;
+            } else if (isCurVal === isNewVal) {
+              const curW = String(currentBest.waktu || '');
+              const newW = String(p.waktu || '');
+              if (newW && newW > curW) {
+                byDate[groupKey] = p;
+              } else if (!curW && newW) {
+                byDate[groupKey] = p;
+              }
+            }
+          }
+        });
+
+        const list = Object.values(byDate);
+        list.sort((a, b) => {
+          const tA = Number(a.tanggal) || 0;
+          const tB = Number(b.tanggal) || 0;
+          if (tA !== tB) return tA - tB;
+          return String(a.waktu || '').localeCompare(String(b.waktu || ''));
+        });
+
+        finalGroups[taskName] = list;
+      });
+
+      return finalGroups;
+    }
+
+    /**
+     * Format tampilan tanggal dan waktu bukti dukung yang rapi & konsisten
+     * Contoh: "Rabu, 4 November 2026 - 07:44:59 WIB"
+     * Mencegah tanggal berulang seperti "4 November 2026 (Rabu, 4 November 2026 - 07:44:59 WIB)".
+     */
+    function formatBuktiDateTime(it, periode) {
+      if (!it) return '-';
+      const w = (it.waktu || '').trim();
+
+      // 1. Jika w sudah memuat nama hari atau tanggal lengkap
+      if (w && /^(senin|selasa|rabu|kamis|jumat|sabtu|minggu)/i.test(w)) {
+        return w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+      }
+      if (w && /^\d{1,2}\s+[a-zA-Z]+\s+\d{4}/.test(w)) {
+        return w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+      }
+
+      // 2. Ekstraksi tanggal, bulan, tahun
+      const tgl = it.tanggal ? String(it.tanggal).trim() : '';
+      const bln = periode && (periode.namaBulan || periode.bulanNama) ? String(periode.namaBulan || periode.bulanNama).trim() : '';
+      const thn = periode && periode.tahun ? String(periode.tahun).trim() : '';
+
+      let hariStr = '';
+      if (tgl && bln && thn) {
+        const monthsID = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+        const mIdx = monthsID.indexOf(bln.toLowerCase());
+        if (mIdx !== -1) {
+          const dObj = new Date(parseInt(thn, 10), mIdx, parseInt(tgl, 10));
+          const daysID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+          hariStr = daysID[dObj.getDay()];
+        }
+      }
+
+      let datePart = '';
+      if (hariStr && tgl && bln && thn) {
+        datePart = `${hariStr}, ${tgl} ${bln} ${thn}`;
+      } else if (tgl && bln && thn) {
+        datePart = `${tgl} ${bln} ${thn}`;
+      } else if (tgl) {
+        datePart = `Tanggal ${tgl}`;
+      }
+
+      if (w) {
+        let cleanTime = w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+        if (!/WIB$/i.test(cleanTime) && /^\d{1,2}:\d{2}/.test(cleanTime)) {
+          cleanTime += ' WIB';
+        }
+        return datePart ? `${datePart} - ${cleanTime}` : cleanTime;
+      }
+      return datePart || '-';
     }
 
     /**
@@ -783,7 +885,7 @@ function renderIntegratedMonitoringUI() {
                 <div class="space-y-1 text-slate-600">
                   <div class="flex items-center justify-between gap-1">
                     <span class="font-bold text-slate-900 flex items-center gap-1">
-                      <i class="fa-solid fa-clock text-blue-600"></i> ${escapeHtml(it.waktu || '-')} WIB
+                      <i class="fa-solid fa-clock text-blue-600"></i> ${escapeHtml(formatBuktiDateTime(it, periode))}
                     </span>
                     ${statusBadge}
                   </div>
@@ -909,7 +1011,7 @@ function renderIntegratedMonitoringUI() {
               </div>
               <div class="print-photo-meta">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
-                  <strong>Tgl ${it.tanggal || '-'} &bull; ${escapeHtml(it.waktu || '-')} WIB</strong>
+                  <strong>${escapeHtml(formatBuktiDateTime(it, periode))}</strong>
                   <span>${statusText}</span>
                 </div>
                 <div><strong>Ruangan:</strong> ${escapeHtml(it.ruangan || '-')}</div>
@@ -997,7 +1099,7 @@ function renderIntegratedMonitoringUI() {
 
         items.forEach(it => {
           const bgClass = (counter % 2 === 1) ? 'class="bg-alt"' : '';
-          const tglWaktu = `${it.tanggal || '-'} ${escapeHtml(periode.namaBulan || '')} ${periode.tahun || ''} - ${escapeHtml(it.waktu || '-')} WIB`;
+          const tglWaktu = formatBuktiDateTime(it, periode);
           const statusText = it.statusPengawas ? `Divalidasi (${escapeHtml(it.namaPengawas || 'Pengawas')})` : 'Menunggu Validasi';
           const linkDrive = it.fileUrl ? `<a href="${it.fileUrl}">Buka Foto Drive</a>` : '-';
 
@@ -2277,7 +2379,7 @@ function renderIntegratedMonitoringUI() {
           <div class="flex items-center gap-2 overflow-hidden">
             <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">${it.no}</span>
             <div class="truncate">
-              <span class="font-bold text-slate-800 block truncate">${escapeHtml(it.kegiatan)}</span>
+              <span class="font-bold text-slate-800 block truncate">${escapeHtml(it.ruangan && it.ruangan !== '-' && it.ruangan !== 'Area Umum' && it.ruangan !== 'Umum' ? (it.ruangan + ' - ' + it.kegiatan) : it.kegiatan)}</span>
               <span class="text-[10px] text-slate-500">${it.kuantitas} checklist terlaksana &bull; ${it.totalFoto} foto terlampir &bull; Status: <strong class="${it.action === 'updated' ? 'text-amber-600' : 'text-emerald-600'}">${it.action === 'updated' ? 'Diperbarui' : 'Dibuat Baru'}</strong></span>
             </div>
           </div>

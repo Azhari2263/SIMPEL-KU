@@ -68,7 +68,8 @@ var IGNORE_HEADER_WORDS = [
 var SKIP_ROW_KEYWORDS = [
   'NO', 'RUANGAN', 'NAMA RUANGAN', 'KEGIATAN', 'URAIAN KEGIATAN',
   'JADWAL', 'BULAN', 'TAHUN', 'TANGGAL', 'HARI', 'SUB TOTAL', 'TOTAL',
-  'PARAF', 'KETERANGAN', 'CHECKLIST', 'CATATAN', 'STANDAR'
+  'PARAF', 'KETERANGAN', 'CHECKLIST', 'CATATAN', 'STANDAR',
+  'HITUNG SKOR', 'HITUNG_SKOR', 'HITUNGSKOR'
 ];
 
 // Role dan Kewenangan Akses
@@ -2039,26 +2040,28 @@ function sanitizeFileName(str) {
 
 /**
  * Mencocokkan foto bukti dukung dengan suatu kegiatan / tugas
+ * Mendukung filter spesifik ruangan (jika tersedia) dan anti-duplikasi per tanggal pelaksanaan.
  */
-function findPhotosForTask(allPhotos, taskKegiatan) {
+function findPhotosForTask(allPhotos, taskKegiatan, ruangan) {
   if (!allPhotos || !Array.isArray(allPhotos) || allPhotos.length === 0) return [];
   var taskAlpha = getAlphaOnly(taskKegiatan || '');
   if (!taskAlpha) return [];
 
-  return allPhotos.filter(function(p) {
+  // 1. Filter seluruh foto yang sesuai dengan uraian kegiatan / tugas
+  var matched = allPhotos.filter(function(p) {
     if (!p || !p.fileId) return false;
     var pAlpha = getAlphaOnly(p.namaTugas || '');
     if (!pAlpha) return false;
 
-    // 1. Cocok persis alpha
+    // a. Cocok persis alpha
     if (pAlpha === taskAlpha) return true;
 
-    // 2. Substring jika panjang karakter min 6 char
+    // b. Substring jika panjang karakter min 6 char
     if (taskAlpha.length >= 6 && pAlpha.length >= 6) {
       if (taskAlpha.indexOf(pAlpha) !== -1 || pAlpha.indexOf(taskAlpha) !== -1) return true;
     }
 
-    // 3. Kata kunci signifikan (> 4 char) cocok min 2 kata
+    // c. Kata kunci signifikan (> 4 char) cocok min 2 kata
     var taskWords = (taskKegiatan || '').toLowerCase().split(/[\s\-_,\.\/]+/).filter(function(w) { return w.length > 4; });
     var pWords = (p.namaTugas || '').toLowerCase().split(/[\s\-_,\.\/]+/).filter(function(w) { return w.length > 4; });
     var matches = 0;
@@ -2074,6 +2077,209 @@ function findPhotosForTask(allPhotos, taskKegiatan) {
     }
     return (matches >= 2);
   });
+
+  if (matched.length === 0) return [];
+
+  // 1.b Filter per ruangan jika spesifik ruangan diberikan
+  var hasRuang = Boolean(ruangan && String(ruangan).trim() && String(ruangan).trim() !== '-' && String(ruangan).trim() !== 'Area Umum' && String(ruangan).trim() !== 'Umum');
+  if (hasRuang) {
+    var targetRuangAlpha = getAlphaOnly(ruangan);
+    var roomMatched = matched.filter(function(p) {
+      var pRuangAlpha = getAlphaOnly(p.ruangan || '');
+      if (!pRuangAlpha) return false;
+      if (pRuangAlpha === targetRuangAlpha) return true;
+      if (targetRuangAlpha.length >= 4 && pRuangAlpha.length >= 4) {
+        if (targetRuangAlpha.indexOf(pRuangAlpha) !== -1 || pRuangAlpha.indexOf(targetRuangAlpha) !== -1) return true;
+      }
+      return false;
+    });
+    // Jika ada foto yang cocok spesifik dengan ruangan ini, gunakan foto tersebut
+    if (roomMatched.length > 0) {
+      matched = roomMatched;
+    }
+    // Jika tidak ada foto spesifik ruangan (misal foto umum), tetap gunakan matched agar dokumentasi tidak hilang
+  }
+
+  // 2. Pemeriksaan Duplikasi: Pastikan setiap tanggal pelaksanaan hanya memiliki SATU foto dokumentasi
+  var photosByDate = {};
+  var seenFileIds = {};
+
+  for (var i = 0; i < matched.length; i++) {
+    var p = matched[i];
+    if (seenFileIds[p.fileId]) continue; // Cegah duplikasi fileId yang sama persis
+    seenFileIds[p.fileId] = true;
+
+    var tglKey = Number(p.tanggal) || 0;
+    var groupKey = (tglKey > 0) ? String(tglKey) : ('file_' + p.fileId);
+
+    if (!photosByDate[groupKey]) {
+      photosByDate[groupKey] = p;
+    } else {
+      // Jika terdapat beberapa foto pada tanggal yang sama, pilih satu foto yang sesuai sebagai dokumentasi utama:
+      // Prioritas 1: Foto yang telah divalidasi pengawas (statusPengawas === true)
+      // Prioritas 2: Foto unggahan terbaru (berdasarkan timestamp / waktu)
+      var currentBest = photosByDate[groupKey];
+      var isCurrentValidated = !!currentBest.statusPengawas;
+      var isNewValidated = !!p.statusPengawas;
+
+      if (!isCurrentValidated && isNewValidated) {
+        photosByDate[groupKey] = p;
+      } else if (isCurrentValidated === isNewValidated) {
+        var curWaktu = String(currentBest.waktu || '');
+        var newWaktu = String(p.waktu || '');
+        if (newWaktu && newWaktu > curWaktu) {
+          photosByDate[groupKey] = p;
+        } else if (!curWaktu && newWaktu) {
+          photosByDate[groupKey] = p;
+        }
+      }
+    }
+  }
+
+  // 3. Konversi ke array dan urutkan secara kronologis berdasarkan tanggal pelaksanaan
+  var result = [];
+  for (var k in photosByDate) {
+    result.push(photosByDate[k]);
+  }
+
+  result.sort(function(a, b) {
+    var tA = Number(a.tanggal) || 0;
+    var tB = Number(b.tanggal) || 0;
+    if (tA !== tB) return tA - tB;
+    return String(a.waktu || '').localeCompare(String(b.waktu || ''));
+  });
+
+  return result;
+}
+
+/**
+ * Mengecek apakah suatu kegiatan adalah baris 'HITUNG SKOR' yang harus dikecualikan
+ */
+function isHitungSkorTask(taskName) {
+  if (!taskName) return false;
+  var s = String(taskName).trim().toUpperCase();
+  var sAlpha = (typeof getAlphaOnly === 'function') ? getAlphaOnly(s) : s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  return (
+    s.indexOf('HITUNG SKOR') !== -1 ||
+    s.indexOf('HITUNG_SKOR') !== -1 ||
+    sAlpha.indexOf('hitungskor') !== -1 ||
+    s.indexOf('TOTAL SKOR') !== -1
+  );
+}
+
+/**
+ * Memfilter daftar kegiatan agar hanya memproses kegiatan yang:
+ * 1. Bukan kegiatan 'HITUNG SKOR'
+ * 2. Memiliki dokumentasi / foto bukti dukung yang valid
+ */
+function filterEligibleBuktiDukungTasks(items, allPhotos) {
+  if (!items || !Array.isArray(items)) return [];
+  return items.filter(function(item) {
+    var namaTugas = (item && item.kegiatan) ? String(item.kegiatan).trim() : '';
+    if (!namaTugas) return false;
+
+    // 1. Pengecualian Dokumen HITUNG SKOR
+    if (isHitungSkorTask(namaTugas)) return false;
+
+    // 2. Ketersediaan Dokumentasi / Foto Bukti Dukung
+    var photos = findPhotosForTask(allPhotos, namaTugas, item.ruangan);
+    if (!photos || !Array.isArray(photos) || photos.length === 0) {
+      return false; // Lewati kegiatan yang belum memiliki dokumentasi foto
+    }
+
+    return true;
+  });
+}
+
+/**
+ * Format string tanggal pelaksanaan foto dokumentasi.
+ * Menghasilkan format tunggal dan konsisten: "Hari, DD Bulan YYYY - HH:mm:ss WIB"
+ * Mencegah pengulangan tanggal seperti "4 November 2026 (Rabu, 4 November 2026 - 07:44:59 WIB)".
+ */
+function formatPhotoDateStr(photo, periodeStr) {
+  if (!photo) return '';
+  var w = photo.waktu ? String(photo.waktu).trim() : '';
+
+  // 1. Jika w sudah lengkap memuat nama hari dan tanggal (misal: "Rabu, 4 November 2026 - 07:44:59 WIB")
+  if (w && /^(senin|selasa|rabu|kamis|jumat|sabtu|minggu)/i.test(w)) {
+    return w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+  }
+
+  // 2. Jika w sudah memuat tanggal lengkap "DD Bulan YYYY - HH:mm:ss WIB"
+  if (w && /^\d{1,2}\s+[a-zA-Z]+\s+\d{4}/.test(w)) {
+    var matchDate = w.match(/^(\d{1,2})\s+([a-zA-Z]+)\s+(\d{4})/);
+    if (matchDate) {
+      var dDay = parseInt(matchDate[1], 10);
+      var dMonStr = matchDate[2].toLowerCase();
+      var dYear = parseInt(matchDate[3], 10);
+      var monthsID = ['januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember'];
+      var dMonIdx = monthsID.indexOf(dMonStr);
+      if (dMonIdx !== -1) {
+        var dObj = new Date(dYear, dMonIdx, dDay);
+        var daysID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        var dayName = daysID[dObj.getDay()];
+        return (dayName + ", " + w).replace(/\s*WIB\s*WIB/gi, ' WIB');
+      }
+    }
+    return w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+  }
+
+  // 3. Ekstraksi tanggal, bulan, tahun untuk menyusun format standar
+  var tgl = photo.tanggal ? parseInt(photo.tanggal, 10) : null;
+  var thn = photo.tahun ? parseInt(photo.tahun, 10) : null;
+  var bln = photo.bulan ? parseInt(photo.bulan, 10) : null;
+  var blnNama = photo.bulanNama ? String(photo.bulanNama).trim() : '';
+
+  var monthsList = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+  if (periodeStr && (!thn || !bln || !blnNama)) {
+    for (var m = 0; m < monthsList.length; m++) {
+      if (new RegExp(monthsList[m], 'i').test(periodeStr)) {
+        if (!bln) bln = m + 1;
+        if (!blnNama) blnNama = monthsList[m];
+        break;
+      }
+    }
+    var yrMatch = String(periodeStr).match(/\b(20\d{2})\b/);
+    if (yrMatch && !thn) {
+      thn = parseInt(yrMatch[1], 10);
+    }
+  }
+
+  var hariStr = '';
+  if (tgl && bln && thn) {
+    try {
+      var dateObj = new Date(thn, bln - 1, tgl);
+      var daysArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      hariStr = daysArr[dateObj.getDay()];
+    } catch (eDate) {}
+  }
+
+  var datePart = '';
+  if (hariStr && tgl && blnNama && thn) {
+    datePart = hariStr + ", " + tgl + " " + blnNama + " " + thn;
+  } else if (tgl && blnNama && thn) {
+    datePart = tgl + " " + blnNama + " " + thn;
+  } else if (tgl) {
+    var blnThn = '';
+    if (periodeStr) {
+      var parts = String(periodeStr).trim().split(/\s+/);
+      blnThn = parts.length >= 3 ? parts.slice(1).join(' ') : periodeStr;
+    }
+    datePart = tgl + " " + blnThn;
+  } else {
+    datePart = periodeStr || '';
+  }
+
+  if (w) {
+    var cleanTime = w.replace(/\s*WIB\s*WIB/gi, ' WIB');
+    if (!/WIB$/i.test(cleanTime) && /^\d{1,2}:\d{2}/.test(cleanTime)) {
+      cleanTime += " WIB";
+    }
+    return datePart ? (datePart + " - " + cleanTime).trim() : cleanTime.trim();
+  }
+
+  return datePart.trim();
 }
 
 /**
@@ -2126,11 +2332,15 @@ function getFolderPdfCache(pdfFolder) {
 
 /**
  * Mencari Google Docs yang sudah ada di folder Bukti Dukung (mencegah duplikasi file)
- * Mendukung pencarian instan via folderDocCache jika tersedia.
+ * Mendukung pemisahan dokumen per ruangan dan pencarian instan via folderDocCache jika tersedia.
  */
-function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, folderCache) {
+function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, folderCache, ruangan) {
+  if (isHitungSkorTask(taskKegiatan)) return null;
   try {
-    var expectedDocName = "Bukti Dukung - " + sanitizeFileName(taskKegiatan) + " - " + cleanStr(empName) + " - " + bulanNama + " " + tahun;
+    var hasRuang = Boolean(ruangan && String(ruangan).trim() && String(ruangan).trim() !== '-' && String(ruangan).trim() !== 'Area Umum' && String(ruangan).trim() !== 'Umum');
+    var ruangClean = hasRuang ? String(ruangan).trim() : '';
+    var docTitlePrefix = hasRuang ? (sanitizeFileName(ruangClean) + " - ") : "";
+    var expectedDocName = "Bukti Dukung - " + docTitlePrefix + sanitizeFileName(taskKegiatan) + " - " + cleanStr(empName) + " - " + bulanNama + " " + tahun;
 
     if (folderCache) {
       if (folderCache.byExactName && folderCache.byExactName[expectedDocName]) {
@@ -2138,6 +2348,7 @@ function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, fo
       }
       var taskAlpha = getAlphaOnly(taskKegiatan || '');
       var empAlpha = getAlphaOnly(empName || '');
+      var ruangAlpha = hasRuang ? getAlphaOnly(ruangClean) : '';
       var subAlpha = taskAlpha.substring(0, Math.min(20, taskAlpha.length));
       var empSub = empAlpha.substring(0, Math.min(8, empAlpha.length));
       var blnLower = String(bulanNama || '').toLowerCase();
@@ -2145,6 +2356,12 @@ function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, fo
       for (var k = 0; k < folderCache.list.length; k++) {
         var it = folderCache.list[k];
         if (subAlpha && it.nameAlpha.indexOf(subAlpha) !== -1) {
+          if (hasRuang) {
+            var ruangSub = ruangAlpha.substring(0, Math.min(10, ruangAlpha.length));
+            if (ruangSub && it.nameAlpha.indexOf(ruangSub) === -1) {
+              continue; // Ruangan berbeda, jangan anggap sebagai file yang sama!
+            }
+          }
           if (!empAlpha || it.nameAlpha.indexOf(empSub) !== -1 || it.name.toLowerCase().indexOf(blnLower) !== -1) {
             return it.file;
           }
@@ -2157,6 +2374,7 @@ function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, fo
     var files = folder.getFiles();
     var taskAlpha = getAlphaOnly(taskKegiatan || '');
     var empAlpha = getAlphaOnly(empName || '');
+    var ruangAlpha = hasRuang ? getAlphaOnly(ruangClean) : '';
     var subAlpha = taskAlpha.substring(0, Math.min(20, taskAlpha.length));
     var docMime = (typeof MimeType !== 'undefined' && MimeType.GOOGLE_DOCS) ? MimeType.GOOGLE_DOCS : 'application/vnd.google-apps.document';
 
@@ -2170,6 +2388,12 @@ function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, fo
 
       var fAlpha = getAlphaOnly(fName);
       if (subAlpha && fAlpha.indexOf(subAlpha) !== -1) {
+        if (hasRuang) {
+          var ruangSub = ruangAlpha.substring(0, Math.min(10, ruangAlpha.length));
+          if (ruangSub && fAlpha.indexOf(ruangSub) === -1) {
+            continue;
+          }
+        }
         if (!empAlpha || fAlpha.indexOf(empAlpha.substring(0, Math.min(8, empAlpha.length))) !== -1 || fName.toLowerCase().indexOf(bulanNama.toLowerCase()) !== -1) {
           return f;
         }
@@ -2185,6 +2409,13 @@ function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, fo
  * Menyusun tata letak & isi Google Docs sesuai referensi gambar BUKTI DUKUNG DOKUMENTASI
  */
 function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
+  if (!photos || !Array.isArray(photos) || photos.length === 0) {
+    throw new Error("Kegiatan '" + ((task && task.kegiatan) || '') + "' tidak memiliki dokumentasi atau bukti dukung foto.");
+  }
+  if (task && isHitungSkorTask(task.kegiatan)) {
+    throw new Error("Kegiatan HITUNG SKOR dikecualikan dari pembuatan dokumen bukti dukung.");
+  }
+
   var body = doc.getBody();
   body.clear();
 
@@ -2237,11 +2468,15 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
   spacer1.setSpacingAfter(12);
 
   // 3. TABEL PENUGASAN (URAIAN KEGIATAN & RINCIAN KEGIATAN)
-  var narrativeText = formatRincianKegiatanNarrative(task.kegiatan, task.selesai || 0, periodeStr);
+  var taskRuangan = (task && task.ruangan && task.ruangan !== '-' && task.ruangan !== 'Area Umum' && task.ruangan !== 'Umum') ? String(task.ruangan).trim() : '';
+  var displayKegiatan = taskRuangan ? (taskRuangan + " - " + (task.kegiatan || '-')) : (task.kegiatan || '-');
+  var narrativeText = taskRuangan
+    ? ("Terlaksananya " + convertVerbsToNouns(task.kegiatan || '') + " pada " + taskRuangan + " sebanyak " + (task.selesai || 0) + " kali selama periode " + periodeStr + ".")
+    : formatRincianKegiatanNarrative(task.kegiatan, task.selesai || 0, periodeStr);
 
   var taskTable = body.appendTable([
     ["URAIAN KEGIATAN", "RINCIAN KEGIATAN"],
-    [task.kegiatan || '-', narrativeText]
+    [displayKegiatan, narrativeText]
   ]);
   taskTable.setBorderWidth(1);
   taskTable.setBorderColor("#000000");
@@ -2298,10 +2533,11 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
 
   // 6. PENYISIPAN FOTO BUKTI DUKUNG DENGAN CAPTION RAPI
   if (photos && photos.length > 0) {
-    // Optimasi performa & kestabilan: batasi foto per dokumen maksimal 4 foto
-    // agar ukuran Google Doc tidak membengkak dan ekspor PDF tidak timeout/OOM
-    var maxPhotos = 4;
+    // Maksimal 10 foto yang disematkan langsung sebagai gambar ke dalam dokumen
+    // Sisa foto dilampirkan secara rapi di bawahnya dalam bentuk tabel tautan berkas Google Drive beserta tanggal pelaksanaannya
+    var maxPhotos = 10;
     var photosToInsert = photos.slice(0, maxPhotos);
+    var remainingPhotos = (photos.length > maxPhotos) ? photos.slice(maxPhotos) : [];
 
     for (var i = 0; i < photosToInsert.length; i++) {
       var p = photosToInsert[i];
@@ -2360,24 +2596,94 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
       }
     }
 
-    if (photos.length > maxPhotos) {
-      var notePara = body.appendParagraph("(Menampilkan " + maxPhotos + " dari total " + photos.length + " foto bukti dukung. Seluruh foto tersimpan aman di Google Drive)");
-      notePara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    // Jika ada sisa foto di atas 10, lampirkan di bawahnya dalam bentuk tabel tautan berkas foto secara rapi dengan tanggal pelaksanaan
+    if (remainingPhotos.length > 0) {
+      var notePara = body.appendParagraph("Daftar Tautan Bukti Foto Dokumentasi Tambahan:");
+      notePara.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
       notePara.setFontFamily("Arial");
-      notePara.setFontSize(8.5);
-      notePara.setItalic(true);
-      try { notePara.editAsText().setForegroundColor("#64748b"); } catch (eColor) {}
-      notePara.setSpacingBefore(4);
-      notePara.setSpacingAfter(14);
+      notePara.setFontSize(10.5);
+      notePara.setBold(true);
+      notePara.setSpacingBefore(20);
+      notePara.setSpacingAfter(4);
+
+      var subNote = body.appendParagraph("(Menampilkan 10 foto dokumentasi utama di atas. Foto ke-11 s.d. " + photos.length + " dapat diakses langsung melalui tautan berkas Google Drive berikut):");
+      subNote.setAlignment(DocumentApp.HorizontalAlignment.LEFT);
+      subNote.setFontFamily("Arial");
+      subNote.setFontSize(9);
+      subNote.setItalic(true);
+      try { subNote.editAsText().setForegroundColor("#64748b"); } catch (eColor) {}
+      subNote.setSpacingBefore(0);
+      subNote.setSpacingAfter(8);
+
+      var remTableData = [
+        ["No", "Tanggal Pelaksanaan", "Tautan Berkas Foto (Google Drive)"]
+      ];
+
+      for (var r = 0; r < remainingPhotos.length; r++) {
+        var remP = remainingPhotos[r];
+        var remIdx = maxPhotos + r + 1;
+        var remDateStr = formatPhotoDateStr(remP, periodeStr) || periodeStr;
+        remTableData.push([String(remIdx), remDateStr, "Buka File Foto #" + remIdx]);
+      }
+
+      var remTable = body.appendTable(remTableData);
+      remTable.setBorderWidth(1);
+      remTable.setBorderColor("#cbd5e1");
+      remTable.setColumnWidth(0, 35);
+      remTable.setColumnWidth(1, 180);
+      remTable.setColumnWidth(2, 255);
+
+      // Format Header Tabel Tautan
+      var rHeaderRow = remTable.getRow(0);
+      for (var hc = 0; hc < 3; hc++) {
+        var hCell = rHeaderRow.getCell(hc);
+        hCell.setBackgroundColor("#f1f5f9");
+        hCell.setPaddingTop(5);
+        hCell.setPaddingBottom(5);
+        hCell.setPaddingLeft(6);
+        hCell.setPaddingRight(6);
+        var hp = hCell.getChild(0);
+        if (hp && hp.asParagraph) {
+          hp.asParagraph().setFontFamily("Arial");
+          hp.asParagraph().setFontSize(9.5);
+          hp.asParagraph().setBold(true);
+          hp.asParagraph().setAlignment(hc === 0 ? DocumentApp.HorizontalAlignment.CENTER : DocumentApp.HorizontalAlignment.LEFT);
+        }
+      }
+
+      // Format Baris Data & Hyperlink Berkas Foto
+      for (var r = 0; r < remainingPhotos.length; r++) {
+        var remP = remainingPhotos[r];
+        var remIdx = maxPhotos + r + 1;
+        var remUrl = remP.fileUrl || (remP.fileId ? ("https://drive.google.com/file/d/" + remP.fileId + "/view") : '');
+        var dataRow = remTable.getRow(r + 1);
+
+        for (var c = 0; c < 3; c++) {
+          var cell = dataRow.getCell(c);
+          if (r % 2 === 1) cell.setBackgroundColor("#f8fafc");
+          cell.setPaddingTop(4);
+          cell.setPaddingBottom(4);
+          cell.setPaddingLeft(6);
+          cell.setPaddingRight(6);
+          var cp = cell.getChild(0);
+          if (cp && cp.asParagraph) {
+            cp.asParagraph().setFontFamily("Arial");
+            cp.asParagraph().setFontSize(9);
+            if (c === 0) {
+              cp.asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+              cp.asParagraph().setBold(true);
+            } else if (c === 2 && remUrl) {
+              cp.asParagraph().editAsText().setLinkUrl(remUrl);
+              try { cp.asParagraph().editAsText().setForegroundColor("#2563eb"); } catch (eF) {}
+              cp.asParagraph().editAsText().setUnderline(true);
+            }
+          }
+        }
+      }
     }
   } else {
-    var noPhotoPara = body.appendParagraph("(Dokumentasi foto belum diunggah untuk kegiatan ini)");
-    noPhotoPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-    noPhotoPara.setFontFamily("Arial");
-    noPhotoPara.setFontSize(10);
-    noPhotoPara.setItalic(true);
-    try { noPhotoPara.editAsText().setForegroundColor("#64748b"); } catch (eColor) {}
-    noPhotoPara.setSpacingBefore(30);
+    // Sesuai aturan: dokumen bukti dukung tidak dibuat jika tidak memiliki foto dokumentasi
+    throw new Error("Kegiatan '" + ((task && task.kegiatan) || '') + "' tidak memiliki dokumentasi atau bukti dukung foto.");
   }
 }
 
@@ -2416,15 +2722,17 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIn
     var daysInMonth = (report.periode && report.periode.daysInMonth) || new Date(selYear, selMonth, 0).getDate();
     var periodeStr = "1–" + daysInMonth + " " + namaBulanStr + " " + selYear;
 
-    var items = report.items || [];
+    var rawItems = report.items || [];
+    var allPhotos = report.buktiDukung || [];
+
+    // Validasi & filter: lewati kegiatan HITUNG SKOR dan kegiatan yang tidak memiliki foto bukti dukung
+    var items = filterEligibleBuktiDukungTasks(rawItems, allPhotos);
     if (items.length === 0) {
       return {
         success: false,
-        message: "Tidak ditemukan daftar kegiatan/tugas checklist untuk pegawai " + empName + " pada periode " + periodeStr + "."
+        message: "Tidak ditemukan kegiatan yang memiliki dokumentasi/bukti dukung foto untuk pegawai " + empName + " pada periode " + periodeStr + ". Dokumen bukti dukung hanya dibuat untuk kegiatan yang telah memiliki dokumentasi foto."
       };
     }
-
-    var allPhotos = report.buktiDukung || [];
 
     // 1. Dapatkan Folder Induk Google Drive
     var rootInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
@@ -2445,6 +2753,19 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIn
     // Inisialisasi cache folder Google Docs sekali saja untuk efisiensi tinggi
     var folderDocCache = getFolderDocCache(buktiDukungFolder);
 
+    // Bersihkan file sisa HITUNG SKOR jika ada di Google Drive dari proses sebelumnya
+    if (folderDocCache && folderDocCache.list) {
+      for (var f = 0; f < folderDocCache.list.length; f++) {
+        var docItem = folderDocCache.list[f];
+        if (docItem && docItem.name && isHitungSkorTask(docItem.name)) {
+          try {
+            docItem.file.setTrashed(true);
+            delete folderDocCache.byExactName[docItem.name];
+          } catch (eTr) {}
+        }
+      }
+    }
+
     // 4. Pengelolaan Slice Batch untuk Mencegah Timeout (Chunking Support)
     var isBatchMode = (startIndex !== undefined && startIndex !== null);
     var sIdx = isBatchMode ? Math.max(0, Number(startIndex) || 0) : 0;
@@ -2459,10 +2780,17 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIn
       var item = itemsToProcess[i];
       var globalIdx = sIdx + i;
       var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
-      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
+      var itemRuangan = item.ruangan || '';
+
+      // Pengecualian kegiatan HITUNG SKOR
+      if (isHitungSkorTask(namaTugas)) continue;
+
+      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas, itemRuangan);
+      // Validasi ketersediaan bukti dukung: lewati jika tidak ada dokumentasi foto
+      if (!matchingPhotos || matchingPhotos.length === 0) continue;
 
       try {
-        var existingDocFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache);
+        var existingDocFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache, itemRuangan);
         var docObj = null;
         var docFile = null;
         var actionStatus = 'updated';
@@ -2474,7 +2802,9 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIn
           docFile = existingDocFile;
           actionStatus = 'updated';
         } else {
-          var docName = "Bukti Dukung - " + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
+          var hasRuang = Boolean(itemRuangan && String(itemRuangan).trim() && String(itemRuangan).trim() !== '-' && String(itemRuangan).trim() !== 'Area Umum' && String(itemRuangan).trim() !== 'Umum');
+          var docTitlePrefix = hasRuang ? (sanitizeFileName(itemRuangan) + " - ") : "";
+          var docName = "Bukti Dukung - " + docTitlePrefix + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
           docObj = DocumentApp.create(docName);
           buildGoogleDocContent(docObj, item, empName, periodeStr, matchingPhotos);
           docObj.saveAndClose();
@@ -2499,6 +2829,7 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIn
         var cleanDocUrl = String(docFile.getUrl() || '').replace(/\\/g, '').trim();
         processedItems.push({
           no: globalIdx + 1,
+          ruangan: itemRuangan,
           kegiatan: namaTugas,
           kuantitas: item.selesai !== undefined ? item.selesai : (item.target || 0),
           target: item.target || 0,
@@ -2594,15 +2925,17 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
     var daysInMonth = (report.periode && report.periode.daysInMonth) || new Date(selYear, selMonth, 0).getDate();
     var periodeStr = "1–" + daysInMonth + " " + namaBulanStr + " " + selYear;
 
-    var items = report.items || [];
+    var rawItems = report.items || [];
+    var allPhotos = report.buktiDukung || [];
+
+    // Validasi & filter: lewati kegiatan HITUNG SKOR dan kegiatan yang tidak memiliki foto bukti dukung
+    var items = filterEligibleBuktiDukungTasks(rawItems, allPhotos);
     if (items.length === 0) {
       return {
         success: false,
-        message: "Tidak ada daftar kegiatan checklist untuk pegawai " + empName + " pada periode " + periodeStr + "."
+        message: "Tidak ditemukan kegiatan yang memiliki dokumentasi bukti dukung untuk pegawai " + empName + " pada periode " + periodeStr + "."
       };
     }
-
-    var allPhotos = report.buktiDukung || [];
 
     // 1. Dapatkan Folder Induk Google Drive
     var rootInfo = resolveRootFolder(GOOGLE_DRIVE_ROOT_FOLDER_ID);
@@ -2627,6 +2960,30 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
     var folderDocCache = getFolderDocCache(buktiDukungFolder);
     var pdfCache = getFolderPdfCache(pdfFolder);
 
+    // Bersihkan file sisa HITUNG SKOR jika ada di Google Drive dari proses sebelumnya
+    if (folderDocCache && folderDocCache.list) {
+      for (var f = 0; f < folderDocCache.list.length; f++) {
+        var docItem = folderDocCache.list[f];
+        if (docItem && docItem.name && isHitungSkorTask(docItem.name)) {
+          try {
+            docItem.file.setTrashed(true);
+            delete folderDocCache.byExactName[docItem.name];
+          } catch (eTr) {}
+        }
+      }
+    }
+    if (pdfCache && pdfCache.list) {
+      for (var p = 0; p < pdfCache.list.length; p++) {
+        var pdfFile = pdfCache.list[p];
+        if (pdfFile && pdfFile.getName && isHitungSkorTask(pdfFile.getName())) {
+          try {
+            pdfFile.setTrashed(true);
+            delete pdfCache.byName[pdfFile.getName()];
+          } catch (eTrPdf) {}
+        }
+      }
+    }
+
     // 4. Pengelolaan Slice Batch
     var isBatchMode = (startIndex !== undefined && startIndex !== null);
     var sIdx = isBatchMode ? Math.max(0, Number(startIndex) || 0) : 0;
@@ -2643,16 +3000,25 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
       var item = itemsToProcess[i];
       var globalIdx = sIdx + i;
       var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
-      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
+      var itemRuangan = item.ruangan || '';
+
+      // Pengecualian kegiatan HITUNG SKOR
+      if (isHitungSkorTask(namaTugas)) continue;
+
+      var matchingPhotos = findPhotosForTask(allPhotos, namaTugas, itemRuangan);
+      // Validasi ketersediaan bukti dukung: lewati jika tidak ada dokumentasi foto
+      if (!matchingPhotos || matchingPhotos.length === 0) continue;
       var kuantitas = item.selesai !== undefined ? item.selesai : (item.target || 0);
       var rincianNarasi = formatRincianKegiatanNarrative(namaTugas, kuantitas, periodeStr);
 
-      var docFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache);
+      var docFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache, itemRuangan);
 
       // Jika file Doc belum ada, buat langsung
       if (!docFile) {
         try {
-          var docName = "Bukti Dukung - " + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
+          var hasRuang = Boolean(itemRuangan && String(itemRuangan).trim() && String(itemRuangan).trim() !== '-' && String(itemRuangan).trim() !== 'Area Umum' && String(itemRuangan).trim() !== 'Umum');
+          var docTitlePrefix = hasRuang ? (sanitizeFileName(itemRuangan) + " - ") : "";
+          var docName = "Bukti Dukung - " + docTitlePrefix + sanitizeFileName(namaTugas) + " - " + cleanStr(empName) + " - " + namaBulanStr + " " + selYear;
           var docObj = DocumentApp.create(docName);
           buildGoogleDocContent(docObj, item, empName, periodeStr, matchingPhotos);
           docObj.saveAndClose();
@@ -2747,13 +3113,18 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
       for (var k = 0; k < items.length; k++) {
         var itm = items[k];
         var tTask = itm.kegiatan || 'Pelaksanaan Tugas';
+        if (isHitungSkorTask(tTask)) continue;
+        var itmRuang = (itm.ruangan && itm.ruangan !== '-' && itm.ruangan !== 'Area Umum' && itm.ruangan !== 'Umum') ? String(itm.ruangan).trim() : '';
+        var tUraian = itmRuang ? (itmRuang + " - " + tTask) : tTask;
         var tKuantitas = itm.selesai !== undefined ? itm.selesai : (itm.target || 0);
-        var tNarasi = formatRincianKegiatanNarrative(tTask, tKuantitas, periodeStr);
+        var tNarasi = itmRuang
+          ? ("Terlaksananya " + convertVerbsToNouns(tTask) + " pada " + itmRuang + " sebanyak " + tKuantitas + " kali selama periode " + periodeStr + ".")
+          : formatRincianKegiatanNarrative(tTask, tKuantitas, periodeStr);
 
-        var dFile = findExistingDocFile(buktiDukungFolder, tTask, empName, namaBulanStr, selYear, folderDocCache);
+        var dFile = findExistingDocFile(buktiDukungFolder, tTask, empName, namaBulanStr, selYear, folderDocCache, itm.ruangan);
         var dUrl = dFile ? String(dFile.getUrl() || '').replace(/\\/g, '').trim() : '';
 
-        var pName = (dFile ? sanitizeFileName(dFile.getName()) : sanitizeFileName(tTask)) + ".pdf";
+        var pName = (dFile ? sanitizeFileName(dFile.getName()) : sanitizeFileName(tUraian)) + ".pdf";
         var pFile = refreshedPdfCache.byName ? refreshedPdfCache.byName[pName] : null;
         var pUrl = pFile ? String(pFile.getUrl() || '').replace(/\\/g, '').trim() : '';
 
@@ -2763,7 +3134,8 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
         fullResults.push({
           no: k + 1,
           rincianKegiatan: tNarasi,
-          uraianKegiatan: tTask,
+          uraianKegiatan: tUraian,
+          ruangan: itmRuang,
           satuan: "Kegiatan",
           kuantitas: tKuantitas,
           linkBuktiDukung: dUrl,
@@ -2774,7 +3146,7 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, b
         tableRows.push([
           k + 1,
           tNarasi,
-          tTask,
+          tUraian,
           "Kegiatan",
           tKuantitas,
           formulaDoc,
