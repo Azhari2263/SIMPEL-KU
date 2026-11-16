@@ -561,12 +561,8 @@ function renderIntegratedMonitoringUI() {
     let _lastExportReportData = null;
 
     function openExportModal(defaultEmpUsername = null) {
-      const curMonth = document.getElementById('globalMonthSelect')?.value || 
-                       document.getElementById('adminFilterBulan')?.value || 
-                       (new Date().getMonth() + 1);
-      const curYear = document.getElementById('globalYearSelect')?.value || 
-                      document.getElementById('adminFilterTahun')?.value || 
-                      new Date().getFullYear();
+      const curMonth = document.getElementById('globalMonthSelect')?.value || (new Date().getMonth() + 1);
+      const curYear = document.getElementById('globalYearSelect')?.value || new Date().getFullYear();
 
       const mSel = document.getElementById('exportMonthSelect');
       const ySel = document.getElementById('exportYearSelect');
@@ -2045,8 +2041,87 @@ function renderIntegratedMonitoringUI() {
      * ========================================================================
      */
     let _lastGeneratedDokumenData = null;
+    let _isGeneratingDokumen = false;
+    let _isGeneratingKipapp = false;
+    let _accumulatedDocItems = [];
+    let _accumulatedDocData = null;
+    let _accumulatedKipappItems = [];
+    let _accumulatedKipappData = null;
 
-    async function executeGenerateDokumenPerKegiatan() {
+    function renderBatchProgressUI(tipe, current, total, pct, detailText) {
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+      if (!resArea) return;
+
+      resArea.classList.remove('hidden');
+      const isPdf = (tipe === 'kipapp');
+      const title = isPdf ? 'Mengekspor PDF & Menyusun Kipapp...' : 'Membuat Dokumen Google Docs Per Kegiatan...';
+      const borderSpin = isPdf ? 'border-emerald-600' : 'border-blue-600';
+      const barColor = isPdf ? 'bg-emerald-600' : 'bg-blue-600';
+      const textColor = isPdf ? 'text-emerald-700' : 'text-blue-700';
+      const totalDisplay = (total !== null && total !== undefined && total > 0) ? total : '...';
+
+      resArea.innerHTML = `
+        <div class="space-y-2.5 py-1">
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 border-2 ${borderSpin} border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+              <span class="font-bold text-slate-800">${title}</span>
+            </div>
+            <span class="font-extrabold ${textColor} text-xs">${pct}%</span>
+          </div>
+
+          <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/80">
+            <div class="h-2.5 rounded-full transition-all duration-300 ease-out ${barColor}" style="width: ${pct}%"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-500">
+            <span class="truncate">${escapeHtml(detailText || '')}</span>
+            <span class="font-semibold text-slate-700 flex-shrink-0 ml-2">${current} / ${totalDisplay} Kegiatan</span>
+          </div>
+          <div class="text-[10px] text-slate-400 italic flex items-center gap-1">
+            <i class="fa-solid fa-shield-halved text-blue-500 text-[10px]"></i>
+            <span>Pemrosesan bertahap aktif: efisien, anti-timeout, dan bebas duplikasi di Google Drive.</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBatchErrorUI(tipe, failedIndex, total, errorMsg) {
+      const resArea = document.getElementById('rekapKegiatanResultArea');
+      if (!resArea) return;
+
+      const isPdf = (tipe === 'kipapp');
+      const resumeFn = isPdf ? `executeGenerateKipappDanPdf(${failedIndex})` : `executeGenerateDokumenPerKegiatan(${failedIndex})`;
+      const restartFn = isPdf ? `executeGenerateKipappDanPdf(0)` : `executeGenerateDokumenPerKegiatan(0)`;
+
+      resArea.innerHTML = `
+        <div class="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 space-y-2.5">
+          <div class="flex items-start gap-2.5">
+            <i class="fa-solid fa-circle-exclamation text-rose-600 mt-0.5 text-base flex-shrink-0"></i>
+            <div>
+              <strong class="font-bold text-xs block">Proses Terhenti pada Kegiatan ${failedIndex + 1}${total ? ' dari ' + total : ''}</strong>
+              <p class="text-[11px] text-rose-700 mt-0.5">${escapeHtml(errorMsg || 'Terjadi kesalahan jaringan atau respons server.')}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-1 flex-wrap">
+            <button type="button" onclick="${resumeFn}" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95">
+              <i class="fa-solid fa-rotate-right text-xs"></i>
+              <span>Lanjutkan Proses (Mulai Kegiatan ${failedIndex + 1})</span>
+            </button>
+            <button type="button" onclick="${restartFn}" class="px-3 py-1.5 bg-white hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-xs font-semibold transition cursor-pointer">
+              <span>Ulangi dari Awal</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function executeGenerateDokumenPerKegiatan(resumeStartIndex = 0) {
+      if (_isGeneratingDokumen) {
+        showToast('Proses generate dokumen sedang berjalan. Mohon tunggu...', 'info');
+        return;
+      }
+
       const role = (currentUser?.role || '').toLowerCase();
       const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
 
@@ -2081,79 +2156,114 @@ function renderIntegratedMonitoringUI() {
       const btnKipapp = document.getElementById('btnBuatKipapp');
       const resArea = document.getElementById('rekapKegiatanResultArea');
 
+      _isGeneratingDokumen = true;
       if (btnGen) {
         btnGen.disabled = true;
         btnGen.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Memproses Dokumen...</span>';
       }
 
-      if (resArea) {
-        resArea.classList.remove('hidden');
-        resArea.innerHTML = `
-          <div class="flex items-center gap-3 py-2 text-slate-600">
-            <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-            <div>
-              <span class="font-bold text-slate-800">Sedang membuat/memperbarui Google Docs rekapitulasi per kegiatan...</span>
-              <p class="text-[10px] text-slate-500 mt-0.5">Menyiapkan dokumen penugasan, menyisipkan foto bukti dukung, dan menata folder di Google Drive.</p>
-            </div>
-          </div>
-        `;
+      const BATCH_SIZE = 4;
+      const MAX_RETRIES = 3;
+      let startIndex = Math.max(0, Number(resumeStartIndex) || 0);
+
+      if (startIndex === 0) {
+        _accumulatedDocItems = [];
+        _accumulatedDocData = null;
       }
 
-      showLoader(true, 'Menghasilkan dokumen Google Docs per kegiatan...');
+      let totalItems = _accumulatedDocData ? _accumulatedDocData.totalItems : null;
 
       try {
-        const res = await callBackend('generateDokumenPerKegiatan', {
-          token: sessionToken,
-          targetUsername: targetUser,
-          bulan: bulan,
-          tahun: tahun
-        });
+        while (true) {
+          const currentProgress = startIndex;
+          const pct = totalItems ? Math.min(99, Math.round((currentProgress / totalItems) * 100)) : 5;
+          renderBatchProgressUI('docs', currentProgress, totalItems, pct, `Menyiapkan & memproses batch kegiatan ${startIndex + 1}...`);
 
-        showLoader(false);
+          let res = null;
+          let batchSuccess = false;
+          let lastErrorMessage = '';
+
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              res = await callBackend('generateDokumenPerKegiatan', {
+                token: sessionToken,
+                targetUsername: targetUser,
+                bulan: bulan,
+                tahun: tahun,
+                startIndex: startIndex,
+                batchSize: BATCH_SIZE
+              });
+
+              if (res && res.success && res.data) {
+                batchSuccess = true;
+                break;
+              } else {
+                lastErrorMessage = (res && res.message) ? res.message : 'Terjadi kendala saat memproses dokumen.';
+              }
+            } catch (err) {
+              lastErrorMessage = err.message || 'Kesalahan jaringan/server.';
+            }
+
+            if (attempt < MAX_RETRIES) {
+              renderBatchProgressUI('docs', currentProgress, totalItems, pct, `Koneksi tersendat, mencoba ulang (percobaan ${attempt + 1}/${MAX_RETRIES})...`);
+              await new Promise(r => setTimeout(r, 1500 * attempt));
+            }
+          }
+
+          if (!batchSuccess) {
+            _isGeneratingDokumen = false;
+            if (btnGen) {
+              btnGen.disabled = false;
+              btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Generate Dokumen Kegiatan</span>';
+            }
+            renderBatchErrorUI('docs', startIndex, totalItems, lastErrorMessage);
+            showToast('Gagal memproses kegiatan: ' + lastErrorMessage, 'error');
+            return;
+          }
+
+          _accumulatedDocData = res.data;
+          totalItems = res.data.totalItems || 0;
+
+          if (Array.isArray(res.data.items)) {
+            _accumulatedDocItems.push(...res.data.items);
+          }
+
+          // Periksa apakah seluruh kegiatan telah selesai diproses
+          if (res.data.isComplete || res.data.nextIndex === null || res.data.nextIndex === undefined || startIndex + BATCH_SIZE >= totalItems) {
+            renderBatchProgressUI('docs', totalItems, totalItems, 100, 'Selesai! Menyusun tampilan hasil...');
+            break;
+          }
+
+          startIndex = res.data.nextIndex;
+        }
+
+        // Proses berhasil sepenuhnya
+        _isGeneratingDokumen = false;
         if (btnGen) {
           btnGen.disabled = false;
           btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Generate Dokumen Kegiatan</span>';
         }
 
-        if (res && res.success && res.data) {
-          _lastGeneratedDokumenData = res.data;
-          showToast(res.message || 'Dokumen rekapitulasi per kegiatan berhasil dibuat!', 'success');
+        _accumulatedDocData.items = _accumulatedDocItems;
+        _lastGeneratedDokumenData = _accumulatedDocData;
 
-          if (btnKipapp) {
-            btnKipapp.classList.remove('hidden');
-            btnKipapp.classList.add('inline-flex');
-          }
+        showToast(_accumulatedDocData.message || 'Dokumen rekapitulasi per kegiatan berhasil dibuat!', 'success');
 
-          renderHasilGenerateDokumenUI(res.data);
-        } else {
-          if (resArea) {
-            resArea.innerHTML = `
-              <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start gap-2">
-                <i class="fa-solid fa-circle-exclamation mt-0.5 text-sm flex-shrink-0"></i>
-                <div>
-                  <strong class="font-bold block">Gagal Membuat Dokumen</strong>
-                  <span class="text-[11px]">${escapeHtml(res?.message || 'Terjadi kesalahan saat membuat dokumen.')}</span>
-                </div>
-              </div>
-            `;
-          }
-          showToast(res?.message || 'Gagal membuat dokumen kegiatan.', 'error');
+        if (btnKipapp) {
+          btnKipapp.classList.remove('hidden');
+          btnKipapp.classList.add('inline-flex');
         }
-      } catch (err) {
-        showLoader(false);
+
+        renderHasilGenerateDokumenUI(_accumulatedDocData);
+
+      } catch (fatalErr) {
+        _isGeneratingDokumen = false;
         if (btnGen) {
           btnGen.disabled = false;
           btnGen.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-xs"></i><span>Generate Dokumen Kegiatan</span>';
         }
-        if (resArea) {
-          resArea.innerHTML = `
-            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
-              <strong class="font-bold block">Kesalahan Koneksi / Server</strong>
-              <span class="text-[11px]">${escapeHtml(err.message)}</span>
-            </div>
-          `;
-        }
-        showToast('Kesalahan: ' + err.message, 'error');
+        renderBatchErrorUI('docs', startIndex, totalItems, fatalErr.message);
+        showToast('Kesalahan: ' + fatalErr.message, 'error');
       }
     }
 
@@ -2215,7 +2325,12 @@ function renderIntegratedMonitoringUI() {
       `;
     }
 
-    async function executeGenerateKipappDanPdf() {
+    async function executeGenerateKipappDanPdf(resumeStartIndex = 0) {
+      if (_isGeneratingKipapp) {
+        showToast('Proses pembuatan Kipapp & PDF sedang berjalan. Mohon tunggu...', 'info');
+        return;
+      }
+
       const role = (currentUser?.role || '').toLowerCase();
       const isManager = role.includes('admin') || role.includes('supervisor') || role.includes('kabag') || role.includes('umum');
 
@@ -2244,74 +2359,114 @@ function renderIntegratedMonitoringUI() {
       const btnKipapp = document.getElementById('btnBuatKipapp');
       const resArea = document.getElementById('rekapKegiatanResultArea');
 
+      _isGeneratingKipapp = true;
       if (btnKipapp) {
         btnKipapp.disabled = true;
         btnKipapp.innerHTML = '<div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div><span>Menyusun Kipapp & PDF...</span>';
       }
 
-      if (resArea) {
-        resArea.classList.remove('hidden');
-        resArea.innerHTML = `
-          <div class="flex items-center gap-3 py-3 text-slate-600">
-            <div class="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-            <div>
-              <span class="font-bold text-slate-800">Sedang mengekspor berkas PDF dan menyusun Google Sheets Kipapp...</span>
-              <p class="text-[10px] text-slate-500 mt-0.5">Membuat folder 'Bukti Dukung PDF', mengekspor seluruh Google Docs, dan memperbarui spreadsheet Kipapp.</p>
-            </div>
-          </div>
-        `;
+      const BATCH_SIZE = 4;
+      const MAX_RETRIES = 3;
+      let startIndex = Math.max(0, Number(resumeStartIndex) || 0);
+
+      if (startIndex === 0) {
+        _accumulatedKipappItems = [];
+        _accumulatedKipappData = null;
       }
 
-      showLoader(true, 'Menyusun berkas Kipapp & PDF di Google Drive...');
+      let totalItems = _accumulatedKipappData ? _accumulatedKipappData.totalItems : null;
 
       try {
-        const res = await callBackend('generateKipappDanPdf', {
-          token: sessionToken,
-          targetUsername: targetUser,
-          bulan: bulan,
-          tahun: tahun
-        });
+        while (true) {
+          const currentProgress = startIndex;
+          const pct = totalItems ? Math.min(99, Math.round((currentProgress / totalItems) * 100)) : 5;
+          renderBatchProgressUI('kipapp', currentProgress, totalItems, pct, `Mengekspor PDF & menyusun kegiatan ${startIndex + 1}...`);
 
-        showLoader(false);
-        if (btnKipapp) {
-          btnKipapp.disabled = false;
-          btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
-        }
+          let res = null;
+          let batchSuccess = false;
+          let lastErrorMessage = '';
 
-        if (res && res.success && res.data) {
-          showToast(res.message || 'Google Sheets Kipapp dan berkas PDF berhasil dibuat!', 'success');
-          renderHasilKipappDanPdfUI(res.data);
-        } else {
-          if (resArea) {
-            resArea.innerHTML = `
-              <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start gap-2">
-                <i class="fa-solid fa-circle-exclamation mt-0.5 text-sm flex-shrink-0"></i>
-                <div>
-                  <strong class="font-bold block">Gagal Membuat Kipapp & PDF</strong>
-                  <span class="text-[11px]">${escapeHtml(res?.message || 'Terjadi kendala saat menyusun berkas.')}</span>
-                </div>
-              </div>
-            `;
+          for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+              res = await callBackend('generateKipappDanPdf', {
+                token: sessionToken,
+                targetUsername: targetUser,
+                bulan: bulan,
+                tahun: tahun,
+                startIndex: startIndex,
+                batchSize: BATCH_SIZE
+              });
+
+              if (res && res.success && res.data) {
+                batchSuccess = true;
+                break;
+              } else {
+                lastErrorMessage = (res && res.message) ? res.message : 'Terjadi kendala saat menyusun Kipapp & PDF.';
+              }
+            } catch (err) {
+              lastErrorMessage = err.message || 'Kesalahan jaringan/server.';
+            }
+
+            if (attempt < MAX_RETRIES) {
+              renderBatchProgressUI('kipapp', currentProgress, totalItems, pct, `Koneksi tersendat, mencoba ulang (percobaan ${attempt + 1}/${MAX_RETRIES})...`);
+              await new Promise(r => setTimeout(r, 1500 * attempt));
+            }
           }
-          showToast(res?.message || 'Gagal membuat Kipapp & PDF.', 'error');
+
+          if (!batchSuccess) {
+            _isGeneratingKipapp = false;
+            if (btnKipapp) {
+              btnKipapp.disabled = false;
+              btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
+            }
+            renderBatchErrorUI('kipapp', startIndex, totalItems, lastErrorMessage);
+            showToast('Gagal memproses Kipapp & PDF: ' + lastErrorMessage, 'error');
+            return;
+          }
+
+          _accumulatedKipappData = res.data;
+          totalItems = res.data.totalItems || 0;
+
+          // Ingat: pada batch terakhir, backend otomatis menyusun fullResults
+          if (Array.isArray(res.data.items)) {
+            _accumulatedKipappItems.push(...res.data.items);
+          }
+
+          if (res.data.isComplete || res.data.nextIndex === null || res.data.nextIndex === undefined || startIndex + BATCH_SIZE >= totalItems) {
+            renderBatchProgressUI('kipapp', totalItems, totalItems, 100, 'Selesai! Google Sheets Kipapp & PDF berhasil diperbarui.');
+            break;
+          }
+
+          startIndex = res.data.nextIndex;
         }
-      } catch (err) {
-        showLoader(false);
+
+        _isGeneratingKipapp = false;
         if (btnKipapp) {
           btnKipapp.disabled = false;
           btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
         }
-        if (resArea) {
-          resArea.innerHTML = `
-            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700">
-              <strong class="font-bold block">Kesalahan Koneksi / Server</strong>
-              <span class="text-[11px]">${escapeHtml(err.message)}</span>
-            </div>
-          `;
+
+        // Jika pada batch terakhir backend telah mengembalikan full list di res.data.items, gunakan itu, jika tidak gunakan accumulated
+        if (_accumulatedKipappData && (!_accumulatedKipappData.items || _accumulatedKipappData.items.length < totalItems)) {
+          _accumulatedKipappData.items = _accumulatedKipappItems;
         }
-        showToast('Kesalahan: ' + err.message, 'error');
+
+        showToast(_accumulatedKipappData.message || 'Google Sheets Kipapp dan berkas PDF berhasil dibuat!', 'success');
+        renderHasilKipappDanPdfUI(_accumulatedKipappData);
+
+      } catch (fatalErr) {
+        _isGeneratingKipapp = false;
+        if (btnKipapp) {
+          btnKipapp.disabled = false;
+          btnKipapp.innerHTML = '<i class="fa-solid fa-table-list text-xs"></i><span>Buat Kipapp</span>';
+        }
+        renderBatchErrorUI('kipapp', startIndex, totalItems, fatalErr.message);
+        showToast('Kesalahan: ' + fatalErr.message, 'error');
       }
     }
+
+    window.executeGenerateDokumenPerKegiatan = executeGenerateDokumenPerKegiatan;
+    window.executeGenerateKipappDanPdf = executeGenerateKipappDanPdf;
 
     function renderHasilKipappDanPdfUI(d) {
       const resArea = document.getElementById('rekapKegiatanResultArea');
@@ -2324,9 +2479,11 @@ function renderIntegratedMonitoringUI() {
           <td class="p-2 font-medium text-slate-800">${escapeHtml(it.uraianKegiatan)}</td>
           <td class="p-2 text-center font-bold text-emerald-600">${it.kuantitas}</td>
           <td class="p-2 text-center">
-            <a href="${it.linkBuktiDukung}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold underline text-[10px]">
-              Docs
-            </a>
+            ${it.linkBuktiDukung && it.linkBuktiDukung !== '-' ? `
+              <a href="${it.linkBuktiDukung}" target="_blank" class="text-blue-600 hover:text-blue-800 font-bold underline text-[10px]">
+                Docs
+              </a>
+            ` : '-'}
           </td>
           <td class="p-2 text-center">
             ${it.linkPdf && it.linkPdf !== '-' ? `

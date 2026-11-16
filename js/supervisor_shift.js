@@ -172,7 +172,7 @@ function renderActiveOfficerDailyView() {
       }
 
       // Render Day Selector Carousel for active officer
-      const daySelector = document.getElementById('secDayPillsContainer') || document.getElementById('secDaysSelectorGrid');
+      const daySelector = document.getElementById('secDayPillsContainer');
       if (daySelector) {
         daySelector.innerHTML = schedCols.map(col => {
           const sObj = (officer.schedule || []).find(s => s.tanggal === col.tanggal) || { kodeShift: 'O' };

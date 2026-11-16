@@ -32,30 +32,24 @@ async function loadInspeksiMutuData(unit = 'SEMUA', forceRefresh = false) {
       }
     }
 
-function filterInspeksiUnit(unit) {
-      document.querySelectorAll('.insp-filter-btn').forEach(btn => {
-        if (btn.getAttribute('data-unit') === unit) {
-          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm';
-        } else {
-          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600';
-        }
-      });
-      loadInspeksiMutuData(unit, true);
-    }
-
-    let inspCurrentUnitFilter = 'SEMUA';
+let inspCurrentUnitFilter = 'SEMUA';
 
 function filterInspeksiUnit(unit) {
-      inspCurrentUnitFilter = unit;
-      document.querySelectorAll('.insp-filter-btn').forEach(btn => {
-        if (btn.getAttribute('data-unit') === unit) {
-          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm';
-        } else {
-          btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600';
-        }
-      });
-      filterInspeksiTableRealtime(document.getElementById('searchInspeksiTable')?.value || '');
+  inspCurrentUnitFilter = unit;
+  document.querySelectorAll('.insp-filter-btn').forEach(btn => {
+    if (btn.getAttribute('data-unit') === unit) {
+      btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm';
+    } else {
+      btn.className = 'insp-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600';
     }
+  });
+
+  if (!cachedInspeksiData) {
+    loadInspeksiMutuData(unit, true);
+  } else {
+    filterInspeksiTableRealtime(document.getElementById('searchInspeksiTable')?.value || '');
+  }
+}
 
 function filterInspeksiTableRealtime(q) {
       if (!cachedInspeksiData) return;
@@ -111,8 +105,18 @@ function renderInspeksiMutuUI(list) {
     }
 
 function openInspeksiMutuModal() {
-      openModal('modalInspeksiMutu');
-    }
+  const tglInput = document.getElementById('inspTanggalInput');
+  if (tglInput && !tglInput.value) {
+    const d = new Date();
+    const day = String(d.getDate()).padStart(2, '0');
+    const mon = String(d.getMonth() + 1).padStart(2, '0');
+    tglInput.value = `${day}/${mon}/${d.getFullYear()}`;
+  }
+  for (let i = 1; i <= 4; i++) {
+    setInspRating(i, 5);
+  }
+  openModal('modalInspeksiMutu');
+}
 
 let _inspRatings = { 1: 5, 2: 5, 3: 5, 4: 5, 5: 5 };
 
@@ -137,7 +141,7 @@ function onInspUnitInputChange() {
 
 async function submitInspeksiMutu() {
   const unit = document.getElementById('inspUnitInput')?.value || 'Kebersihan';
-  const ruangan = document.getElementById('inspRuanganInput')?.value || document.getElementById('inspAreaInput')?.value || '';
+  const ruangan = document.getElementById('inspRuanganInput')?.value || '';
   const tanggal = document.getElementById('inspTanggalInput')?.value || '';
   const catatan = document.getElementById('inspCatatanInput')?.value || '';
   const tindakLanjut = document.getElementById('inspTindakLanjutInput')?.value || '';
@@ -150,30 +154,31 @@ async function submitInspeksiMutu() {
     return;
   }
 
-  const avg = ((_inspRatings[1] + _inspRatings[2] + _inspRatings[3] + _inspRatings[4] + _inspRatings[5]) / 5);
+  const avg = Number(((_inspRatings[1] + _inspRatings[2] + _inspRatings[3] + _inspRatings[4]) / 4).toFixed(2));
   const statusRekomendasi = avg >= 4.0 ? 'Sesuai Standar' : (avg >= 3.0 ? 'Perlu Perbaikan Ringan' : 'Perlu Tindakan Korektif');
 
   showLoader(true);
   try {
     const res = await callBackend('saveInspeksiMutu', {
       token: sessionToken,
-      payload: {
-        unit: unit,
-        ruangan: ruangan,
-        pegawaiArea: ruangan,
-        tanggal: tanggal,
-        skorRataRata: avg,
-        param1: _inspRatings[1],
-        param2: _inspRatings[2],
-        param3: _inspRatings[3],
-        param4: _inspRatings[4],
-        param5: _inspRatings[5],
-        catatan: catatan,
-        tindakLanjut: tindakLanjut,
-        statusRekomendasi: statusRekomendasi,
-        bulan: bulan,
-        tahun: tahun
-      }
+      unit: unit,
+      ruangan: ruangan,
+      pegawaiArea: ruangan,
+      tanggal: tanggal,
+      skorRataRata: avg,
+      skorKerapihan: _inspRatings[1],
+      skorKetepatan: _inspRatings[2],
+      skorKepatuhan: _inspRatings[3],
+      skorKelengkapan: _inspRatings[4],
+      param1: _inspRatings[1],
+      param2: _inspRatings[2],
+      param3: _inspRatings[3],
+      param4: _inspRatings[4],
+      catatan: catatan,
+      tindakLanjut: tindakLanjut,
+      statusRekomendasi: statusRekomendasi,
+      bulan: bulan,
+      tahun: tahun
     });
     showLoader(false);
     if (res && res.success) {

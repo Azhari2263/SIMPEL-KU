@@ -98,12 +98,7 @@ function renderJadwalKeamananUI() {
         let isDoneCount = 0;
         let dayTaskTotal = 0;
         if (d.taskItems && !isLibur) {
-          const shiftTasks = d.taskItems.filter(t => {
-            const rUpper = String(t.ruangan || '').toUpperCase();
-            if (kode === 'P') return rUpper.includes('PAGI') || rUpper.includes('JAM KERJA');
-            if (kode === 'S' || kode === 'M') return rUpper.includes('MALAM');
-            return false;
-          });
+          const shiftTasks = d.taskItems.filter(t => isKeamananTaskForShift(t, kode));
           dayTaskTotal = shiftTasks.length;
           isDoneCount = shiftTasks.filter(t => t.dailyStatus && (t.dailyStatus[item.tanggal] === '1' || t.dailyStatus[item.tanggal] === 1)).length;
         }
@@ -166,18 +161,7 @@ function renderJadwalKeamananUI() {
       }
 
       const allTasks = d.taskItems || [];
-      let filteredTasks = [];
-      if (shiftKode === 'P') {
-        filteredTasks = allTasks.filter(t => {
-          const rUpper = String(t.ruangan || '').toUpperCase();
-          return rUpper.includes('PAGI') || rUpper.includes('JAM KERJA');
-        });
-      } else if (shiftKode === 'S' || shiftKode === 'M') {
-        filteredTasks = allTasks.filter(t => {
-          const rUpper = String(t.ruangan || '').toUpperCase();
-          return rUpper.includes('MALAM');
-        });
-      }
+      const filteredTasks = allTasks.filter(t => isKeamananTaskForShift(t, shiftKode));
 
       const totalCount = filteredTasks.length;
       const completedCount = filteredTasks.filter(t => t.dailyStatus && (t.dailyStatus[selectedKeamananDay] === '1' || t.dailyStatus[selectedKeamananDay] === 1)).length;

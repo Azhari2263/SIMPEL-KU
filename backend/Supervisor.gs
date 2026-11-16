@@ -865,7 +865,11 @@ function getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, ti
     for (var i = 1; i < bValues.length; i++) {
       var bRow = bValues[i];
       var bYear = Number(bRow[2] || 0);
-      var bMonth = Number(bRow[3] || 0);
+      var rawBMonth = bRow[3];
+      var bMonth = Number(rawBMonth || 0);
+      if (!bMonth && typeof rawBMonth === 'string' && typeof MONTH_MAP_ID !== 'undefined') {
+        bMonth = MONTH_MAP_ID[rawBMonth.toUpperCase().trim()] || 0;
+      }
       if (selectedYear && bYear && bYear !== selectedYear) continue;
       if (selectedMonth && bMonth && bMonth !== selectedMonth) continue;
 
@@ -939,8 +943,8 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
     const userRoleLower = (session.role || '').toLowerCase();
     const isManager = userRoleLower.includes('admin') || userRoleLower.includes('supervisor') || userRoleLower.includes('kabag') || userRoleLower.includes('humas') || userRoleLower.includes('koordinator') || userRoleLower.includes('korlap');
 
-    // JIKA TIPE 'semua' (Hanya untuk Admin / Supervisor)
-    if (tipe === 'semua' && isManager) {
+    // JIKA TIPE 'semua' (Rekap terpadu seluruh pegawai)
+    if (tipe === 'semua') {
       const allUsers = getAllUsersList(ss);
       const nonManagementStaff = allUsers.filter(u => {
         const r = (u.role || '').toLowerCase();
@@ -1263,13 +1267,28 @@ function supervisorToggleStaffTaskCheck(token, payload) {
       }
     }
 
-    if (existingRowIdx === -1 && targetNamaPegawai && namaTugas) {
+    if (existingRowIdx === -1 && (targetNamaPegawai || targetUsername) && namaTugas) {
+      const targetUserAlpha = getAlphaOnly(targetUsername);
+      const targetNamaAlpha = getAlphaOnly(targetNamaPegawai);
+      const targetTugasAlpha = getAlphaOnly(namaTugas);
+
       for (let r = 1; r < values.length; r++) {
         const row = values[r];
+        const rYear = Number(row[2] || 0);
+        const rMonth = Number(row[3] || 0);
         const rDay = Number(row[5] || 0);
-        const rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        const rUserVal = String(row[9] || '').trim();
+        const rNamaVal = String(row[8] || '').trim();
+        const rUserAlpha = getAlphaOnly(rUserVal);
+        const rNamaAlpha = getAlphaOnly(rNamaVal);
         const rTugas = getAlphaOnly(String(row[11] || ''));
-        if (rDay === dayNum && rUser === getAlphaOnly(targetUsername || targetNamaPegawai) && rTugas === getAlphaOnly(namaTugas)) {
+
+        const isUserMatch = (
+          (targetUserAlpha && (rUserAlpha === targetUserAlpha || rNamaAlpha === targetUserAlpha || isUserAliasMatch(rUserAlpha, targetUserAlpha))) ||
+          (targetNamaAlpha && (rUserAlpha === targetNamaAlpha || rNamaAlpha === targetNamaAlpha || isUserAliasMatch(rNamaAlpha, targetNamaAlpha)))
+        );
+
+        if (rDay === dayNum && (!rMonth || rMonth === monthNum) && (!rYear || rYear === yearNum) && isUserMatch && rTugas === targetTugasAlpha) {
           existingRowIdx = r + 1;
           break;
         }

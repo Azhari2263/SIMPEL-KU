@@ -1,4 +1,4 @@
-/**
+﻿/**
 
  * ========================================================================
 
@@ -1064,6 +1064,83 @@ function getAllUsersList(ss) {
   return list;
 }
 
+/**
+ * FUNGSI SETUP DATABASE USERS OTOMATIS
+ * Menginisialisasi sheet Users jika belum ada atau melengkapi akun default (18 Pegawai SIMPEL-KU).
+ */
+function setupAllUsers() {
+  const ss = getDb();
+  if (!ss) return "Database Spreadsheet tidak terhubung. Pastikan SPREADSHEET_ID valid.";
+
+  let userSheet = ss.getSheetByName("Users");
+  if (!userSheet) {
+    userSheet = ss.insertSheet("Users");
+  }
+
+  const headers = ["Username", "Nama Pegawai", "Nama Sheet", "Password", "Role", "Unit", "NIP", "Terakhir Ganti Kredensial"];
+
+  const allUsers = [
+    ["admin",      "Administrator SIMPEL-KU",  "Users",          "admin123",  "Admin",               "Manajemen", "198501012010011001", ""],
+    ["supervisor", "Supervisor / Kabag Umum",  "Users",          "spv123",    "Supervisor",          "Manajemen", "198002022005011002", ""],
+    ["humas",      "Tim Umum dan Humas",       "Users",          "humas123",  "Tim Umum dan Humas",  "Umum",      "199003032015012003", ""],
+    ["korlap",     "Koordinator Lapangan",     "Users",          "korlap123", "Koordinator Lapangan", "Umum",      "199204042017011004", ""],
+    ["yuni",       "Yuni Juniarti",            "YuniJuniarti",   "yuni123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-001",        ""],
+    ["slamet",     "Slamet Riyadi",            "SlametRiyadi",   "slamet123", "Petugas Kebersihan",  "Kebersihan","PJLP-KB-002",        ""],
+    ["dede",       "Nurramadhanial (Dede)",    "Nurramadhanial", "dede123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-003",        ""],
+    ["syukri",     "Muhammad Syukri",          "MSyukri",        "syukri123", "Petugas Kebersihan",  "Kebersihan","PJLP-KB-004",        ""],
+    ["ramadhan",   "Ramadhan",                 "Ramadhan",       "rama123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-005",        ""],
+    ["mawardi",    "Mawardi",                  "Mawardi",        "mawardi123","Petugas Pelayanan",   "Pelayanan", "PJLP-PL-001",        ""],
+    ["rania",      "Rania Naila Husna",        "RaniaNailaHusna","rania123",  "Petugas Pelayanan",   "Pelayanan", "PJLP-PL-002",        ""],
+    ["alfiana",    "Alfiana Ayuni",            "AlfianaAyuni",   "alfiana123","Petugas Pelayanan",   "Pelayanan", "PJLP-PL-003",        ""],
+    ["eddy",       "Eddy Suryadi",             "EddySuryadi",    "eddy123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-001",        ""],
+    ["reza",       "Syarif Reza Nopriadrian",  "SyReza",         "reza123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-002",        ""],
+    ["feri",       "Feri Yustami",             "FeriYustami",    "feri123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-003",        ""],
+    ["eko",        "Eko Prasetyo",             "EkoPrasetyo",    "eko123",    "Petugas Keamanan",    "Keamanan",  "PJLP-KM-004",        ""],
+    ["agus",       "Agus Tetriansyah",         "AgusTetriansyah","agus123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-005",        ""],
+    ["rizki",      "Rizki Fadil",              "RizkiFadil",     "rizki123",  "Petugas Keamanan",    "Keamanan",  "PJLP-KM-006",        ""]
+  ];
+
+  if (userSheet.getLastRow() === 0) {
+    userSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    userSheet.getRange(1, 1, 1, headers.length)
+      .setBackground("#1e40af")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold");
+    userSheet.getRange(2, 1, allUsers.length, headers.length).setValues(allUsers);
+    userSheet.autoResizeColumns(1, headers.length);
+    _cachedUserList = null;
+    resetMemoryCache();
+    return "Setup Users Berhasil! " + allUsers.length + " akun default telah dibuat.";
+  }
+
+  const existingValues = userSheet.getDataRange().getValues();
+  const existingUsernames = new Set();
+  for (let i = 1; i < existingValues.length; i++) {
+    const u = cleanStr(existingValues[i][0]).toLowerCase();
+    if (u) existingUsernames.add(u);
+  }
+
+  const usersToAdd = [];
+  for (let i = 0; i < allUsers.length; i++) {
+    const targetU = allUsers[i][0].toLowerCase();
+    if (!existingUsernames.has(targetU)) {
+      usersToAdd.push(allUsers[i]);
+    }
+  }
+
+  if (usersToAdd.length > 0) {
+    userSheet.getRange(existingValues.length + 1, 1, usersToAdd.length, headers.length).setValues(usersToAdd);
+  }
+
+  _cachedUserList = null;
+  resetMemoryCache();
+  return "Sinkronisasi Users Berhasil! " + usersToAdd.length + " akun baru ditambahkan, total " + (existingValues.length - 1 + usersToAdd.length) + " akun aktif.";
+}
+
+function setupSampleDatabase() {
+  return setupAllUsers();
+}
+
 // <<<<<<<<<< END MODUL: backend/Auth.gs <<<<<<<<<<
 
 
@@ -1334,8 +1411,14 @@ function getBuktiDukungMap(ss, bulan, tahun) {
     }
 
     // Fallback key: tanggal_namaPegawaiAlpha_ruanganAlpha_tugasAlpha
-    var fKey = [rDay, getAlphaOnly(record.namaPegawai || record.username), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
-    fallbackMap[fKey] = record;
+    if (record.namaPegawai) {
+      var fKey1 = [rDay, getAlphaOnly(record.namaPegawai), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
+      fallbackMap[fKey1] = record;
+    }
+    if (record.username) {
+      var fKey2 = [rDay, getAlphaOnly(record.username), getAlphaOnly(record.ruangan), getAlphaOnly(record.namaTugas)].join('_');
+      fallbackMap[fKey2] = record;
+    }
   }
 
   return { map: map, fallbackMap: fallbackMap };
@@ -1589,14 +1672,28 @@ function updateSupervisorChecklist(token, payload) {
     }
 
     // Jika belum ada row taskKey exact, cari fallback (tanggal + nama + tugas)
-    if (existingRowIdx === -1 && empName && namaTugas) {
-      var searchAlpha = [targetTanggal, getAlphaOnly(username || empName), getAlphaOnly(namaTugas)].join('_');
+    if (existingRowIdx === -1 && (empName || username) && namaTugas) {
+      var targetUserAlpha = getAlphaOnly(username);
+      var targetNamaAlpha = getAlphaOnly(empName);
+      var targetTugasAlpha = getAlphaOnly(namaTugas);
+
       for (var r = 1; r < values.length; r++) {
         var row = values[r];
+        var rYear = Number(row[2] || 0);
+        var rMonth = Number(row[3] || 0);
         var rDay = Number(row[5] || 0);
-        var rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        var rUserVal = String(row[9] || '').trim();
+        var rNamaVal = String(row[8] || '').trim();
+        var rUserAlpha = getAlphaOnly(rUserVal);
+        var rNamaAlpha = getAlphaOnly(rNamaVal);
         var rTugas = getAlphaOnly(String(row[11] || ''));
-        if (rDay === targetTanggal && rUser === getAlphaOnly(username || empName) && rTugas === getAlphaOnly(namaTugas)) {
+
+        var isUserMatch = (
+          (targetUserAlpha && (rUserAlpha === targetUserAlpha || rNamaAlpha === targetUserAlpha || isUserAliasMatch(rUserAlpha, targetUserAlpha))) ||
+          (targetNamaAlpha && (rUserAlpha === targetNamaAlpha || rNamaAlpha === targetNamaAlpha || isUserAliasMatch(rNamaAlpha, targetNamaAlpha)))
+        );
+
+        if (rDay === targetTanggal && (!rMonth || rMonth === targetBulan) && (!rYear || rYear === targetTahun) && isUserMatch && rTugas === targetTugasAlpha) {
           existingRowIdx = r + 1;
           break;
         }
@@ -1980,23 +2077,98 @@ function findPhotosForTask(allPhotos, taskKegiatan) {
 }
 
 /**
- * Mencari Google Docs yang sudah ada di folder Bukti Dukung (mencegah duplikasi file)
+ * Membaca seluruh file Google Docs di folder Bukti Dukung sekaligus ke dalam memori
+ * untuk mempercepat proses pencarian (mengeliminasi ratusan roundtrip Drive API).
  */
-function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun) {
+function getFolderDocCache(folder) {
+  var cache = { byExactName: {}, list: [] };
+  if (!folder) return cache;
   try {
+    var files = folder.getFiles();
+    var docMime = (typeof MimeType !== 'undefined' && MimeType.GOOGLE_DOCS) ? MimeType.GOOGLE_DOCS : 'application/vnd.google-apps.document';
+    while (files.hasNext()) {
+      var f = files.next();
+      var mime = f.getMimeType();
+      if (mime !== docMime && mime !== 'application/vnd.google-apps.document') continue;
+      var fName = f.getName();
+      cache.byExactName[fName] = f;
+      cache.list.push({
+        file: f,
+        name: fName,
+        nameAlpha: getAlphaOnly(fName)
+      });
+    }
+  } catch (err) {
+    Logger.log("getFolderDocCache error: " + err.message);
+  }
+  return cache;
+}
+
+/**
+ * Membaca seluruh file PDF di folder Bukti Dukung PDF sekaligus ke dalam memori
+ */
+function getFolderPdfCache(pdfFolder) {
+  var cache = { byName: {}, list: [] };
+  if (!pdfFolder) return cache;
+  try {
+    var files = pdfFolder.getFiles();
+    while (files.hasNext()) {
+      var f = files.next();
+      var fName = f.getName();
+      cache.byName[fName] = f;
+      cache.list.push(f);
+    }
+  } catch (err) {
+    Logger.log("getFolderPdfCache error: " + err.message);
+  }
+  return cache;
+}
+
+/**
+ * Mencari Google Docs yang sudah ada di folder Bukti Dukung (mencegah duplikasi file)
+ * Mendukung pencarian instan via folderDocCache jika tersedia.
+ */
+function findExistingDocFile(folder, taskKegiatan, empName, bulanNama, tahun, folderCache) {
+  try {
+    var expectedDocName = "Bukti Dukung - " + sanitizeFileName(taskKegiatan) + " - " + cleanStr(empName) + " - " + bulanNama + " " + tahun;
+
+    if (folderCache) {
+      if (folderCache.byExactName && folderCache.byExactName[expectedDocName]) {
+        return folderCache.byExactName[expectedDocName];
+      }
+      var taskAlpha = getAlphaOnly(taskKegiatan || '');
+      var empAlpha = getAlphaOnly(empName || '');
+      var subAlpha = taskAlpha.substring(0, Math.min(20, taskAlpha.length));
+      var empSub = empAlpha.substring(0, Math.min(8, empAlpha.length));
+      var blnLower = String(bulanNama || '').toLowerCase();
+
+      for (var k = 0; k < folderCache.list.length; k++) {
+        var it = folderCache.list[k];
+        if (subAlpha && it.nameAlpha.indexOf(subAlpha) !== -1) {
+          if (!empAlpha || it.nameAlpha.indexOf(empSub) !== -1 || it.name.toLowerCase().indexOf(blnLower) !== -1) {
+            return it.file;
+          }
+        }
+      }
+      return null;
+    }
+
+    // Direct scan fallback jika folderCache tidak diberikan
     var files = folder.getFiles();
     var taskAlpha = getAlphaOnly(taskKegiatan || '');
     var empAlpha = getAlphaOnly(empName || '');
     var subAlpha = taskAlpha.substring(0, Math.min(20, taskAlpha.length));
+    var docMime = (typeof MimeType !== 'undefined' && MimeType.GOOGLE_DOCS) ? MimeType.GOOGLE_DOCS : 'application/vnd.google-apps.document';
 
     while (files.hasNext()) {
       var f = files.next();
       var mime = f.getMimeType();
-      if (mime !== MimeType.GOOGLE_DOCS && mime !== 'application/vnd.google-apps.document') continue;
+      if (mime !== docMime && mime !== 'application/vnd.google-apps.document') continue;
 
       var fName = f.getName();
-      var fAlpha = getAlphaOnly(fName);
+      if (fName === expectedDocName) return f;
 
+      var fAlpha = getAlphaOnly(fName);
       if (subAlpha && fAlpha.indexOf(subAlpha) !== -1) {
         if (!empAlpha || fAlpha.indexOf(empAlpha.substring(0, Math.min(8, empAlpha.length))) !== -1 || fName.toLowerCase().indexOf(bulanNama.toLowerCase()) !== -1) {
           return f;
@@ -2126,8 +2298,13 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
 
   // 6. PENYISIPAN FOTO BUKTI DUKUNG DENGAN CAPTION RAPI
   if (photos && photos.length > 0) {
-    for (var i = 0; i < photos.length; i++) {
-      var p = photos[i];
+    // Optimasi performa & kestabilan: batasi foto per dokumen maksimal 4 foto
+    // agar ukuran Google Doc tidak membengkak dan ekspor PDF tidak timeout/OOM
+    var maxPhotos = 4;
+    var photosToInsert = photos.slice(0, maxPhotos);
+
+    for (var i = 0; i < photosToInsert.length; i++) {
+      var p = photosToInsert[i];
       try {
         var imgFile = DriveApp.getFileById(p.fileId);
         var imgBlob = imgFile.getBlob();
@@ -2168,7 +2345,7 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
         capPara.setSpacingBefore(4);
         capPara.setSpacingAfter(18);
 
-        if (i < photos.length - 1) {
+        if (i < photosToInsert.length - 1) {
           var betweenSpacer = body.appendParagraph("");
           betweenSpacer.setSpacingBefore(0);
           betweenSpacer.setSpacingAfter(12);
@@ -2178,9 +2355,20 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
         errPara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
         errPara.setFontSize(9);
         errPara.setItalic(true);
-        errPara.setFontColor("#dc2626");
+        try { errPara.editAsText().setForegroundColor("#dc2626"); } catch (eColor) {}
         errPara.setSpacingAfter(12);
       }
+    }
+
+    if (photos.length > maxPhotos) {
+      var notePara = body.appendParagraph("(Menampilkan " + maxPhotos + " dari total " + photos.length + " foto bukti dukung. Seluruh foto tersimpan aman di Google Drive)");
+      notePara.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+      notePara.setFontFamily("Arial");
+      notePara.setFontSize(8.5);
+      notePara.setItalic(true);
+      try { notePara.editAsText().setForegroundColor("#64748b"); } catch (eColor) {}
+      notePara.setSpacingBefore(4);
+      notePara.setSpacingAfter(14);
     }
   } else {
     var noPhotoPara = body.appendParagraph("(Dokumentasi foto belum diunggah untuk kegiatan ini)");
@@ -2188,7 +2376,7 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
     noPhotoPara.setFontFamily("Arial");
     noPhotoPara.setFontSize(10);
     noPhotoPara.setItalic(true);
-    noPhotoPara.setFontColor("#64748b");
+    try { noPhotoPara.editAsText().setForegroundColor("#64748b"); } catch (eColor) {}
     noPhotoPara.setSpacingBefore(30);
   }
 }
@@ -2196,9 +2384,10 @@ function buildGoogleDocContent(doc, task, empName, periodeStr, photos) {
 /**
  * ========================================================================
  * BACKEND ACTION: GENERATE REKAPITULASI DOKUMEN PER KEGIATAN (GOOGLE DOCS)
+ * Mendukung batch chunking (startIndex & batchSize) untuk performa cepat dan bebas timeout
  * ========================================================================
  */
-function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
+function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun, startIndex, batchSize) {
   try {
     var session = getSessionUser(token);
     if (!session) {
@@ -2253,17 +2442,27 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
       buktiDukungFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch (eShare) {}
 
-    // 4. Proses Setiap Kegiatan Menjadi Dokumen Google Docs Tersendiri
+    // Inisialisasi cache folder Google Docs sekali saja untuk efisiensi tinggi
+    var folderDocCache = getFolderDocCache(buktiDukungFolder);
+
+    // 4. Pengelolaan Slice Batch untuk Mencegah Timeout (Chunking Support)
+    var isBatchMode = (startIndex !== undefined && startIndex !== null);
+    var sIdx = isBatchMode ? Math.max(0, Number(startIndex) || 0) : 0;
+    var bSize = isBatchMode ? Math.max(1, Number(batchSize) || 4) : items.length;
+    var eIdx = Math.min(items.length, sIdx + bSize);
+    var itemsToProcess = isBatchMode ? items.slice(sIdx, eIdx) : items;
+
     var processedItems = [];
     var errors = [];
 
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
+    for (var i = 0; i < itemsToProcess.length; i++) {
+      var item = itemsToProcess[i];
+      var globalIdx = sIdx + i;
       var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
       var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
 
       try {
-        var existingDocFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear);
+        var existingDocFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache);
         var docObj = null;
         var docFile = null;
         var actionStatus = 'updated';
@@ -2291,11 +2490,15 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
             docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           } catch (eS) {}
           actionStatus = 'created';
+
+          // Daftarkan ke folderDocCache
+          folderDocCache.byExactName[docName] = docFile;
+          folderDocCache.list.push({ file: docFile, name: docName, nameAlpha: getAlphaOnly(docName) });
         }
 
         var cleanDocUrl = String(docFile.getUrl() || '').replace(/\\/g, '').trim();
         processedItems.push({
-          no: i + 1,
+          no: globalIdx + 1,
           kegiatan: namaTugas,
           kuantitas: item.selesai !== undefined ? item.selesai : (item.target || 0),
           target: item.target || 0,
@@ -2312,16 +2515,22 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
       }
     }
 
-    if (processedItems.length === 0) {
+    if (processedItems.length === 0 && itemsToProcess.length > 0) {
       return {
         success: false,
         message: "Gagal membuat dokumen kegiatan: " + (errors.join(' | ') || "Terjadi kesalahan internal.")
       };
     }
 
+    var isComplete = (eIdx >= items.length);
+    var cleanDocFolderUrl = String(buktiDukungFolder.getUrl() || '').replace(/\\/g, '').trim();
+    var cleanEmpFolderUrl = String(employeeFolder.getUrl() || '').replace(/\\/g, '').trim();
+
     return {
       success: true,
-      message: "Berhasil menghasilkan " + processedItems.length + " dokumen rekapitulasi Google Docs di folder Bukti Dukung!",
+      message: isBatchMode
+        ? ("Berhasil memproses dokumen " + (sIdx + 1) + "–" + eIdx + " dari " + items.length + " kegiatan.")
+        : ("Berhasil menghasilkan " + processedItems.length + " dokumen rekapitulasi Google Docs di folder Bukti Dukung!"),
       data: {
         namaPegawai: empName,
         username: (report.pegawai && report.pegawai.username) || targetUsername,
@@ -2330,8 +2539,13 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
         bulan: selMonth,
         tahun: selYear,
         folderBuktiDukungId: buktiDukungFolder.getId(),
-        folderBuktiDukungUrl: buktiDukungFolder.getUrl(),
-        folderPegawaiUrl: employeeFolder.getUrl(),
+        folderBuktiDukungUrl: cleanDocFolderUrl,
+        folderPegawaiUrl: cleanEmpFolderUrl,
+        totalItems: items.length,
+        startIndex: sIdx,
+        processedCount: eIdx,
+        isComplete: isComplete,
+        nextIndex: isComplete ? null : eIdx,
         items: processedItems,
         errors: errors
       }
@@ -2348,9 +2562,10 @@ function generateDokumenPerKegiatan(token, targetUsername, bulan, tahun) {
 /**
  * ========================================================================
  * BACKEND ACTION: BUAT KIPAPP (GOOGLE SHEETS) & EKSPOR PDF OTOMATIS
+ * Mendukung batch chunking (startIndex & batchSize), smart PDF caching, dan bebas timeout
  * ========================================================================
  */
-function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
+function generateKipappDanPdf(token, targetUsername, bulan, tahun, startIndex, batchSize) {
   try {
     var session = getSessionUser(token);
     if (!session) {
@@ -2408,19 +2623,31 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
       pdfFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     } catch (eShare) {}
 
-    // 4. Pastikan Setiap Kegiatan Memiliki Google Docs dan Ekspor ke PDF
-    var tableRows = [];
+    // Inisialisasi cache folder Google Docs & PDF sekali saja untuk efisiensi tinggi
+    var folderDocCache = getFolderDocCache(buktiDukungFolder);
+    var pdfCache = getFolderPdfCache(pdfFolder);
+
+    // 4. Pengelolaan Slice Batch
+    var isBatchMode = (startIndex !== undefined && startIndex !== null);
+    var sIdx = isBatchMode ? Math.max(0, Number(startIndex) || 0) : 0;
+    var bSize = isBatchMode ? Math.max(1, Number(batchSize) || 4) : items.length;
+    var eIdx = Math.min(items.length, sIdx + bSize);
+    var itemsToProcess = isBatchMode ? items.slice(sIdx, eIdx) : items;
+    var isLastBatch = (eIdx >= items.length);
+
     var processedResults = [];
     var pdfErrors = [];
 
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
+    // Proses konversi PDF untuk batch saat ini
+    for (var i = 0; i < itemsToProcess.length; i++) {
+      var item = itemsToProcess[i];
+      var globalIdx = sIdx + i;
       var namaTugas = item.kegiatan || 'Pelaksanaan Tugas';
       var matchingPhotos = findPhotosForTask(allPhotos, namaTugas);
       var kuantitas = item.selesai !== undefined ? item.selesai : (item.target || 0);
       var rincianNarasi = formatRincianKegiatanNarrative(namaTugas, kuantitas, periodeStr);
 
-      var docFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear);
+      var docFile = findExistingDocFile(buktiDukungFolder, namaTugas, empName, namaBulanStr, selYear, folderDocCache);
 
       // Jika file Doc belum ada, buat langsung
       if (!docFile) {
@@ -2440,6 +2667,9 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
           try {
             docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
           } catch (eS) {}
+
+          folderDocCache.byExactName[docName] = docFile;
+          folderDocCache.list.push({ file: docFile, name: docName, nameAlpha: getAlphaOnly(docName) });
         } catch (eCreateDoc) {
           pdfErrors.push("Gagal membuat Google Doc untuk " + namaTugas + ": " + eCreateDoc.message);
           continue;
@@ -2447,44 +2677,53 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
       }
 
       var docUrl = docFile.getUrl();
-      var docId = docFile.getId();
+      var cleanDocUrl = String(docUrl || '').replace(/\\/g, '').trim();
+      var pdfName = sanitizeFileName(docFile.getName()) + ".pdf";
       var pdfUrl = '';
 
-      // Ekspor Google Docs ke PDF
-      try {
-        var pdfBlob = docFile.getAs('application/pdf');
-        var pdfName = sanitizeFileName(docFile.getName()) + ".pdf";
-        pdfBlob.setName(pdfName);
+      // Ekspor Google Docs ke PDF dengan Smart Caching (hanya ekspor jika belum ada atau doc lebih baru)
+      var existingPdf = pdfCache.byName ? pdfCache.byName[pdfName] : null;
+      var needsExport = true;
 
-        // Hapus PDF lama jika sudah ada agar tidak terjadi duplikasi file
-        var existingPdfs = pdfFolder.getFilesByName(pdfName);
-        while (existingPdfs.hasNext()) {
-          var oldPdf = existingPdfs.next();
-          try { oldPdf.setTrashed(true); } catch (eTrash) {}
-        }
-
-        var pdfFile = pdfFolder.createFile(pdfBlob);
+      if (existingPdf) {
         try {
-          pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        } catch (eS2) {}
-
-        pdfUrl = pdfFile.getUrl();
-
-      } catch (ePdf) {
-        pdfErrors.push("Ekspor PDF untuk '" + namaTugas + "' gagal: " + ePdf.message);
-        pdfUrl = docUrl; // Fallback ke Doc URL jika PDF gagal
+          var pdfUpdated = existingPdf.getLastUpdated().getTime();
+          var docUpdated = docFile.getLastUpdated().getTime();
+          if (pdfUpdated >= docUpdated) {
+            pdfUrl = existingPdf.getUrl();
+            needsExport = false;
+          } else {
+            try { existingPdf.setTrashed(true); } catch (eTrash) {}
+          }
+        } catch (eCheck) {
+          needsExport = true;
+        }
       }
 
-      // Bersihkan URL dari karakter escape backslash (\)
-      var cleanDocUrl = String(docUrl || '').replace(/\\/g, '').trim();
+      if (needsExport) {
+        try {
+          var pdfBlob = docFile.getAs('application/pdf');
+          pdfBlob.setName(pdfName);
+
+          var pdfFile = pdfFolder.createFile(pdfBlob);
+          try {
+            pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+          } catch (eS2) {}
+
+          pdfUrl = pdfFile.getUrl();
+          if (pdfCache.byName) {
+            pdfCache.byName[pdfName] = pdfFile;
+          }
+        } catch (ePdf) {
+          pdfErrors.push("Ekspor PDF untuk '" + namaTugas + "' gagal: " + ePdf.message);
+          pdfUrl = docUrl; // Fallback ke Doc URL jika PDF gagal
+        }
+      }
+
       var cleanPdfUrl = String(pdfUrl || '').replace(/\\/g, '').trim();
 
-      // Gunakan titik koma (;) sebagai pemisah argumen fungsi HYPERLINK untuk regional Indonesia (id_ID)
-      var formulaDoc = cleanDocUrl ? ('=HYPERLINK("' + cleanDocUrl + '"; "Buka Dokumen")') : '-';
-      var formulaPdf = (cleanPdfUrl && cleanPdfUrl !== '-') ? ('=HYPERLINK("' + cleanPdfUrl + '"; "Buka PDF")') : '-';
-
       processedResults.push({
-        no: i + 1,
+        no: globalIdx + 1,
         rincianKegiatan: rincianNarasi,
         uraianKegiatan: namaTugas,
         satuan: "Kegiatan",
@@ -2493,128 +2732,171 @@ function generateKipappDanPdf(token, targetUsername, bulan, tahun) {
         linkPdf: cleanPdfUrl,
         tanggalPelaksanaan: periodeStr
       });
-
-      tableRows.push([
-        i + 1,
-        rincianNarasi,
-        namaTugas,
-        "Kegiatan",
-        kuantitas,
-        formulaDoc,
-        formulaPdf,
-        periodeStr
-      ]);
     }
 
-    if (processedResults.length === 0) {
-      return {
-        success: false,
-        message: "Gagal membuat Kipapp & PDF: " + (pdfErrors.join(' | ') || "Tidak ada kegiatan yang berhasil diekspor.")
-      };
-    }
-
-    // 5. Buat / Perbarui Spreadsheet Kipapp di Dalam Folder Pegawai
     var kipappFileName = "Kipapp - " + sanitizeFileName(empName) + " - " + namaBulanStr + " " + selYear;
-    var existingSheets = employeeFolder.getFilesByName(kipappFileName);
     var kipappSs = null;
 
-    if (existingSheets.hasNext()) {
-      var ssFile = existingSheets.next();
-      kipappSs = SpreadsheetApp.openById(ssFile.getId());
-    } else {
-      kipappSs = SpreadsheetApp.create(kipappFileName);
-      var newSsFile = DriveApp.getFileById(kipappSs.getId());
-      try {
-        newSsFile.moveTo(employeeFolder);
-      } catch (eMoveSs) {
-        employeeFolder.addFile(newSsFile);
-        try { DriveApp.getRootFolder().removeFile(newSsFile); } catch (eRemSs) {}
+    // 5. Buat / Perbarui Spreadsheet Kipapp (Hanya saat batch terakhir atau non-batch mode)
+    if (isLastBatch) {
+      // Re-scan pdfCache untuk memastikan seluruh PDF terdaftar
+      var refreshedPdfCache = getFolderPdfCache(pdfFolder);
+      var tableRows = [];
+      var fullResults = [];
+
+      for (var k = 0; k < items.length; k++) {
+        var itm = items[k];
+        var tTask = itm.kegiatan || 'Pelaksanaan Tugas';
+        var tKuantitas = itm.selesai !== undefined ? itm.selesai : (itm.target || 0);
+        var tNarasi = formatRincianKegiatanNarrative(tTask, tKuantitas, periodeStr);
+
+        var dFile = findExistingDocFile(buktiDukungFolder, tTask, empName, namaBulanStr, selYear, folderDocCache);
+        var dUrl = dFile ? String(dFile.getUrl() || '').replace(/\\/g, '').trim() : '';
+
+        var pName = (dFile ? sanitizeFileName(dFile.getName()) : sanitizeFileName(tTask)) + ".pdf";
+        var pFile = refreshedPdfCache.byName ? refreshedPdfCache.byName[pName] : null;
+        var pUrl = pFile ? String(pFile.getUrl() || '').replace(/\\/g, '').trim() : '';
+
+        var formulaDoc = dUrl ? ('=HYPERLINK("' + dUrl + '"; "Buka Dokumen")') : '-';
+        var formulaPdf = (pUrl && pUrl !== '-') ? ('=HYPERLINK("' + pUrl + '"; "Buka PDF")') : '-';
+
+        fullResults.push({
+          no: k + 1,
+          rincianKegiatan: tNarasi,
+          uraianKegiatan: tTask,
+          satuan: "Kegiatan",
+          kuantitas: tKuantitas,
+          linkBuktiDukung: dUrl,
+          linkPdf: pUrl,
+          tanggalPelaksanaan: periodeStr
+        });
+
+        tableRows.push([
+          k + 1,
+          tNarasi,
+          tTask,
+          "Kegiatan",
+          tKuantitas,
+          formulaDoc,
+          formulaPdf,
+          periodeStr
+        ]);
       }
+
+      processedResults = fullResults;
+
+      var existingSheets = employeeFolder.getFilesByName(kipappFileName);
+      if (existingSheets.hasNext()) {
+        var ssFile = existingSheets.next();
+        kipappSs = SpreadsheetApp.openById(ssFile.getId());
+      } else {
+        kipappSs = SpreadsheetApp.create(kipappFileName);
+        var newSsFile = DriveApp.getFileById(kipappSs.getId());
+        try {
+          newSsFile.moveTo(employeeFolder);
+        } catch (eMoveSs) {
+          employeeFolder.addFile(newSsFile);
+          try { DriveApp.getRootFolder().removeFile(newSsFile); } catch (eRemSs) {}
+        }
+        try {
+          newSsFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (eSsShare) {}
+      }
+
       try {
-        newSsFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      } catch (eSsShare) {}
+        kipappSs.setSpreadsheetLocale('id_ID');
+      } catch (eLoc) {}
+
+      var kipappSheet = kipappSs.getSheets()[0];
+      kipappSheet.setName("Kipapp " + namaBulanStr + " " + selYear);
+      kipappSheet.clear();
+
+      // Judul & Metadata
+      kipappSheet.getRange(1, 1).setValue("REKAPITULASI BUKTI DUKUNG DAN KIPAPP PEGAWAI").setFontSize(13).setFontWeight("bold");
+      kipappSheet.getRange(2, 1).setValue("BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT").setFontSize(11).setFontWeight("bold").setFontColor("#1e40af");
+      kipappSheet.getRange(3, 1).setValue("Nama Pegawai: " + empName + " | Unit Kerja: " + unitKerja + " | Periode: " + periodeStr).setFontSize(10).setFontStyle("italic").setFontColor("#475569");
+
+      // Header Kolom (Baris 5)
+      var headers = [
+        "No",
+        "Rincian Kegiatan",
+        "Uraian Kegiatan",
+        "Satuan",
+        "Kuantitas",
+        "Link Bukti Dukung (Google Docs)",
+        "Link PDF",
+        "Tanggal Pelaksanaan"
+      ];
+
+      kipappSheet.getRange(5, 1, 1, headers.length)
+        .setValues([headers])
+        .setBackground("#1e40af")
+        .setFontColor("#ffffff")
+        .setFontWeight("bold")
+        .setHorizontalAlignment("center")
+        .setVerticalAlignment("middle");
+
+      kipappSheet.setRowHeight(5, 30);
+      kipappSheet.setFrozenRows(5);
+
+      // Isi Baris Data
+      if (tableRows.length > 0) {
+        var dataRange = kipappSheet.getRange(6, 1, tableRows.length, headers.length);
+        dataRange.setValues(tableRows);
+        dataRange.setVerticalAlignment("middle");
+        dataRange.setFontSize(10);
+
+        // Format Lebar Kolom
+        kipappSheet.setColumnWidth(1, 45);   // No
+        kipappSheet.setColumnWidth(2, 360);  // Rincian Kegiatan
+        kipappSheet.setColumnWidth(3, 280);  // Uraian Kegiatan
+        kipappSheet.setColumnWidth(4, 85);   // Satuan
+        kipappSheet.setColumnWidth(5, 85);   // Kuantitas
+        kipappSheet.setColumnWidth(6, 210);  // Link Bukti Dukung
+        kipappSheet.setColumnWidth(7, 130);  // Link PDF
+        kipappSheet.setColumnWidth(8, 160);  // Tanggal Pelaksanaan
+
+        // Perataan Kolom
+        kipappSheet.getRange(6, 1, tableRows.length, 1).setHorizontalAlignment("center");
+        kipappSheet.getRange(6, 2, tableRows.length, 2).setWrap(true).setHorizontalAlignment("left");
+        kipappSheet.getRange(6, 4, tableRows.length, 5).setHorizontalAlignment("center");
+
+        // Border dan Baris Selang-Seling
+        for (var r = 0; r < tableRows.length; r++) {
+          kipappSheet.setRowHeight(6 + r, 26);
+          if (r % 2 === 1) {
+            kipappSheet.getRange(6 + r, 1, 1, headers.length).setBackground("#f8fafc");
+          }
+        }
+        dataRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
+      }
+
+      SpreadsheetApp.flush();
     }
 
-    // Format Lembar Kipapp (Pastikan regional Indonesia id_ID untuk pemisah rumus titik koma)
-    try {
-      kipappSs.setSpreadsheetLocale('id_ID');
-    } catch (eLoc) {}
-
-    var kipappSheet = kipappSs.getSheets()[0];
-    kipappSheet.setName("Kipapp " + namaBulanStr + " " + selYear);
-    kipappSheet.clear();
-
-    // Judul & Metadata
-    kipappSheet.getRange(1, 1).setValue("REKAPITULASI BUKTI DUKUNG DAN KIPAPP PEGAWAI").setFontSize(13).setFontWeight("bold");
-    kipappSheet.getRange(2, 1).setValue("BADAN PUSAT STATISTIK PROVINSI KALIMANTAN BARAT").setFontSize(11).setFontWeight("bold").setFontColor("#1e40af");
-    kipappSheet.getRange(3, 1).setValue("Nama Pegawai: " + empName + " | Unit Kerja: " + unitKerja + " | Periode: " + periodeStr).setFontSize(10).setFontStyle("italic").setFontColor("#475569");
-
-    // Header Kolom (Baris 5)
-    var headers = [
-      "No",
-      "Rincian Kegiatan",
-      "Uraian Kegiatan",
-      "Satuan",
-      "Kuantitas",
-      "Link Bukti Dukung (Google Docs)",
-      "Link PDF",
-      "Tanggal Pelaksanaan"
-    ];
-
-    kipappSheet.getRange(5, 1, 1, headers.length)
-      .setValues([headers])
-      .setBackground("#1e40af")
-      .setFontColor("#ffffff")
-      .setFontWeight("bold")
-      .setHorizontalAlignment("center")
-      .setVerticalAlignment("middle");
-
-    kipappSheet.setRowHeight(5, 30);
-    kipappSheet.setFrozenRows(5);
-
-    // Isi Baris Data
-    var dataRange = kipappSheet.getRange(6, 1, tableRows.length, headers.length);
-    dataRange.setValues(tableRows);
-    dataRange.setVerticalAlignment("middle");
-    dataRange.setFontSize(10);
-
-    // Format Lebar Kolom
-    kipappSheet.setColumnWidth(1, 45);   // No
-    kipappSheet.setColumnWidth(2, 360);  // Rincian Kegiatan
-    kipappSheet.setColumnWidth(3, 280);  // Uraian Kegiatan
-    kipappSheet.setColumnWidth(4, 85);   // Satuan
-    kipappSheet.setColumnWidth(5, 85);   // Kuantitas
-    kipappSheet.setColumnWidth(6, 210);  // Link Bukti Dukung
-    kipappSheet.setColumnWidth(7, 130);  // Link PDF
-    kipappSheet.setColumnWidth(8, 160);  // Tanggal Pelaksanaan
-
-    // Perataan Kolom
-    kipappSheet.getRange(6, 1, tableRows.length, 1).setHorizontalAlignment("center");
-    kipappSheet.getRange(6, 2, tableRows.length, 2).setWrap(true).setHorizontalAlignment("left");
-    kipappSheet.getRange(6, 4, tableRows.length, 5).setHorizontalAlignment("center");
-
-    // Border dan Baris Selang-Seling
-    for (var r = 0; r < tableRows.length; r++) {
-      kipappSheet.setRowHeight(6 + r, 26);
-      if (r % 2 === 1) {
-        kipappSheet.getRange(6 + r, 1, 1, headers.length).setBackground("#f8fafc");
-      }
-    }
-    dataRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
-
-    SpreadsheetApp.flush();
+    var cleanKipappUrl = kipappSs ? String(kipappSs.getUrl() || '').replace(/\\/g, '').trim() : '';
+    var cleanPdfFolderUrl = String(pdfFolder.getUrl() || '').replace(/\\/g, '').trim();
+    var cleanDocFolderUrl = String(buktiDukungFolder.getUrl() || '').replace(/\\/g, '').trim();
+    var cleanEmpFolderUrl = String(employeeFolder.getUrl() || '').replace(/\\/g, '').trim();
 
     return {
       success: true,
-      message: "Berkas Google Sheets Kipapp dan seluruh file PDF berhasil dibuat/diperbarui di Google Drive!",
+      message: isBatchMode
+        ? (isLastBatch ? "Seluruh berkas PDF dan Google Sheets Kipapp selesai dibuat!" : ("Berhasil mengekspor PDF " + (sIdx + 1) + "–" + eIdx + " dari " + items.length + " kegiatan."))
+        : "Berkas Google Sheets Kipapp dan seluruh file PDF berhasil dibuat/diperbarui di Google Drive!",
       data: {
         namaPegawai: empName,
         periodeStr: periodeStr,
         kipappName: kipappFileName,
-        kipappUrl: kipappSs.getUrl(),
-        folderPdfUrl: pdfFolder.getUrl(),
-        folderBuktiDukungUrl: buktiDukungFolder.getUrl(),
-        folderPegawaiUrl: employeeFolder.getUrl(),
+        kipappUrl: cleanKipappUrl,
+        folderPdfUrl: cleanPdfFolderUrl,
+        folderBuktiDukungUrl: cleanDocFolderUrl,
+        folderPegawaiUrl: cleanEmpFolderUrl,
+        totalItems: items.length,
+        startIndex: sIdx,
+        processedCount: eIdx,
+        isComplete: isLastBatch,
+        nextIndex: isLastBatch ? null : eIdx,
         totalKegiatan: processedResults.length,
         items: processedResults,
         errors: pdfErrors
@@ -2722,32 +3004,40 @@ function saveInspeksiMutu(token, payload) {
     if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
 
     const sh = setupInspeksiMutuSheet(ss);
-    const now = new Date();
-    const bulan = payload.bulan || (now.getMonth() + 1);
-    const tahun = payload.tahun || now.getFullYear();
-    const tanggal = payload.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
+    const data = (payload && payload.payload) ? payload.payload : (payload || {});
 
-    const skor1 = Number(payload.skorKerapihan || 5);
-    const skor2 = Number(payload.skorKetepatan || 5);
-    const skor3 = Number(payload.skorKepatuhan || 5);
-    const skor4 = Number(payload.skorKelengkapan || 5);
+    const now = new Date();
+    const bulan = data.bulan || (now.getMonth() + 1);
+    const tahun = data.tahun || now.getFullYear();
+    const tanggal = data.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
+
+    const skor1 = Number(data.skorKerapihan !== undefined ? data.skorKerapihan : (data.param1 !== undefined ? data.param1 : 5));
+    const skor2 = Number(data.skorKetepatan !== undefined ? data.skorKetepatan : (data.param2 !== undefined ? data.param2 : 5));
+    const skor3 = Number(data.skorKepatuhan !== undefined ? data.skorKepatuhan : (data.param3 !== undefined ? data.param3 : 5));
+    const skor4 = Number(data.skorKelengkapan !== undefined ? data.skorKelengkapan : (data.param4 !== undefined ? data.param4 : 5));
     const avg = Number(((skor1 + skor2 + skor3 + skor4) / 4).toFixed(2));
+
+    const unit = data.unit || 'Kebersihan';
+    const pegawaiArea = data.pegawaiArea || data.ruangan || data.area || 'Semua Area';
+    const catatan = data.catatan || '-';
+    const statusRekomendasi = data.statusRekomendasi || data.tindakLanjut || (avg >= 4.0 ? 'Sesuai Standar' : (avg >= 3.0 ? 'Perlu Perbaikan Ringan' : 'Perlu Tindakan Korektif'));
+    const inspektor = session.namaPegawai || session.username || 'Supervisor';
 
     sh.appendRow([
       now,
       tanggal,
       bulan,
       tahun,
-      payload.unit || 'Kebersihan',
-      payload.pegawaiArea || 'Semua Area',
+      unit,
+      pegawaiArea,
       skor1,
       skor2,
       skor3,
       skor4,
       avg,
-      payload.catatan || '-',
-      payload.statusRekomendasi || 'Sesuai Standar',
-      session.namaPegawai || session.username || 'Supervisor'
+      catatan,
+      statusRekomendasi,
+      inspektor
     ]);
 
     clearScriptCacheKeys([
@@ -4993,7 +5283,11 @@ function getBuktiDukungForExport(ss, selectedMonth, selectedYear, targetUser, ti
     for (var i = 1; i < bValues.length; i++) {
       var bRow = bValues[i];
       var bYear = Number(bRow[2] || 0);
-      var bMonth = Number(bRow[3] || 0);
+      var rawBMonth = bRow[3];
+      var bMonth = Number(rawBMonth || 0);
+      if (!bMonth && typeof rawBMonth === 'string' && typeof MONTH_MAP_ID !== 'undefined') {
+        bMonth = MONTH_MAP_ID[rawBMonth.toUpperCase().trim()] || 0;
+      }
       if (selectedYear && bYear && bYear !== selectedYear) continue;
       if (selectedMonth && bMonth && bMonth !== selectedMonth) continue;
 
@@ -5067,8 +5361,8 @@ function getExportLaporanData(token, tipe, bulan, tahun, targetUsername) {
     const userRoleLower = (session.role || '').toLowerCase();
     const isManager = userRoleLower.includes('admin') || userRoleLower.includes('supervisor') || userRoleLower.includes('kabag') || userRoleLower.includes('humas') || userRoleLower.includes('koordinator') || userRoleLower.includes('korlap');
 
-    // JIKA TIPE 'semua' (Hanya untuk Admin / Supervisor)
-    if (tipe === 'semua' && isManager) {
+    // JIKA TIPE 'semua' (Rekap terpadu seluruh pegawai)
+    if (tipe === 'semua') {
       const allUsers = getAllUsersList(ss);
       const nonManagementStaff = allUsers.filter(u => {
         const r = (u.role || '').toLowerCase();
@@ -5391,13 +5685,28 @@ function supervisorToggleStaffTaskCheck(token, payload) {
       }
     }
 
-    if (existingRowIdx === -1 && targetNamaPegawai && namaTugas) {
+    if (existingRowIdx === -1 && (targetNamaPegawai || targetUsername) && namaTugas) {
+      const targetUserAlpha = getAlphaOnly(targetUsername);
+      const targetNamaAlpha = getAlphaOnly(targetNamaPegawai);
+      const targetTugasAlpha = getAlphaOnly(namaTugas);
+
       for (let r = 1; r < values.length; r++) {
         const row = values[r];
+        const rYear = Number(row[2] || 0);
+        const rMonth = Number(row[3] || 0);
         const rDay = Number(row[5] || 0);
-        const rUser = getAlphaOnly(String(row[9] || row[8] || ''));
+        const rUserVal = String(row[9] || '').trim();
+        const rNamaVal = String(row[8] || '').trim();
+        const rUserAlpha = getAlphaOnly(rUserVal);
+        const rNamaAlpha = getAlphaOnly(rNamaVal);
         const rTugas = getAlphaOnly(String(row[11] || ''));
-        if (rDay === dayNum && rUser === getAlphaOnly(targetUsername || targetNamaPegawai) && rTugas === getAlphaOnly(namaTugas)) {
+
+        const isUserMatch = (
+          (targetUserAlpha && (rUserAlpha === targetUserAlpha || rNamaAlpha === targetUserAlpha || isUserAliasMatch(rUserAlpha, targetUserAlpha))) ||
+          (targetNamaAlpha && (rUserAlpha === targetNamaAlpha || rNamaAlpha === targetNamaAlpha || isUserAliasMatch(rNamaAlpha, targetNamaAlpha)))
+        );
+
+        if (rDay === dayNum && (!rMonth || rMonth === monthNum) && (!rYear || rYear === yearNum) && isUserMatch && rTugas === targetTugasAlpha) {
           existingRowIdx = r + 1;
           break;
         }
@@ -5590,9 +5899,9 @@ function handleApiRequest(params) {
     } else if (action === 'getExportLaporanData') {
       result = getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
     } else if (action === 'generateDokumenPerKegiatan') {
-      result = generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+      result = generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun, params.startIndex, params.batchSize);
     } else if (action === 'generateKipappDanPdf') {
-      result = generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+      result = generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun, params.startIndex, params.batchSize);
     } else if (action === 'uploadBuktiDukung') {
       result = uploadBuktiDukungFoto(params.token, params);
     } else if (action === 'updateSupervisorChecklist') {

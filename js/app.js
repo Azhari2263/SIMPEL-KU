@@ -21,6 +21,7 @@
     let isSidebarCollapsed       = false;                     // Collapse desktop sidebar
     let cachedMonitoringData     = null;
     let cachedKeamananData       = null;
+    let cachedInspeksiData       = null;
     let selectedKeamananDay      = 1;
     let chartTrenInstance        = null;
     let chartRuanganInstance     = null;
@@ -53,7 +54,7 @@
           } else if (action === 'getMonitoringData') {
             runner.getMonitoringData(params.token, params.jenis, params.bulan, params.tahun, params.filterRuangan || 'SEMUA', params.filterStatus || 'SEMUA');
           } else if (action === 'updateMonitoringStatus') {
-            runner.updateMonitoringStatus(params.token, params.sheetRowIndex, params.colIndex, params.newStatus, params.dayNum, params.bulan, params.tahun);
+            runner.updateMonitoringStatus(params.token, params.sheetRowIndex, params.colIndex, params.newStatus, params.dayNum, params.bulan, params.tahun, params.targetSheetName);
           } else if (action === 'getRekapMonitoring') {
             runner.getRekapMonitoring(params.token, params.bulan, params.tahun);
           } else if (action === 'getJadwalKeamanan') {
@@ -67,7 +68,7 @@
           } else if (action === 'getIntegratedRekapMonitoring') {
             runner.getIntegratedRekapMonitoring(params.token, params.bulan, params.tahun);
           } else if (action === 'getEmployeeDetailProgress') {
-            runner.getEmployeeDetailProgress(params.token, params.namaPegawai, params.bulan, params.tahun);
+            runner.getEmployeeDetailProgress(params.token, params.employeeIdentifier || params.namaPegawai, params.bulan, params.tahun);
           } else if (action === 'getJadwalPiketSecurityMatrix') {
             runner.getJadwalPiketSecurityMatrix(params.token, params.bulan, params.tahun);
           } else if (action === 'updateSecurityShift') {
@@ -84,9 +85,9 @@
           } else if (action === 'getExportLaporanData') {
             runner.getExportLaporanData(params.token, params.tipe, params.bulan, params.tahun, params.username || params.targetUsername);
           } else if (action === 'generateDokumenPerKegiatan') {
-            runner.generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+            runner.generateDokumenPerKegiatan(params.token, params.targetUsername || params.username, params.bulan, params.tahun, params.startIndex, params.batchSize);
           } else if (action === 'generateKipappDanPdf') {
-            runner.generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun);
+            runner.generateKipappDanPdf(params.token, params.targetUsername || params.username, params.bulan, params.tahun, params.startIndex, params.batchSize);
           } else if (action === 'uploadBuktiDukung') {
             runner.uploadBuktiDukungFoto(params.token, params);
           } else if (action === 'updateSupervisorChecklist') {
@@ -356,14 +357,14 @@ function applySidebarCollapseState() {
 
 function renderDynamicMenu(jenis) {
       // Sembunyikan semua menu dinamis terlebih dahulu
-      ['nav-dashboard', 'nav-kebersihan', 'nav-pelayanan', 'nav-keamanan', 'nav-dashboard-supervisor', 'nav-monitoring-admin', 'nav-shift-security'].forEach(id => {
+      ['nav-dashboard', 'nav-kebersihan', 'nav-pelayanan', 'nav-keamanan', 'nav-dashboard-supervisor', 'nav-monitoring-admin', 'nav-shift-security', 'nav-inspeksi-mutu'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
 
       if (isManagerRole(currentUser)) {
         // Tampilkan Menu Khusus Admin & Supervisor
-        ['nav-dashboard-supervisor', 'nav-rekap', 'nav-monitoring-admin', 'nav-shift-security', 'nav-profil'].forEach(id => {
+        ['nav-dashboard-supervisor', 'nav-rekap', 'nav-monitoring-admin', 'nav-shift-security', 'nav-inspeksi-mutu', 'nav-profil'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.classList.remove('hidden');
         });
@@ -399,7 +400,7 @@ function navigateTo(viewName) {
       const navBtn = document.getElementById('nav-' + viewName);
       if (navBtn) navBtn.classList.add('active');
 
-      ['view-dashboard-supervisor','view-dashboard','view-monitoring-admin','view-monitoring','view-rekap','view-shift-security','view-profil','view-keamanan'].forEach(id => {
+      ['view-dashboard-supervisor','view-dashboard','view-monitoring-admin','view-monitoring','view-rekap','view-shift-security','view-profil','view-keamanan','view-inspeksi-mutu'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
       });
@@ -425,6 +426,11 @@ function navigateTo(viewName) {
         document.getElementById('topbarSubtitle').innerText = 'Matriks jadwal piket dan pertukaran shift satpam';
         document.getElementById('view-shift-security')?.classList.remove('hidden');
         loadJadwalPiketSecurityMatrix();
+      } else if (viewName === 'inspeksi-mutu') {
+        document.getElementById('topbarTitle').innerText   = 'Inspeksi Standar Mutu';
+        document.getElementById('topbarSubtitle').innerText = 'Audit evaluasi mutu layanan dan kepatuhan SOP';
+        document.getElementById('view-inspeksi-mutu')?.classList.remove('hidden');
+        loadInspeksiMutuData('SEMUA', true);
       } else if (viewName === 'dashboard') {
         document.getElementById('topbarTitle').innerText   = 'Dashboard Ringkasan';
         document.getElementById('topbarSubtitle').innerText = 'Ringkasan data checklist aktif';
@@ -479,6 +485,8 @@ function onGlobalDateChange() {
         loadIntegratedMonitoringData();
       } else if (activeView === 'shift-security') {
         loadJadwalPiketSecurityMatrix();
+      } else if (activeView === 'inspeksi-mutu') {
+        loadInspeksiMutuData('SEMUA', true);
       } else if (activeView === 'dashboard') {
         loadDashboardData();
       } else if (activeView === 'kebersihan' || activeView === 'pelayanan') {
@@ -501,6 +509,8 @@ function refreshCurrentPage() {
         loadIntegratedMonitoringData();
       } else if (activeView === 'shift-security') {
         loadJadwalPiketSecurityMatrix();
+      } else if (activeView === 'inspeksi-mutu') {
+        loadInspeksiMutuData('SEMUA', true);
       } else if (activeView === 'dashboard') {
         loadDashboardData();
       } else if (activeView === 'kebersihan' || activeView === 'pelayanan') {

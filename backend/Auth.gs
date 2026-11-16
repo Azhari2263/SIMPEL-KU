@@ -548,3 +548,80 @@ function getAllUsersList(ss) {
   _cachedUserList = list;
   return list;
 }
+
+/**
+ * FUNGSI SETUP DATABASE USERS OTOMATIS
+ * Menginisialisasi sheet Users jika belum ada atau melengkapi akun default (18 Pegawai SIMPEL-KU).
+ */
+function setupAllUsers() {
+  const ss = getDb();
+  if (!ss) return "Database Spreadsheet tidak terhubung. Pastikan SPREADSHEET_ID valid.";
+
+  let userSheet = ss.getSheetByName("Users");
+  if (!userSheet) {
+    userSheet = ss.insertSheet("Users");
+  }
+
+  const headers = ["Username", "Nama Pegawai", "Nama Sheet", "Password", "Role", "Unit", "NIP", "Terakhir Ganti Kredensial"];
+
+  const allUsers = [
+    ["admin",      "Administrator SIMPEL-KU",  "Users",          "admin123",  "Admin",               "Manajemen", "198501012010011001", ""],
+    ["supervisor", "Supervisor / Kabag Umum",  "Users",          "spv123",    "Supervisor",          "Manajemen", "198002022005011002", ""],
+    ["humas",      "Tim Umum dan Humas",       "Users",          "humas123",  "Tim Umum dan Humas",  "Umum",      "199003032015012003", ""],
+    ["korlap",     "Koordinator Lapangan",     "Users",          "korlap123", "Koordinator Lapangan", "Umum",      "199204042017011004", ""],
+    ["yuni",       "Yuni Juniarti",            "YuniJuniarti",   "yuni123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-001",        ""],
+    ["slamet",     "Slamet Riyadi",            "SlametRiyadi",   "slamet123", "Petugas Kebersihan",  "Kebersihan","PJLP-KB-002",        ""],
+    ["dede",       "Nurramadhanial (Dede)",    "Nurramadhanial", "dede123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-003",        ""],
+    ["syukri",     "Muhammad Syukri",          "MSyukri",        "syukri123", "Petugas Kebersihan",  "Kebersihan","PJLP-KB-004",        ""],
+    ["ramadhan",   "Ramadhan",                 "Ramadhan",       "rama123",   "Petugas Kebersihan",  "Kebersihan","PJLP-KB-005",        ""],
+    ["mawardi",    "Mawardi",                  "Mawardi",        "mawardi123","Petugas Pelayanan",   "Pelayanan", "PJLP-PL-001",        ""],
+    ["rania",      "Rania Naila Husna",        "RaniaNailaHusna","rania123",  "Petugas Pelayanan",   "Pelayanan", "PJLP-PL-002",        ""],
+    ["alfiana",    "Alfiana Ayuni",            "AlfianaAyuni",   "alfiana123","Petugas Pelayanan",   "Pelayanan", "PJLP-PL-003",        ""],
+    ["eddy",       "Eddy Suryadi",             "EddySuryadi",    "eddy123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-001",        ""],
+    ["reza",       "Syarif Reza Nopriadrian",  "SyReza",         "reza123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-002",        ""],
+    ["feri",       "Feri Yustami",             "FeriYustami",    "feri123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-003",        ""],
+    ["eko",        "Eko Prasetyo",             "EkoPrasetyo",    "eko123",    "Petugas Keamanan",    "Keamanan",  "PJLP-KM-004",        ""],
+    ["agus",       "Agus Tetriansyah",         "AgusTetriansyah","agus123",   "Petugas Keamanan",    "Keamanan",  "PJLP-KM-005",        ""],
+    ["rizki",      "Rizki Fadil",              "RizkiFadil",     "rizki123",  "Petugas Keamanan",    "Keamanan",  "PJLP-KM-006",        ""]
+  ];
+
+  if (userSheet.getLastRow() === 0) {
+    userSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    userSheet.getRange(1, 1, 1, headers.length)
+      .setBackground("#1e40af")
+      .setFontColor("#ffffff")
+      .setFontWeight("bold");
+    userSheet.getRange(2, 1, allUsers.length, headers.length).setValues(allUsers);
+    userSheet.autoResizeColumns(1, headers.length);
+    _cachedUserList = null;
+    resetMemoryCache();
+    return "Setup Users Berhasil! " + allUsers.length + " akun default telah dibuat.";
+  }
+
+  const existingValues = userSheet.getDataRange().getValues();
+  const existingUsernames = new Set();
+  for (let i = 1; i < existingValues.length; i++) {
+    const u = cleanStr(existingValues[i][0]).toLowerCase();
+    if (u) existingUsernames.add(u);
+  }
+
+  const usersToAdd = [];
+  for (let i = 0; i < allUsers.length; i++) {
+    const targetU = allUsers[i][0].toLowerCase();
+    if (!existingUsernames.has(targetU)) {
+      usersToAdd.push(allUsers[i]);
+    }
+  }
+
+  if (usersToAdd.length > 0) {
+    userSheet.getRange(existingValues.length + 1, 1, usersToAdd.length, headers.length).setValues(usersToAdd);
+  }
+
+  _cachedUserList = null;
+  resetMemoryCache();
+  return "Sinkronisasi Users Berhasil! " + usersToAdd.length + " akun baru ditambahkan, total " + (existingValues.length - 1 + usersToAdd.length) + " akun aktif.";
+}
+
+function setupSampleDatabase() {
+  return setupAllUsers();
+}

@@ -86,32 +86,40 @@ function saveInspeksiMutu(token, payload) {
     if (!ss) return { success: false, message: "Spreadsheet tidak ditemukan." };
 
     const sh = setupInspeksiMutuSheet(ss);
-    const now = new Date();
-    const bulan = payload.bulan || (now.getMonth() + 1);
-    const tahun = payload.tahun || now.getFullYear();
-    const tanggal = payload.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
+    const data = (payload && payload.payload) ? payload.payload : (payload || {});
 
-    const skor1 = Number(payload.skorKerapihan || 5);
-    const skor2 = Number(payload.skorKetepatan || 5);
-    const skor3 = Number(payload.skorKepatuhan || 5);
-    const skor4 = Number(payload.skorKelengkapan || 5);
+    const now = new Date();
+    const bulan = data.bulan || (now.getMonth() + 1);
+    const tahun = data.tahun || now.getFullYear();
+    const tanggal = data.tanggal || `${now.getDate()}/${bulan}/${tahun}`;
+
+    const skor1 = Number(data.skorKerapihan !== undefined ? data.skorKerapihan : (data.param1 !== undefined ? data.param1 : 5));
+    const skor2 = Number(data.skorKetepatan !== undefined ? data.skorKetepatan : (data.param2 !== undefined ? data.param2 : 5));
+    const skor3 = Number(data.skorKepatuhan !== undefined ? data.skorKepatuhan : (data.param3 !== undefined ? data.param3 : 5));
+    const skor4 = Number(data.skorKelengkapan !== undefined ? data.skorKelengkapan : (data.param4 !== undefined ? data.param4 : 5));
     const avg = Number(((skor1 + skor2 + skor3 + skor4) / 4).toFixed(2));
+
+    const unit = data.unit || 'Kebersihan';
+    const pegawaiArea = data.pegawaiArea || data.ruangan || data.area || 'Semua Area';
+    const catatan = data.catatan || '-';
+    const statusRekomendasi = data.statusRekomendasi || data.tindakLanjut || (avg >= 4.0 ? 'Sesuai Standar' : (avg >= 3.0 ? 'Perlu Perbaikan Ringan' : 'Perlu Tindakan Korektif'));
+    const inspektor = session.namaPegawai || session.username || 'Supervisor';
 
     sh.appendRow([
       now,
       tanggal,
       bulan,
       tahun,
-      payload.unit || 'Kebersihan',
-      payload.pegawaiArea || 'Semua Area',
+      unit,
+      pegawaiArea,
       skor1,
       skor2,
       skor3,
       skor4,
       avg,
-      payload.catatan || '-',
-      payload.statusRekomendasi || 'Sesuai Standar',
-      session.namaPegawai || session.username || 'Supervisor'
+      catatan,
+      statusRekomendasi,
+      inspektor
     ]);
 
     clearScriptCacheKeys([

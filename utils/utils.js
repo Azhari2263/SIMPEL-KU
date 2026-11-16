@@ -32,3 +32,15 @@ function formatDateIndo(day, month, year) {
   const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   return `${day} ${months[month] || month} ${year}`;
 }
+
+function isKeamananTaskForShift(task, shiftKode) {
+  if (!task || !shiftKode || shiftKode === 'O') return false;
+  const rUpper = String(task.ruangan || '').toUpperCase();
+  if (shiftKode === 'P') {
+    return rUpper.includes('PAGI') || rUpper.includes('JAM KERJA');
+  }
+  if (shiftKode === 'S' || shiftKode === 'M') {
+    return rUpper.includes('MALAM');
+  }
+  return false;
+}
